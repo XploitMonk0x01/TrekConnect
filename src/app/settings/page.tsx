@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form'; // Import Controller
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
@@ -21,6 +21,8 @@ import { getUserProfile, updateUserProfile } from '@/services/users';
 import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"; // Import Form components
+import type { Control } from "react-hook-form";
 
 
 const accountFormSchema = z.object({
@@ -67,7 +69,6 @@ export default function SettingsPage() {
         });
     } else if (!authLoading) {
       setIsLoadingProfile(false);
-      // Potentially redirect or show sign-in prompt if settings require auth
     }
   }, [firebaseUser, authLoading, form, toast]);
 
@@ -113,6 +114,7 @@ export default function SettingsPage() {
     }
 
     return (
+      <Form {...form}> {/* Wrap with Form provider */}
         <form onSubmit={form.handleSubmit(onAccountSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormFieldItem control={form.control} name="name" label="Full Name" placeholder="Your full name" />
@@ -128,6 +130,7 @@ export default function SettingsPage() {
             Save Changes
             </Button>
         </form>
+      </Form>
     );
   }
 
@@ -228,8 +231,6 @@ export default function SettingsPage() {
 }
 
 // Helper component for FormField items in settings
-import { FormField, FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import type { Control } from "react-hook-form";
 
 interface FormFieldItemProps {
   control: Control<any>;
