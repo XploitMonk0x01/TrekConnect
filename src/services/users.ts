@@ -45,7 +45,7 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
     };
 
     // Fields to set on insert (create)
-    constsetOnInsertData: Partial<UserProfile> = {
+    const setOnInsertData: Partial<UserProfile> = {
       age: undefined,
       gender: undefined,
       bio: '',
@@ -112,25 +112,46 @@ export async function updateUserProfile(uid: string, dataToUpdate: Partial<Omit<
     const db: Db = await getDb();
     const usersCollection = db.collection('users');
 
-    const updateData = {
+    const updatePayload = {
       ...dataToUpdate,
       updatedAt: new Date(),
     };
 
-    const result = await usersCollection.findOneAndUpdate(
+    console.log(`[TrekConnect Debug] Attempting to update profile for UID: ${uid} with data:`, JSON.stringify(updatePayload, null, 2));
+
+    const findOneAndUpdateResult = await usersCollection.findOneAndUpdate(
       { _id: uid },
-      { $set: updateData },
+      { $set: updatePayload },
       { returnDocument: 'after' }
     );
     
-    if (result) {
-        const updatedDoc = result as WithId<Document> | null;
-        return updatedDoc ? mapDocToUserProfile(updatedDoc) : null;
+    if (findOneAndUpdateResult) {
+      console.log(`[TrekConnect Debug] Successfully updated profile for UID: ${uid}.`);
+      return mapDocToUserProfile(findOneAndUpdateResult as WithId<Document>);
+    } else {
+      console.warn(`[TrekConnect Debug] No user profile found for UID: ${uid} during update attempt. Document may not exist or filter did not match.`);
+      return null;
     }
-    return null;
 
   } catch (error) {
-    console.error(`Error updating user profile for UID (${uid}) in MongoDB:`, error);
+    console.error(`[TrekConnect Debug] Error updating user profile for UID (${uid}) in MongoDB:`, error);
     return null;
+  }
+}
+
+export async function getOtherUsers(currentUserId: string): Promise<UserProfile[]> {
+  try {
+    const db: Db = await getDb();
+    const usersCollection = db.collection('users');
+    // Find users where _id is not the current user's ID
+    const userDocs = await usersCollection.find({ _id: { $ne: currentUserId } }).toArray();
+
+    if (!userDocs) {
+      return [];
+    }
+    return userDocs.map(doc => mapDocToUserProfile(doc as WithId<Document>));
+  } catch (error) {
+    console.error('Error fetching other users from MongoDB:', error);
+    return [];
   }
 }
