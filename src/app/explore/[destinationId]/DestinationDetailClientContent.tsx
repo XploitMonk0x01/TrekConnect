@@ -19,13 +19,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface DestinationDetailClientContentProps {
   initialDestination: Destination;
   mockWeather: WeatherInfo; // Pass mock weather as prop
-  getWeatherIcon: (iconCode?: string) => JSX.Element; // Pass icon getter as prop
 }
+
+// Moved getWeatherIcon function here
+function getWeatherIcon(iconCode?: string) {
+  if (!iconCode) return <Sun className="h-5 w-5 text-yellow-500" />;
+  if (iconCode.includes("01")) return <Sun className="h-5 w-5 text-yellow-500" />; // Sunny
+  if (iconCode.includes("02") || iconCode.includes("03") || iconCode.includes("04")) return <CloudSun className="h-5 w-5 text-yellow-400" />; // Partly/Mostly Cloudy
+  if (iconCode.includes("09") || iconCode.includes("10")) return <CloudRain className="h-5 w-5 text-blue-500" />; // Rain/Showers
+  // Add more icon mappings as needed (e.g., snow, thunderstorm)
+  return <Sun className="h-5 w-5 text-yellow-500" />; // Default to Sun
+}
+
 
 export default function DestinationDetailClientContent({ 
   initialDestination,
-  mockWeather,
-  getWeatherIcon 
+  mockWeather
 }: DestinationDetailClientContentProps) {
   
   const [destination, setDestination] = useState<Destination>(initialDestination);

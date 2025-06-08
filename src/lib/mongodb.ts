@@ -1,6 +1,8 @@
 
 // This approach is taken from https://github.com/vercel/next.js/tree/canary/examples/with-mongodb
 import { MongoClient, ServerApiVersion, Db } from 'mongodb';
+import { config } from 'dotenv'
+config() // Load environment variables from .env file
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB_NAME || "TrekConnect"; // Default DB name if not in URI or env
