@@ -77,20 +77,39 @@ export default function EditProfilePage() {
               languagesSpoken: profile.languagesSpoken?.join(', ') || '',
               trekkingExperience: profile.trekkingExperience || '',
             });
+          } else {
+             // If profile is null (e.g., new user whose profile wasn't fully created yet, or error)
+             // Reset with some sensible defaults, possibly from FirebaseUser if needed
+             form.reset({
+                name: firebaseUser.displayName || '',
+                photoUrl: firebaseUser.photoURL || '',
+                age: '',
+                gender: '',
+                bio: '',
+                travelPreferences_soloOrGroup: '',
+                travelPreferences_budget: '',
+                travelPreferences_style: '',
+                languagesSpoken: '',
+                trekkingExperience: '',
+             });
           }
         })
         .catch(error => {
           console.error("Failed to fetch user profile:", error);
           toast({ variant: 'destructive', title: 'Error', description: 'Could not load profile data.' });
+          // Potentially reset form to defaults from FirebaseUser here as well
+           form.reset({
+                name: firebaseUser.displayName || '',
+                photoUrl: firebaseUser.photoURL || '',
+           });
         })
         .finally(() => {
           setIsLoadingProfile(false);
         });
     } else if (!authLoading) {
       setIsLoadingProfile(false);
-      // Redirect if not logged in and not loading
       router.push('/auth/signin');
-       toast({ variant: 'destructive', title: 'Unauthorized', description: 'Please sign in to edit your profile.' });
+      toast({ variant: 'destructive', title: 'Unauthorized', description: 'Please sign in to edit your profile.' });
     }
   }, [firebaseUser, authLoading, form, router, toast]);
 
@@ -105,24 +124,32 @@ export default function EditProfilePage() {
     
     const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'updatedAt'>> = {
       name: data.name,
-      photoUrl: data.photoUrl || null,
+      photoUrl: data.photoUrl || null, // Set to null if empty string
       age: data.age === '' ? undefined : Number(data.age),
-      gender: data.gender || undefined,
+      gender: data.gender && data.gender !== '' ? data.gender as UserProfile['gender'] : undefined,
       bio: data.bio || undefined,
       travelPreferences: {
-        soloOrGroup: data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] || undefined,
-        budget: data.travelPreferences_budget as UserProfile['travelPreferences']['budget'] || undefined,
+        soloOrGroup: data.travelPreferences_soloOrGroup && data.travelPreferences_soloOrGroup !== '' ? data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] : undefined,
+        budget: data.travelPreferences_budget && data.travelPreferences_budget !== '' ? data.travelPreferences_budget as UserProfile['travelPreferences']['budget'] : undefined,
         style: data.travelPreferences_style || undefined,
       },
       languagesSpoken: languages.length > 0 ? languages : undefined,
-      trekkingExperience: data.trekkingExperience as UserProfile['trekkingExperience'] || undefined,
+      trekkingExperience: data.trekkingExperience && data.trekkingExperience !== '' ? data.trekkingExperience as UserProfile['trekkingExperience'] : undefined,
     };
+
+    // Clean up undefined travelPreference fields if the whole object is empty
+    if (Object.values(profileUpdateData.travelPreferences || {}).every(v => v === undefined)) {
+        profileUpdateData.travelPreferences = undefined;
+    }
+
 
     try {
       const updatedProfile = await updateUserProfile(firebaseUser.uid, profileUpdateData);
       if (updatedProfile) {
         toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated.' });
-        router.push('/profile');
+        // Optionally refetch profile here if you want to ensure ProfilePage gets the absolute latest data
+        // or rely on server revalidation if implemented.
+        router.push('/profile'); 
       } else {
         throw new Error('Failed to update profile.');
       }
@@ -233,7 +260,7 @@ export default function EditProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gender</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="Male">Male</SelectItem>
@@ -268,7 +295,7 @@ export default function EditProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Solo/Group</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select preference" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="Solo">Solo</SelectItem>
@@ -286,7 +313,7 @@ export default function EditProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Budget</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select budget" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="Budget">Budget</SelectItem>
@@ -329,7 +356,7 @@ export default function EditProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Trekking Experience</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Select experience level" /></SelectTrigger></FormControl>
                       <SelectContent>
                         <SelectItem value="Beginner">Beginner</SelectItem>
@@ -342,7 +369,7 @@ export default function EditProfilePage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" disabled={isSaving || isLoadingProfile} className="bg-primary hover:bg-primary/90">
+              <Button type="submit" disabled={isSaving || isLoadingProfile || authLoading} className="bg-primary hover:bg-primary/90">
                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save Changes
               </Button>
@@ -353,3 +380,6 @@ export default function EditProfilePage() {
     </div>
   );
 }
+
+
+    
