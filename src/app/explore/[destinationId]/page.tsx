@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react'; // Added 'use'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -50,7 +50,8 @@ const destinationAITags: Record<string, string> = {
 };
 
 
-export default function DestinationDetailPage({ params }: { params: { destinationId: string } }) {
+export default function DestinationDetailPage({ params: incomingParams }: { params: { destinationId: string } }) {
+  const params = use(incomingParams as any); // Unwrap params using React.use() as per Next.js warning
   const destination = mockDestinations.find(d => d.id === params.destinationId);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -301,5 +302,3 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
     </div>
   );
 }
-
-    
