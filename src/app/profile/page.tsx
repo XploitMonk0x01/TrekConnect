@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, UserCircle, MapPin, Star as StarIcon, CheckCircle, Heart, Briefcase, Languages, Mountain, LogIn, Loader2 } from "lucide-react";
-import type { UserProfile, Destination, Badge as BadgeType } from "@/lib/types";
+import type { UserProfile, Destination } from '@/lib/types';
 import { Badge } from "@/components/ui/badge";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { useAuth } from '@/hooks/useAuth';
@@ -134,8 +134,10 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">Try editing your profile to add more details.</p>
-           <Button variant="outline">
-              <Edit className="mr-2 h-4 w-4" /> Edit Profile (Soon)
+           <Button asChild variant="outline">
+            <Link href="/profile/edit">
+              <Edit className="mr-2 h-4 w-4" /> Edit Profile
+            </Link>
            </Button>
         </CardContent>
       </Card>
@@ -158,8 +160,10 @@ export default function ProfilePage() {
           <div className="flex-1 mt-4 md:mt-0">
             <div className="flex flex-col md:flex-row items-center justify-between gap-2">
                 <CardTitle className="font-headline text-3xl text-primary">{userProfile.name || "Trekker"}</CardTitle>
-                <Button variant="outline" size="sm"> {/* onClick will eventually navigate to edit page or open modal */}
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/profile/edit">
                     <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                  </Link>
                 </Button>
             </div>
             <CardDescription className="mt-1 text-lg">
@@ -252,4 +256,3 @@ export default function ProfilePage() {
     </div>
   );
 }
- 

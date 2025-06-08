@@ -14,8 +14,8 @@ export interface UserProfile {
   };
   languagesSpoken?: string[];
   trekkingExperience?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-  wishlistDestinations?: Destination[];
-  travelHistory?: Destination[];
+  wishlistDestinations?: Destination[]; // Simplified for now, could be array of IDs or full objects
+  travelHistory?: Destination[]; // Simplified for now
   plannedTrips?: PlannedTrip[];
   badges?: Badge[];
   createdAt?: Date;
