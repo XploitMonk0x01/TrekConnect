@@ -30,6 +30,25 @@ function mapDocToUserProfile(doc: WithId<Document>): UserProfile {
 }
 
 
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  console.log(`[TrekConnect Debug] getUserProfile CALLED for UID: ${uid}`);
+  try {
+    const db: Db = await getDb();
+    const usersCollection = db.collection('users');
+    const userDoc = await usersCollection.findOne({ _id: uid }); 
+
+    if (!userDoc) {
+      console.warn(`[TrekConnect Debug] No user profile found in DB for UID: ${uid}`);
+      return null;
+    }
+    console.log(`[TrekConnect Debug] User profile found for UID: ${uid}. Document:`, JSON.stringify(userDoc));
+    return mapDocToUserProfile(userDoc);
+  } catch (error) {
+    console.error(`[TrekConnect Debug] CATCH BLOCK: Error fetching user profile for UID (${uid}) from MongoDB:`, error);
+    return null;
+  }
+}
+
 export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promise<UserProfile | null> {
   console.log(`[TrekConnect Debug] upsertUserFromFirebase CALLED for UID: ${firebaseUser.uid}, Email: ${firebaseUser.email}, Name: ${firebaseUser.displayName}, Photo: ${firebaseUser.photoURL}`);
   try {
@@ -37,28 +56,8 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
     const usersCollection = db.collection('users');
     const now = new Date();
 
-    // --- Diagnostic: Check if user exists before upsert ---
-    try {
-      const existingUser = await usersCollection.findOne({ _id: firebaseUser.uid });
-      if (existingUser) {
-        console.log(`[TrekConnect Debug] DIAGNOSTIC: User ${firebaseUser.uid} ALREADY EXISTS in DB before upsert. Document:`, JSON.stringify(existingUser));
-      } else {
-        console.log(`[TrekConnect Debug] DIAGNOSTIC: User ${firebaseUser.uid} DOES NOT EXIST in DB before upsert.`);
-      }
-    } catch (findError) {
-      console.error(`[TrekConnect Debug] DIAGNOSTIC: Error during pre-upsert findOne for ${firebaseUser.uid}:`, findError);
-    }
-    // --- End Diagnostic ---
-
-    const userProfileDataToSet: Partial<Pick<UserProfile, 'name' | 'email' | 'photoUrl' | 'updatedAt'>> = {
-        updatedAt: now,
-    };
-    if (firebaseUser.displayName !== undefined) userProfileDataToSet.name = firebaseUser.displayName; else userProfileDataToSet.name = null;
-    if (firebaseUser.email !== undefined) userProfileDataToSet.email = firebaseUser.email; else userProfileDataToSet.email = null;
-    if (firebaseUser.photoURL !== undefined) userProfileDataToSet.photoUrl = firebaseUser.photoURL; else userProfileDataToSet.photoUrl = null;
-
-
-    const userProfileDataToSetOnInsert: Omit<UserProfile, 'id'> = {
+    // Define the data to be inserted if a new document is created
+    const insertData: Omit<UserProfile, 'id'> = {
       name: firebaseUser.displayName || null,
       email: firebaseUser.email || null,
       photoUrl: firebaseUser.photoURL || null,
@@ -77,92 +76,33 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
       plannedTrips: [],
       badges: [],
       createdAt: now,
-      updatedAt: now,
+      updatedAt: now, // Set updatedAt on both insert and update
     };
-    
-    const filteredSetData: { [key: string]: any } = {};
-    for (const key in userProfileDataToSet) {
-        const typedKey = key as keyof typeof userProfileDataToSet;
-        // Allow null values to be set, but exclude undefined
-        if (userProfileDataToSet[typedKey] !== undefined) {
-            filteredSetData[typedKey] = userProfileDataToSet[typedKey];
-        }
-    }
 
+    // Define the data to be set/updated if the document exists
+    const updateData: Partial<Omit<UserProfile, 'id' | 'createdAt'>> = {
+      name: firebaseUser.displayName || null,
+      email: firebaseUser.email || null,
+      photoUrl: firebaseUser.photoURL || null,
+      updatedAt: now, // Set updatedAt on both insert and update
+    };
 
     console.log(`[TrekConnect Debug] Upserting user ${firebaseUser.uid}.`);
-    console.log(`[TrekConnect Debug] Filter: { _id: "${firebaseUser.uid}" }`);
-    console.log(`[TrekConnect Debug] Data for $set:`, JSON.stringify(filteredSetData, null, 2));
-    console.log(`[TrekConnect Debug] Data for $setOnInsert:`, JSON.stringify(userProfileDataToSetOnInsert, null, 2));
 
     const result = await usersCollection.findOneAndUpdate(
-      { _id: firebaseUser.uid }, 
-      { 
-        $set: filteredSetData,
-        $setOnInsert: userProfileDataToSetOnInsert
+      { _id: firebaseUser.uid }, // Filter by Firebase UID
+      {
+        $set: updateData, // Data to set/update
+        $setOnInsert: insertData, // Data to set only on insert
       },
-      { 
-        upsert: true, 
-        returnDocument: 'after' 
-      }
+      { upsert: true, returnDocument: 'after' } // Use upsert: true to insert if not exists, return the modified document
     );
-    
-    console.log(`[TrekConnect Debug] findOneAndUpdate result for ${firebaseUser.uid} (upsertUserFromFirebase):`, JSON.stringify(result, null, 2));
 
-    if (result) { 
-        const updatedDoc = result as WithId<Document> | null; 
-        if (updatedDoc) {
-            console.log(`[TrekConnect Debug] User ${firebaseUser.uid} successfully upserted/found. Returned Document:`, JSON.stringify(updatedDoc));
-            return mapDocToUserProfile(updatedDoc);
-        } else {
-             // This case should ideally not be hit if result is truthy and returnDocument: 'after' is used.
-             // It might indicate an issue with how MongoDB driver returns the document or an unexpected structure.
-             console.error(`[TrekConnect Debug] CRITICAL: User ${firebaseUser.uid} upsert operation (findOneAndUpdate) returned a truthy value but the document itself was null or not in the expected structure. Result:`, JSON.stringify(result));
-             // Attempting fallback fetch as a last resort, though this signals a deeper issue.
-             const fallbackDoc = await usersCollection.findOne({ _id: firebaseUser.uid });
-             if (fallbackDoc) {
-                 console.log(`[TrekConnect Debug] Fallback fetch for ${firebaseUser.uid} successful after unexpected upsert result. Document:`, JSON.stringify(fallbackDoc));
-                 return mapDocToUserProfile(fallbackDoc);
-             } else {
-                 console.error(`[TrekConnect Debug] CRITICAL: Fallback fetch for ${firebaseUser.uid} FAILED after upsert did not return document as expected.`);
-                 return null;
-             }
-        }
-    } else {
-      // This means findOneAndUpdate returned null/undefined directly.
-      console.error(`[TrekConnect Debug] CRITICAL: findOneAndUpdate for user ${firebaseUser.uid} returned null/undefined. Upsert failed to return a document. This usually means the document was not found and upsert did not insert, or an error occurred that wasn't thrown but prevented document return.`);
-      // Attempting direct fetch as last resort.
-      const finalAttemptDoc = await usersCollection.findOne({ _id: firebaseUser.uid });
-      if (finalAttemptDoc) {
-           console.warn(`[TrekConnect Debug] Last resort fetch for ${firebaseUser.uid} successful. Document found, but upsert did not return it. This points to an issue with the upsert operation or its configuration. Document:`, JSON.stringify(finalAttemptDoc));
-           return mapDocToUserProfile(finalAttemptDoc);
-      } else {
-           console.error(`[TrekConnect Debug] CRITICAL: User ${firebaseUser.uid} still not found after all attempts during upsert. The user document was not created in MongoDB.`);
-           return null;
-      }
-    }
+    console.log(`[TrekConnect Debug] findOneAndUpdate result for ${firebaseUser.uid}:`, JSON.stringify(result, null, 2));
 
+    return result ? mapDocToUserProfile(result as WithId<Document>) : null;
   } catch (error) {
     console.error(`[TrekConnect Debug] CATCH BLOCK: Error in upsertUserFromFirebase for UID (${firebaseUser.uid}):`, error);
-    return null;
-  }
-}
-
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  console.log(`[TrekConnect Debug] getUserProfile CALLED for UID: ${uid}`);
-  try {
-    const db: Db = await getDb();
-    const usersCollection = db.collection('users');
-    const userDoc = await usersCollection.findOne({ _id: uid }); 
-
-    if (!userDoc) {
-      console.warn(`[TrekConnect Debug] No user profile found in DB for UID: ${uid}`);
-      return null;
-    }
-    console.log(`[TrekConnect Debug] User profile found for UID: ${uid}. Document:`, JSON.stringify(userDoc));
-    return mapDocToUserProfile(userDoc);
-  } catch (error) {
-    console.error(`[TrekConnect Debug] CATCH BLOCK: Error fetching user profile for UID (${uid}) from MongoDB:`, error);
     return null;
   }
 }

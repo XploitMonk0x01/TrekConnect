@@ -59,7 +59,9 @@ export default function SignUpPage() {
     }
     
     toast({ title: 'Account Created', description: 'Welcome to TrekConnect!' });
-    router.push('/'); // Redirect to dashboard
+    // Use setTimeout to defer the redirect, potentially preventing a stack overflow
+    // if the redirect triggers a state change that re-runs part of the sign-up logic.
+    setTimeout(() => router.push('/'), 0); 
   };
 
   const handleEmailSignUp = async (event: React.FormEvent<HTMLFormElement>) => {

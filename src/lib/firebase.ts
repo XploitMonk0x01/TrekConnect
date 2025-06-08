@@ -1,7 +1,8 @@
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getStorage, FirebaseStorage } from 'firebase/storage'; // Import getStorage
+import { getAuth, Auth, onAuthStateChanged } from 'firebase/auth';
+import { upsertUserFromFirebase, getUserProfile } from '@/services/users';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
 // import { getFirestore } from 'firebase/firestore';
 // import { getAnalytics } from "firebase/analytics";
 
@@ -34,4 +35,17 @@ storage = getStorage(app); // Initialize storage
 //   analytics = getAnalytics(app);
 // }
 
-export { app, auth, storage /*, firestore, storage, analytics */ };
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    // User is signed in, see docs for a list of available properties
+    // https://firebase.google.com/docs/reference/js/auth.user
+    console.log('[TrekConnect Debug] Auth state changed: User signed in.', user.uid);
+    // Check if user already exists in MongoDB to avoid unnecessary upsert calls on every auth state change
+    const userProfile = await getUserProfile(user.uid);
+    if (!userProfile) {
+      await upsertUserFromFirebase(user);
+    }
+  }
+});
+
+export { app, auth, storage };
