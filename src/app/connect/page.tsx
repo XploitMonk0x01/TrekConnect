@@ -35,13 +35,13 @@ export default function ConnectSpherePage() {
   const handleSwipe = (direction: 'left' | 'right') => {
     if (direction === 'right' && profiles[currentIndex]) {
       console.log(`Matched with ${profiles[currentIndex].name}`);
-      setLastSwipedProfile(profiles[currentIndex]); 
+      setLastSwipedProfile(profiles[currentIndex]);
       setShowMatchAnimation(true);
-      setTimeout(() => setShowMatchAnimation(false), 2000); 
+      setTimeout(() => setShowMatchAnimation(false), 2000);
     } else if (profiles[currentIndex]) {
       setLastSwipedProfile(profiles[currentIndex]);
     }
-    
+
     if (currentIndex < profiles.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
@@ -50,15 +50,15 @@ export default function ConnectSpherePage() {
   };
 
   const handleUndo = () => {
-    if (currentIndex > 0 && lastSwipedProfile) { 
+    if (currentIndex > 0 && lastSwipedProfile) {
       setCurrentIndex(currentIndex - 1);
-      setLastSwipedProfile(null); 
+      setLastSwipedProfile(null);
       console.log("Undo last swipe");
     } else {
       console.log("Nothing to undo or already at the beginning.");
     }
   };
-  
+
   const currentProfile = profiles[currentIndex];
 
   if (showMatchAnimation && lastSwipedProfile) {
