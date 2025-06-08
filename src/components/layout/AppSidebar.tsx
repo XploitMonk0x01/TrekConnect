@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import type { Route } from 'next';
 
 import {
@@ -18,17 +18,23 @@ import { SiteLogo } from '@/components/SiteLogo';
 import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, NavItem, AUTH_SIGNIN_NAV_ITEM } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase';
+import { signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { LogOut } from 'lucide-react';
+
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user, loading } = useAuth();
 
   const isActive = (item: NavItem) => {
     if (item.href === '/') {
       return pathname === '/';
     }
-    // For nested routes, check if the current pathname starts with the item's href
-    // and matches the specified number of segments.
     if (item.matchSegments && item.matchSegments > 0) {
       const currentSegments = pathname.split('/').filter(Boolean);
       const itemSegments = (item.href as string).split('/').filter(Boolean);
@@ -39,8 +45,17 @@ export function AppSidebar() {
     return pathname.startsWith(item.href);
   };
   
-  // Simulate authentication state
-  const isAuthenticated = true; // Replace with actual auth check
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: 'Signed Out', description: 'You have been successfully signed out.' });
+      router.push(AUTH_SIGNOUT_NAV_ITEM.href); 
+    } catch (error: any) {
+      console.error('Sign out error:', error);
+      toast({ variant: 'destructive', title: 'Sign Out Failed', description: error.message || 'Could not sign out.' });
+    }
+  };
+
 
   return (
     <Sidebar side="left" variant="sidebar" collapsible="icon">
@@ -60,7 +75,7 @@ export function AppSidebar() {
                     isActive(item) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
                   )}
                   aria-current={isActive(item) ? 'page' : undefined}
-                  asChild={false} // Ensure it's not forwarding props if Link doesn't have legacyBehavior
+                  asChild={false}
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
@@ -89,33 +104,47 @@ export function AppSidebar() {
             </Link>
           </SidebarMenuItem>
           <Separator className="my-1 bg-sidebar-border" />
-           {isAuthenticated ? (
+           {!loading && user ? (
              <SidebarMenuItem>
-                <Link href={AUTH_SIGNOUT_NAV_ITEM.href as Route} passHref>
-                  <SidebarMenuButton
-                    tooltip={AUTH_SIGNOUT_NAV_ITEM.label}
-                    className="justify-start w-full text-left"
-                    // onClick={() => { /* Handle sign out */ }}
-                    asChild={false}
-                  >
-                    <AUTH_SIGNOUT_NAV_ITEM.icon className="h-5 w-5" />
-                    <span>{AUTH_SIGNOUT_NAV_ITEM.label}</span>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton
+                  onClick={handleSignOut}
+                  tooltip={AUTH_SIGNOUT_NAV_ITEM.label}
+                  className="justify-start w-full text-left cursor-pointer"
+                  asChild={false}
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>{AUTH_SIGNOUT_NAV_ITEM.label}</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
-           ) : (
+           ) : !loading && !user ? (
             <SidebarMenuItem>
               <Link href={AUTH_SIGNIN_NAV_ITEM.href as Route} passHref>
                 <SidebarMenuButton
+                  isActive={isActive(AUTH_SIGNIN_NAV_ITEM)}
                   tooltip={AUTH_SIGNIN_NAV_ITEM.label}
-                  className="justify-start w-full text-left"
+                  className={cn(
+                    'justify-start',
+                     isActive(AUTH_SIGNIN_NAV_ITEM) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
+                  )}
                   asChild={false}
                 >
                   <AUTH_SIGNIN_NAV_ITEM.icon className="h-5 w-5" />
-                  <span>Sign In</span>
+                  <span>{AUTH_SIGNIN_NAV_ITEM.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+           ) : (
+             <SidebarMenuItem>
+                <SidebarMenuButton
+                  tooltip="Loading..."
+                  className="justify-start w-full text-left"
+                  disabled
+                  asChild={false}
+                >
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Loading...</span>
+                </SidebarMenuButton>
+             </SidebarMenuItem>
            )}
         </SidebarMenu>
       </SidebarFooter>

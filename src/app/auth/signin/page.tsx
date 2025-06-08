@@ -1,19 +1,55 @@
+
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MountainSnow, LogIn } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
 import { SiteLogo } from '@/components/SiteLogo';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SignInPage() {
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const handleEmailSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Handle sign-in logic
-    console.log('Sign in attempt');
-    // Typically redirect to '/' or dashboard after successful sign-in
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Signed In', description: 'Welcome back!' });
+      router.push('/'); // Redirect to dashboard
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      toast({ variant: 'destructive', title: 'Sign In Failed', description: error.message || 'Please check your credentials.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      toast({ title: 'Signed In with Google', description: 'Welcome!' });
+      router.push('/'); // Redirect to dashboard
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      toast({ variant: 'destructive', title: 'Google Sign In Failed', description: error.message || 'Could not sign in with Google.' });
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   return (
@@ -27,10 +63,10 @@ export default function SignInPage() {
           <CardDescription>Sign in to continue your adventure with TrekConnect.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" placeholder="you@example.com" required />
+              <Input id="email" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading || isGoogleLoading} />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -39,10 +75,11 @@ export default function SignInPage() {
                   Forgot password?
                 </Link>
               </div>
-              <Input id="password" type="password" placeholder="••••••••" required />
+              <Input id="password" type="password" placeholder="••••••••" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading || isGoogleLoading} />
             </div>
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
-              <LogIn className="mr-2 h-5 w-5" /> Sign In
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading || isGoogleLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
+              Sign In
             </Button>
           </form>
           <div className="relative">
@@ -55,8 +92,10 @@ export default function SignInPage() {
               </span>
             </div>
           </div>
-          {/* Placeholder for social logins */}
-          <Button variant="outline" className="w-full">
+          <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading || isGoogleLoading}>
+            {isGoogleLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 
+              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 112.8 512 0 398.9 0 256S112.8 0 244 0c71.8 0 130.3 29.2 172.9 73.4l-65.3 64.2C335.5 111.3 294.8 88 244 88c-81.1 0-146.9 65.8-146.9 146.9s65.8 146.9 146.9 146.9c104.4 0 132.1-72.7 134.7-109.7H244V261.8h244z"></path></svg>
+            }
             Sign in with Google
           </Button>
         </CardContent>
