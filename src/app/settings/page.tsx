@@ -48,9 +48,9 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    if (firebaseUser) {
+    if (firebaseUser?.uid) {
       setCurrentUserEmail(firebaseUser.email);
-      setIsLoadingProfile(true);
+      setIsLoadingProfile(true); 
       getUserProfile(firebaseUser.uid)
         .then(profile => {
           if (profile) {
@@ -67,10 +67,16 @@ export default function SettingsPage() {
         .finally(() => {
           setIsLoadingProfile(false);
         });
-    } else if (!authLoading) {
-      setIsLoadingProfile(false);
+    } else {
+      // Handles cases where firebaseUser is null (logged out) or auth is still loading
+      // If auth is done loading and there's no user, ensure form is reset and loading indicators are off.
+      form.reset({ name: '', bio: '' });
+      setCurrentUserEmail(null);
+      if (!authLoading) {
+        setIsLoadingProfile(false);
+      }
     }
-  }, [firebaseUser, authLoading, form, toast]);
+  }, [firebaseUser?.uid, authLoading, form, toast]); // Use firebaseUser.uid for more stable dependency
 
   async function onAccountSubmit(data: AccountFormValues) {
     if (!firebaseUser) {
