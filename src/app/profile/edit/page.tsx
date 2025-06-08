@@ -78,26 +78,18 @@ export default function EditProfilePage() {
               trekkingExperience: profile.trekkingExperience || '',
             });
           } else {
-             // If profile is null (e.g., new user whose profile wasn't fully created yet, or error)
-             // Reset with some sensible defaults, possibly from FirebaseUser if needed
              form.reset({
                 name: firebaseUser.displayName || '',
                 photoUrl: firebaseUser.photoURL || '',
-                age: '',
-                gender: '',
-                bio: '',
-                travelPreferences_soloOrGroup: '',
-                travelPreferences_budget: '',
-                travelPreferences_style: '',
-                languagesSpoken: '',
-                trekkingExperience: '',
+                age: '', gender: '', bio: '',
+                travelPreferences_soloOrGroup: '', travelPreferences_budget: '', travelPreferences_style: '',
+                languagesSpoken: '', trekkingExperience: '',
              });
           }
         })
         .catch(error => {
           console.error("Failed to fetch user profile:", error);
           toast({ variant: 'destructive', title: 'Error', description: 'Could not load profile data.' });
-          // Potentially reset form to defaults from FirebaseUser here as well
            form.reset({
                 name: firebaseUser.displayName || '',
                 photoUrl: firebaseUser.photoURL || '',
@@ -108,8 +100,8 @@ export default function EditProfilePage() {
         });
     } else if (!authLoading) {
       setIsLoadingProfile(false);
-      router.push('/auth/signin');
-      toast({ variant: 'destructive', title: 'Unauthorized', description: 'Please sign in to edit your profile.' });
+      // router.push('/auth/signin'); // Commented out to prevent premature redirect during debugging
+      // toast({ variant: 'destructive', title: 'Unauthorized', description: 'Please sign in to edit your profile.' });
     }
   }, [firebaseUser, authLoading, form, router, toast]);
 
@@ -120,38 +112,53 @@ export default function EditProfilePage() {
     }
     setIsSaving(true);
 
-    const languages = data.languagesSpoken ? data.languagesSpoken.split(',').map(lang => lang.trim()).filter(lang => lang) : [];
-    
-    const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'updatedAt'>> = {
-      name: data.name,
-      photoUrl: data.photoUrl || null, // Set to null if empty string
-      age: data.age === '' ? undefined : Number(data.age),
-      gender: data.gender && data.gender !== '' ? data.gender as UserProfile['gender'] : undefined,
-      bio: data.bio || undefined,
-      travelPreferences: {
-        soloOrGroup: data.travelPreferences_soloOrGroup && data.travelPreferences_soloOrGroup !== '' ? data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] : undefined,
-        budget: data.travelPreferences_budget && data.travelPreferences_budget !== '' ? data.travelPreferences_budget as UserProfile['travelPreferences']['budget'] : undefined,
-        style: data.travelPreferences_style || undefined,
-      },
-      languagesSpoken: languages.length > 0 ? languages : undefined,
-      trekkingExperience: data.trekkingExperience && data.trekkingExperience !== '' ? data.trekkingExperience as UserProfile['trekkingExperience'] : undefined,
+    const languages = data.languagesSpoken && data.languagesSpoken.trim() !== ''
+      ? data.languagesSpoken.split(',').map(lang => lang.trim()).filter(lang => lang)
+      : undefined; // Undefined if empty
+
+    const travelPrefsInput = {
+      soloOrGroup: data.travelPreferences_soloOrGroup && data.travelPreferences_soloOrGroup !== '' ? data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] : undefined,
+      budget: data.travelPreferences_budget && data.travelPreferences_budget !== '' ? data.travelPreferences_budget as UserProfile['travelPreferences']['budget'] : undefined,
+      style: data.travelPreferences_style && data.travelPreferences_style.trim() !== '' ? data.travelPreferences_style.trim() : undefined,
     };
 
-    // Clean up undefined travelPreference fields if the whole object is empty
-    if (Object.values(profileUpdateData.travelPreferences || {}).every(v => v === undefined)) {
-        profileUpdateData.travelPreferences = undefined;
+    const travelPreferencesToUpdate = (travelPrefsInput.soloOrGroup || travelPrefsInput.budget || travelPrefsInput.style)
+      ? travelPrefsInput
+      : undefined;
+
+    const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'updatedAt'>> = {
+      name: data.name.trim(), // Always send name
+      photoUrl: data.photoUrl && data.photoUrl.trim() !== '' ? data.photoUrl.trim() : null, // null if empty string
+      age: data.age === '' || data.age === undefined || isNaN(Number(data.age)) ? undefined : Number(data.age),
+      gender: data.gender && data.gender !== '' ? data.gender as UserProfile['gender'] : undefined,
+      bio: data.bio && data.bio.trim() !== '' ? data.bio.trim() : null, // null if empty string
+      travelPreferences: travelPreferencesToUpdate,
+      languagesSpoken: languages,
+      trekkingExperience: data.trekkingExperience && data.trekkingExperience !== '' ? data.trekkingExperience as UserProfile['trekkingExperience'] : undefined,
+    };
+    
+    // Create a new object that only contains defined properties from profileUpdateData,
+    // or null for photoUrl/bio if they were explicitly set to null.
+    const cleanedProfileUpdateData: { [key: string]: any } = {};
+    for (const key in profileUpdateData) {
+      const typedKey = key as keyof typeof profileUpdateData;
+      if (profileUpdateData[typedKey] !== undefined) {
+        cleanedProfileUpdateData[typedKey] = profileUpdateData[typedKey];
+      }
     }
+    // Ensure photoUrl and bio can be explicitly set to null
+    if (profileUpdateData.photoUrl === null) cleanedProfileUpdateData.photoUrl = null;
+    if (profileUpdateData.bio === null) cleanedProfileUpdateData.bio = null;
 
 
     try {
-      const updatedProfile = await updateUserProfile(firebaseUser.uid, profileUpdateData);
+      console.log("[TrekConnect Debug] Calling updateUserProfile from edit/page.tsx with UID:", firebaseUser.uid, "and data:", JSON.stringify(cleanedProfileUpdateData, null, 2));
+      const updatedProfile = await updateUserProfile(firebaseUser.uid, cleanedProfileUpdateData);
       if (updatedProfile) {
         toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated.' });
-        // Optionally refetch profile here if you want to ensure ProfilePage gets the absolute latest data
-        // or rely on server revalidation if implemented.
         router.push('/profile'); 
       } else {
-        throw new Error('Failed to update profile.');
+        throw new Error('Failed to update profile.'); // This is line 154
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -194,7 +201,7 @@ export default function EditProfilePage() {
         </CardHeader>
         <CardContent>
           <Button asChild className="bg-primary hover:bg-primary/90">
-            <Link href="/auth/signin">Sign In</Link>
+            <Link href="/auth/signin?redirect=/profile/edit">Sign In</Link>
           </Button>
         </CardContent>
       </Card>
@@ -237,7 +244,7 @@ export default function EditProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Photo URL</FormLabel>
-                    <FormControl><Input placeholder="https://example.com/your-photo.jpg" {...field} /></FormControl>
+                    <FormControl><Input placeholder="https://example.com/your-photo.jpg" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -249,7 +256,7 @@ export default function EditProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Age</FormLabel>
-                      <FormControl><Input type="number" placeholder="Your age" {...field} onChange={e => field.onChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))} /></FormControl>
+                      <FormControl><Input type="number" placeholder="Your age" {...field} value={field.value === undefined ? '' : field.value} onChange={e => field.onChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -281,7 +288,7 @@ export default function EditProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Bio</FormLabel>
-                    <FormControl><Textarea placeholder="Tell us about your trekking passion, favorite types of treks, etc." {...field} rows={4} /></FormControl>
+                    <FormControl><Textarea placeholder="Tell us about your trekking passion, favorite types of treks, etc." {...field} value={field.value || ''} rows={4} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -332,7 +339,7 @@ export default function EditProfilePage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Travel Style</FormLabel>
-                      <FormControl><Input placeholder="e.g., Adventure, Relaxing" {...field} /></FormControl>
+                      <FormControl><Input placeholder="e.g., Adventure, Relaxing" {...field} value={field.value || ''} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -345,7 +352,7 @@ export default function EditProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Languages Spoken</FormLabel>
-                    <FormControl><Input placeholder="e.g., English, Hindi, Spanish (comma-separated)" {...field} /></FormControl>
+                    <FormControl><Input placeholder="e.g., English, Hindi, Spanish (comma-separated)" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -380,6 +387,4 @@ export default function EditProfilePage() {
     </div>
   );
 }
-
-
     

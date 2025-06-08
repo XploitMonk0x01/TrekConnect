@@ -12,10 +12,10 @@ function mapDocToUserProfile(doc: WithId<Document>): UserProfile {
     id: doc._id.toString(), // In this service, we'll use firebaseUid as _id for simplicity
     name: doc.name || null,
     email: doc.email || null,
-    photoUrl: doc.photoUrl || null,
+    photoUrl: doc.photoUrl === undefined ? null : doc.photoUrl, // Ensure photoUrl can be null
     age: doc.age,
     gender: doc.gender,
-    bio: doc.bio,
+    bio: doc.bio === undefined ? null : doc.bio, // Ensure bio can be null
     travelPreferences: doc.travelPreferences || { soloOrGroup: undefined, budget: undefined, style: undefined },
     languagesSpoken: doc.languagesSpoken || [],
     trekkingExperience: doc.trekkingExperience,
@@ -31,7 +31,7 @@ function mapDocToUserProfile(doc: WithId<Document>): UserProfile {
 
 
 export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promise<UserProfile | null> {
-  console.log(`[TrekConnect Debug] upsertUserFromFirebase CALLED for UID: ${firebaseUser.uid}, Email: ${firebaseUser.email}`);
+  console.log(`[TrekConnect Debug] upsertUserFromFirebase CALLED for UID: ${firebaseUser.uid}, Email: ${firebaseUser.email}, Name: ${firebaseUser.displayName}, Photo: ${firebaseUser.photoURL}`);
   try {
     const db: Db = await getDb();
     const usersCollection = db.collection('users');
@@ -50,22 +50,24 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
     }
     // --- End Diagnostic ---
 
-    // Fields to always update or set from Firebase profile
+    // Fields to always update or set from Firebase profile if they exist
     const userProfileDataToSet: Partial<UserProfile> = {
-      name: firebaseUser.displayName,
-      email: firebaseUser.email,
-      photoUrl: firebaseUser.photoURL,
-      updatedAt: now,
+        updatedAt: now,
     };
+    if (firebaseUser.displayName !== null) userProfileDataToSet.name = firebaseUser.displayName;
+    if (firebaseUser.email !== null) userProfileDataToSet.email = firebaseUser.email;
+    if (firebaseUser.photoURL !== null) userProfileDataToSet.photoUrl = firebaseUser.photoURL;
+
 
     // Fields to set only on insert (create) - comprehensive defaults
+    // Ensure these fields match UserProfile structure, initializing all as undefined or default empty values
     const userProfileDataToSetOnInsert: Omit<UserProfile, 'id'> = {
-      name: firebaseUser.displayName || null, // Initialize with Firebase value or null
-      email: firebaseUser.email || null,     // Initialize with Firebase value or null
-      photoUrl: firebaseUser.photoURL || null, // Initialize with Firebase value or null
+      name: firebaseUser.displayName || null,
+      email: firebaseUser.email || null,
+      photoUrl: firebaseUser.photoURL || null,
       age: undefined,
       gender: undefined,
-      bio: '', // Default to empty string
+      bio: null, // Initialize as null
       travelPreferences: {
         soloOrGroup: undefined,
         budget: undefined,
@@ -81,7 +83,6 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
       updatedAt: now, // Also set updatedAt on insert
     };
     
-    // Filter out any undefined values from userProfileDataToSet to avoid setting undefined explicitly if not intended
     const filteredSetData: any = {};
     for (const key in userProfileDataToSet) {
         if (userProfileDataToSet[key as keyof typeof userProfileDataToSet] !== undefined) {
@@ -96,7 +97,7 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
     console.log(`[TrekConnect Debug] Data for $setOnInsert:`, JSON.stringify(userProfileDataToSetOnInsert, null, 2));
 
     const result = await usersCollection.findOneAndUpdate(
-      { _id: firebaseUser.uid }, // Use Firebase UID as the document _id
+      { _id: firebaseUser.uid }, 
       { 
         $set: filteredSetData,
         $setOnInsert: userProfileDataToSetOnInsert
@@ -107,15 +108,15 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
       }
     );
     
-    console.log(`[TrekConnect Debug] findOneAndUpdate result for ${firebaseUser.uid}:`, JSON.stringify(result, null, 2));
+    console.log(`[TrekConnect Debug] findOneAndUpdate result for ${firebaseUser.uid} (upsertUserFromFirebase):`, JSON.stringify(result, null, 2));
 
-    if (result) { // In driver v4+, result is the document or null.
+    if (result) { 
         const updatedDoc = result as WithId<Document> | null;
         if (updatedDoc) {
             console.log(`[TrekConnect Debug] User ${firebaseUser.uid} successfully upserted/found. Returned Document:`, JSON.stringify(updatedDoc));
             return mapDocToUserProfile(updatedDoc);
         } else {
-             console.warn(`[TrekConnect Debug] User ${firebaseUser.uid} upsert operation did not return a document as expected. This is unusual with upsert:true and returnDocument:'after'. Attempting fallback fetch.`);
+             console.warn(`[TrekConnect Debug] User ${firebaseUser.uid} upsert operation did not return a document (result was truthy but not a doc). Attempting fallback fetch.`);
              const fallbackDoc = await usersCollection.findOne({ _id: firebaseUser.uid });
              if (fallbackDoc) {
                  console.log(`[TrekConnect Debug] Fallback fetch for ${firebaseUser.uid} successful. Document:`, JSON.stringify(fallbackDoc));
@@ -126,15 +127,13 @@ export async function upsertUserFromFirebase(firebaseUser: FirebaseUser): Promis
              }
         }
     } else {
-      // This path (result being null/undefined when upsert:true and returnDocument:'after') is highly unusual
-      // unless the upsert operation itself failed silently before the catch block (e.g., due to a pre-condition not met which isn't the case here).
-      console.error(`[TrekConnect Debug] CRITICAL: findOneAndUpdate for user ${firebaseUser.uid} returned null/undefined. Upsert might have failed or driver behavior unexpected. Attempting direct fetch as last resort.`);
+      console.error(`[TrekConnect Debug] CRITICAL: findOneAndUpdate for user ${firebaseUser.uid} returned null/undefined. Upsert might have failed. Attempting direct fetch as last resort.`);
       const finalAttemptDoc = await usersCollection.findOne({ _id: firebaseUser.uid });
       if (finalAttemptDoc) {
            console.log(`[TrekConnect Debug] Last resort fetch for ${firebaseUser.uid} successful. Document:`, JSON.stringify(finalAttemptDoc));
            return mapDocToUserProfile(finalAttemptDoc);
       } else {
-           console.error(`[TrekConnect Debug] CRITICAL: User ${firebaseUser.uid} still not found after all attempts.`);
+           console.error(`[TrekConnect Debug] CRITICAL: User ${firebaseUser.uid} still not found after all attempts during upsert.`);
            return null;
       }
     }
@@ -150,7 +149,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
     const db: Db = await getDb();
     const usersCollection = db.collection('users');
-    const userDoc = await usersCollection.findOne({ _id: uid }); // UID is stored as _id
+    const userDoc = await usersCollection.findOne({ _id: uid }); 
 
     if (!userDoc) {
       console.warn(`[TrekConnect Debug] No user profile found in DB for UID: ${uid}`);
@@ -165,39 +164,59 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 export async function updateUserProfile(uid: string, dataToUpdate: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt'>>): Promise<UserProfile | null> {
+  console.log(`[TrekConnect Debug] updateUserProfile CALLED for UID: ${uid}`);
   try {
     const db: Db = await getDb();
     const usersCollection = db.collection('users');
 
-    const updatePayload: any = {};
+    const updatePayload: { [key: string]: any } = {};
     for (const key in dataToUpdate) {
-        if (dataToUpdate[key as keyof typeof dataToUpdate] !== undefined) {
-            updatePayload[key] = dataToUpdate[key as keyof typeof dataToUpdate];
+        const typedKey = key as keyof typeof dataToUpdate;
+        // Only include keys that are not undefined. Allow null values to be set.
+        if (dataToUpdate[typedKey] !== undefined) {
+            updatePayload[typedKey] = dataToUpdate[typedKey];
         }
     }
     updatePayload.updatedAt = new Date();
 
-    console.log(`[TrekConnect Debug] updateUserProfile CALLED for UID: ${uid}. Payload:`, JSON.stringify(updatePayload, null, 2));
+    // If travelPreferences is in payload and is an empty object {}, remove it or MongoDB might store it as {}
+    if (updatePayload.travelPreferences && typeof updatePayload.travelPreferences === 'object' && Object.keys(updatePayload.travelPreferences).length === 0) {
+      // If all sub-fields are undefined, travelPreferences itself would be undefined from edit page,
+      // so this check is more of a safeguard if an empty object somehow gets passed.
+      // It's better to explicitly $unset it if you want to remove it, or ensure schema handles {}
+      // For now, if it's an empty object and we want to remove it, we could do:
+      // delete updatePayload.travelPreferences; // This would prevent setting it as {}
+      // Or, if the intent is to clear it, use $unset:
+      // await usersCollection.updateOne({ _id: uid }, { $unset: { travelPreferences: "" }});
+      // For simplicity, let's assume an empty object is fine for now if it reaches here,
+      // but ideally, the frontend should not send an empty object if it means "no preference".
+    }
+
+
+    console.log(`[TrekConnect Debug] Attempting to update profile for UID: ${uid}.`);
+    console.log(`[TrekConnect Debug] Filter: { _id: "${uid}" }`);
+    console.log(`[TrekConnect Debug] Update Payload ($set):`, JSON.stringify(updatePayload, null, 2));
 
     const findOneAndUpdateResult = await usersCollection.findOneAndUpdate(
-      { _id: uid },
+      { _id: uid }, 
       { $set: updatePayload },
-      { returnDocument: 'after' }
+      { returnDocument: 'after' } 
     );
     
-    console.log(`[TrekConnect Debug] updateUserProfile findOneAndUpdateResult for ${uid}:`, JSON.stringify(findOneAndUpdateResult, null, 2));
+    // Log the raw result directly from MongoDB
+    console.log(`[TrekConnect Debug] RAW findOneAndUpdateResult for ${uid} (updateUserProfile):`, JSON.stringify(findOneAndUpdateResult, null, 2));
 
-    if (findOneAndUpdateResult) {
-      const updatedDoc = findOneAndUpdateResult as WithId<Document> | null;
+    if (findOneAndUpdateResult) { 
+      const updatedDoc = findOneAndUpdateResult as WithId<Document> | null; 
        if (updatedDoc) {
         console.log(`[TrekConnect Debug] Successfully updated profile for UID: ${uid}. Returned Document:`, JSON.stringify(updatedDoc));
         return mapDocToUserProfile(updatedDoc);
       } else {
-        console.warn(`[TrekConnect Debug] User profile update for UID: ${uid} (findOneAndUpdate) did not return document. This is unexpected.`);
-        return null; // Should not happen if document was found and updated
+        console.warn(`[TrekConnect Debug] User profile update for UID: ${uid} (findOneAndUpdate) did not return a document as expected, though the result was truthy. This could indicate an issue with the operation or an unexpected response structure. Result:`, findOneAndUpdateResult);
+        return null;
       }
     } else {
-      console.warn(`[TrekConnect Debug] No user profile found for UID: ${uid} during update attempt (findOneAndUpdate returned null). Document may not exist or filter did not match.`);
+      console.warn(`[TrekConnect Debug] No user profile found for UID: ${uid} during update attempt (findOneAndUpdate returned null or undefined). Document may not exist or filter did not match.`);
       return null;
     }
 
@@ -211,7 +230,6 @@ export async function getOtherUsers(currentUserId: string): Promise<UserProfile[
   try {
     const db: Db = await getDb();
     const usersCollection = db.collection('users');
-    // Find users where _id is not equal to currentUserId
     const userDocs = await usersCollection.find({ _id: { $ne: currentUserId } }).toArray();
 
     if (!userDocs || userDocs.length === 0) {
@@ -226,6 +244,4 @@ export async function getOtherUsers(currentUserId: string): Promise<UserProfile[
     return [];
   }
 }
-    
-
     
