@@ -13,7 +13,7 @@ import { SiteLogo } from '@/components/SiteLogo';
 import { auth } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, type UserCredential } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { upsertUserFromFirebase } from '@/services/users'; // Import the new service
+import { upsertUserFromFirebase } from '@/services/users';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -26,26 +26,38 @@ export default function SignUpPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleSuccessfulSignUp = async (userCredential: UserCredential, isEmailSignUp: boolean = false) => {
-    if (userCredential.user) {
-      if (isEmailSignUp && fullName) {
-        // Update Firebase profile first for email sign-up
-        await updateProfile(userCredential.user, { displayName: fullName });
-      }
-      // Now upsert to MongoDB. For Google Sign-Up, displayName might already be set from Google.
-      // For email sign-up, it's set from fullName via updateProfile.
-      // We need to ensure userCredential.user is refreshed if updateProfile was called.
-      // A simple way is to re-fetch or use the potentially updated user object from auth.currentUser
-      // For now, we'll proceed with the userCredential.user, assuming it's fresh enough or upsertUserFromFirebase handles it.
-      // A more robust approach might involve passing the updated name to upsertUserFromFirebase if needed.
+    let firebaseUserToUpsert = userCredential.user;
 
-      const firebaseUserAfterUpdate = auth.currentUser || userCredential.user; // Prefer currentUser if available
-
-      const userProfile = await upsertUserFromFirebase(firebaseUserAfterUpdate);
-      if (!userProfile) {
-         toast({ variant: 'destructive', title: 'Profile Creation Failed', description: 'Could not save your profile to our database.' });
-         // Decide if you want to prevent login or just warn.
+    if (!firebaseUserToUpsert) {
+        toast({ variant: 'destructive', title: 'Sign Up Error', description: 'User data not found after sign up.' });
+        return;
+    }
+    
+    if (isEmailSignUp && fullName) {
+      try {
+        await updateProfile(firebaseUserToUpsert, { displayName: fullName });
+        // After updating profile, Firebase Auth currentUser should reflect this change.
+        // Re-assign to ensure the most up-to-date user object is used for upsert.
+        if (auth.currentUser) {
+            firebaseUserToUpsert = auth.currentUser;
+        }
+      } catch (profileError: any) {
+          console.error('Error updating Firebase profile:', profileError);
+          toast({ variant: 'destructive', title: 'Profile Update Failed', description: 'Could not set your display name in Firebase.' });
+          // Proceed with upserting to MongoDB anyway, but the name might be missing from Firebase initially
       }
     }
+
+    const userProfile = await upsertUserFromFirebase(firebaseUserToUpsert);
+    if (!userProfile) {
+       toast({ 
+           variant: 'destructive', 
+           title: 'Profile Creation Failed', 
+           description: 'Could not save your profile to our database. You are signed in, but some features might not work correctly. Please try editing your profile later or contact support.' 
+        });
+       // Allow login to proceed but warn the user.
+    }
+    
     toast({ title: 'Account Created', description: 'Welcome to TrekConnect!' });
     router.push('/'); // Redirect to dashboard
   };
@@ -73,9 +85,7 @@ export default function SignUpPage() {
     const provider = new GoogleAuthProvider();
     try {
       const userCredential = await signInWithPopup(auth, provider);
-      // Firebase handles new user creation or sign-in with Google automatically
-      // `isEmailSignUp` is false by default
-      await handleSuccessfulSignUp(userCredential); 
+      await handleSuccessfulSignUp(userCredential, false); 
     } catch (error: any) {
       console.error('Google sign up error:', error);
       toast({ variant: 'destructive', title: 'Google Sign Up Failed', description: error.message || 'Could not sign up with Google.' });

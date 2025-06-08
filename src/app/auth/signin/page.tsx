@@ -13,7 +13,7 @@ import { SiteLogo } from '@/components/SiteLogo';
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, type UserCredential } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { upsertUserFromFirebase } from '@/services/users'; // Import the new service
+import { upsertUserFromFirebase } from '@/services/users';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -27,8 +27,14 @@ export default function SignInPage() {
     if (userCredential.user) {
       const userProfile = await upsertUserFromFirebase(userCredential.user);
       if (!userProfile) {
-         toast({ variant: 'destructive', title: 'Profile Sync Failed', description: 'Could not sync your profile with our database.' });
-         // Decide if you want to prevent login or just warn. For now, we'll allow login.
+         toast({ 
+            variant: 'destructive', 
+            title: 'Profile Sync Failed', 
+            description: 'Could not sync your profile with our database. Please try signing out and in again, or contact support if the issue persists.' 
+        });
+         // Allow login to proceed but warn the user.
+         // If profile sync is absolutely critical for app function, you might consider signing the user out from Firebase here.
+         // For now, we'll log them into Firebase but their DB profile might be missing/stale.
       }
     }
     toast({ title: 'Signed In', description: 'Welcome back!' });
@@ -55,7 +61,8 @@ export default function SignInPage() {
     try {
       const userCredential = await signInWithPopup(auth, provider);
       await handleSuccessfulSignIn(userCredential);
-    } catch (error: any) {
+    } catch (error: any)
+ {
       console.error('Google sign in error:', error);
       toast({ variant: 'destructive', title: 'Google Sign In Failed', description: error.message || 'Could not sign in with Google.' });
     } finally {
