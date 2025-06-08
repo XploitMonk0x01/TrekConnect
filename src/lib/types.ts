@@ -14,8 +14,8 @@ export interface UserProfile {
   };
   languagesSpoken?: string[];
   trekkingExperience?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-  wishlistDestinations?: Destination[]; // Simplified for now, could be array of IDs or full objects
-  travelHistory?: Destination[]; // Simplified for now
+  wishlistDestinations?: Destination[];
+  travelHistory?: Destination[];
   plannedTrips?: PlannedTrip[];
   badges?: Badge[];
   createdAt?: Date;
@@ -26,14 +26,14 @@ export interface Destination {
   id: string;
   name: string;
   description: string;
-  imageUrl: string;
+  imageUrl: string; // Can be placeholder or actual URL
   country?: string;
   region?: string;
   attractions?: string[];
   travelTips?: string;
   coordinates?: { lat: number; lng: number };
   averageRating?: number;
-  aiHint?: string;
+  aiHint?: string; // Hint for Pexels or other AI services
 }
 
 export interface PlannedTrip {
@@ -53,35 +53,44 @@ export interface Badge {
 }
 
 export interface Photo {
-  id: string;
-  userId: string;
+  id: string; // MongoDB ObjectId
+  userId: string; // Firebase UID
   userName: string;
-  userAvatarUrl?: string;
-  imageUrl: string;
+  userAvatarUrl?: string | null;
+  imageUrl: string; // URL from storage (or Data URI for now)
   destinationId?: string;
   destinationName?: string;
   caption?: string;
+  tags?: string[];
   uploadedAt: string; // ISO date string
-  likesCount?: number;
-  commentsCount?: number;
+  likesCount: number;
+  commentsCount: number;
 }
 
+// For creating a photo, some fields are set by the backend or default
+export type CreatePhotoInput = Pick<Photo, 'imageUrl' | 'caption' | 'destinationId' | 'destinationName' | 'tags'>;
+
+
 export interface Story {
-  id: string;
-  userId: string;
+  id: string; // MongoDB ObjectId
+  userId: string; // Firebase UID
   userName: string;
-  userAvatarUrl?: string;
+  userAvatarUrl?: string | null;
   title: string;
   content: string;
-  imageUrl?: string;
+  imageUrl?: string | null; // Optional cover image for story (URL from storage or Data URI)
   destinationId?: string;
   destinationName?: string;
-  createdAt: string; // ISO date string
-  updatedAt?: string; // ISO date string
   tags?: string[];
-  likesCount?: number;
-  commentsCount?: number;
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
+  likesCount: number;
+  commentsCount: number;
 }
+
+// For creating a story
+export type CreateStoryInput = Pick<Story, 'title' | 'content' | 'imageUrl' | 'destinationId' | 'destinationName' | 'tags'>;
+
 
 export interface WeatherInfo {
   temperature: string;

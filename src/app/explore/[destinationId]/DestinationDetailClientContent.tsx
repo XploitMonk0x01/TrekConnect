@@ -9,7 +9,7 @@ import { ArrowLeft, MapPin, Star, Sun, CloudSun, CloudRain, CalendarDays, Extern
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { Destination, WeatherInfo } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
+// Badge component is not used here, can be removed if not planned for future use
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { generateTrekImage } from '@/ai/flows/generate-trek-image-flow';
 import { useToast } from "@/hooks/use-toast";
@@ -18,26 +18,24 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface DestinationDetailClientContentProps {
   initialDestination: Destination;
-  mockWeather: WeatherInfo; // Pass mock weather as prop
+  mockWeather: WeatherInfo;
 }
 
-// Moved getWeatherIcon function here
 function getWeatherIcon(iconCode?: string) {
   if (!iconCode) return <Sun className="h-5 w-5 text-yellow-500" />;
-  if (iconCode.includes("01")) return <Sun className="h-5 w-5 text-yellow-500" />; // Sunny
-  if (iconCode.includes("02") || iconCode.includes("03") || iconCode.includes("04")) return <CloudSun className="h-5 w-5 text-yellow-400" />; // Partly/Mostly Cloudy
-  if (iconCode.includes("09") || iconCode.includes("10")) return <CloudRain className="h-5 w-5 text-blue-500" />; // Rain/Showers
-  // Add more icon mappings as needed (e.g., snow, thunderstorm)
-  return <Sun className="h-5 w-5 text-yellow-500" />; // Default to Sun
+  if (iconCode.includes("01")) return <Sun className="h-5 w-5 text-yellow-500" />;
+  if (iconCode.includes("02") || iconCode.includes("03") || iconCode.includes("04")) return <CloudSun className="h-5 w-5 text-yellow-400" />;
+  if (iconCode.includes("09") || iconCode.includes("10")) return <CloudRain className="h-5 w-5 text-blue-500" />;
+  return <Sun className="h-5 w-5 text-yellow-500" />;
 }
 
-
-export default function DestinationDetailClientContent({ 
+export default function DestinationDetailClientContent({
   initialDestination,
   mockWeather
 }: DestinationDetailClientContentProps) {
-  
+
   const [destination, setDestination] = useState<Destination>(initialDestination);
+  const [mainImage, setMainImage] = useState(initialDestination.imageUrl || PLACEHOLDER_IMAGE_URL(1200, 600));
   const [isMainImageLoading, setIsMainImageLoading] = useState(true);
   const [travelerPhotos, setTravelerPhotos] = useState<string[]>([]);
   const [areTravelerPhotosLoading, setAreTravelerPhotosLoading] = useState(true);
@@ -47,21 +45,19 @@ export default function DestinationDetailClientContent({
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set initial destination and then fetch dynamic images
-    setDestination(initialDestination);
-    setIsMainImageLoading(true); // Reset loading state for main image
-    setAreTravelerPhotosLoading(true); // Reset loading state for traveler photos
+    setDestination(initialDestination); // Keep local state in sync
+    setIsMainImageLoading(true);
+    setAreTravelerPhotosLoading(true);
 
     const fetchDynamicImages = async () => {
       // Fetch Main Image
       const mainImageQuery = initialDestination.aiHint || initialDestination.name;
       try {
         const pexelsImageUrl = await searchPexelsImage(mainImageQuery, 1200, 600);
-        setDestination(prev => ({ ...prev, imageUrl: pexelsImageUrl }));
+        setMainImage(pexelsImageUrl);
       } catch (error) {
         console.error(`Failed to load main image for ${initialDestination.name}:`, error);
-        // Keep placeholder or initial imageUrl if Pexels fails
-        setDestination(prev => ({ ...prev, imageUrl: initialDestination.imageUrl || PLACEHOLDER_IMAGE_URL(1200,600) }));
+        setMainImage(initialDestination.imageUrl || PLACEHOLDER_IMAGE_URL(1200, 600));
       } finally {
         setIsMainImageLoading(false);
       }
@@ -70,18 +66,19 @@ export default function DestinationDetailClientContent({
       const photoQueryBase = initialDestination.aiHint || initialDestination.name;
       const queries = [
         `${photoQueryBase} trek photo`,
-        `${photoQueryBase} landscape detail`,
+        `${photoQueryBase} scenery`,
         `${photoQueryBase} mountain view`,
-        `${photoQueryBase} trail`,
-        `${photoQueryBase} scenery spot` 
+        `${photoQueryBase} trail path`,
+        `${photoQueryBase} travel spot`
       ];
       try {
-        const photoPromises = queries.map(q => searchPexelsImage(q, 300, 300));
+        const photoPromises = queries.slice(0,5).map(q => searchPexelsImage(q, 300, 300));
         const photos = await Promise.all(photoPromises);
+        // Filter out placeholders if Pexels didn't return a valid image
         setTravelerPhotos(photos.filter(p => p && !p.includes('placehold.co')));
       } catch (error) {
         console.error("Failed to load traveler photos:", error);
-        setTravelerPhotos([...Array(5)].map(() => PLACEHOLDER_IMAGE_URL(300,300)));
+        setTravelerPhotos([...Array(5)].map(() => PLACEHOLDER_IMAGE_URL(300,300))); // Fallback to 5 placeholders
       } finally {
         setAreTravelerPhotosLoading(false);
       }
@@ -122,8 +119,8 @@ export default function DestinationDetailClientContent({
       setIsGeneratingImage(false);
     }
   };
-  
-  const AITag = destination.aiHint || destination.name || "trekking india";
+
+  const AITag = destination.aiHint || destination.name.toLowerCase().split(' ').slice(0,2).join(' ') || "trekking india";
   const mapEmbedUrl = destination.coordinates
     ? `https://www.openstreetmap.org/export/embed.html?bbox=${destination.coordinates.lng-0.05}%2C${destination.coordinates.lat-0.05}%2C${destination.coordinates.lng+0.05}%2C${destination.coordinates.lat+0.05}&layer=mapnik&marker=${destination.coordinates.lat}%2C${destination.coordinates.lng}`
     : null;
@@ -152,7 +149,7 @@ export default function DestinationDetailClientContent({
             <Skeleton className="h-full w-full" />
           ) : (
             <Image
-              src={destination.imageUrl}
+              src={mainImage}
               alt={destination.name}
               layout="fill"
               objectFit="cover"
@@ -171,7 +168,7 @@ export default function DestinationDetailClientContent({
             </div>
           </div>
         </div>
-        
+
         <CardContent className="p-6 grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
             <div>
@@ -194,7 +191,7 @@ export default function DestinationDetailClientContent({
                 <p className="text-foreground/80 italic">{destination.travelTips}</p>
               </div>
             )}
-            
+
             <div>
               <h3 className="font-headline text-xl mb-2">Route Planning</h3>
               <Button variant="outline" className="border-accent text-accent hover:bg-accent/5">
@@ -257,7 +254,7 @@ export default function DestinationDetailClientContent({
                  {destination.coordinates && <p className="text-xs text-muted-foreground mt-1">Lat: {destination.coordinates.lat.toFixed(4)}, Lng: {destination.coordinates.lng.toFixed(4)}</p>}
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle className="font-headline text-lg flex items-center"><CalendarDays className="mr-2 h-5 w-5 text-blue-500"/> Local Events</CardTitle>
@@ -322,7 +319,7 @@ export default function DestinationDetailClientContent({
               </div>
             ))
           ) : (
-            travelerPhotos.map((photoUrl, i) => (
+            travelerPhotos.length > 0 ? travelerPhotos.map((photoUrl, i) => (
               <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
                 <Image
                   src={photoUrl}
@@ -335,7 +332,19 @@ export default function DestinationDetailClientContent({
                   }}
                 />
               </div>
-            ))
+            )) : (
+              [...Array(5)].map((_, i) => ( // Fallback to placeholders if Pexels fetch yields no usable images
+                <div key={`fallback-${i}`} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
+                  <Image
+                    src={PLACEHOLDER_IMAGE_URL(300,300)}
+                    alt={`Placeholder photo ${i+1}`}
+                    layout="fill"
+                    objectFit="cover"
+                    data-ai-hint={`${AITag} placeholder ${i+1}`}
+                  />
+                </div>
+              ))
+            )
           )}
            <Button variant="outline" className="aspect-square flex flex-col items-center justify-center text-muted-foreground hover:bg-primary/5 hover:text-primary border-primary">
               <ExternalLink className="h-6 w-6 mb-1"/>

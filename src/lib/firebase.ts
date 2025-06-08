@@ -1,8 +1,8 @@
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
+import { getStorage, FirebaseStorage } from 'firebase/storage'; // Import getStorage
 // import { getFirestore } from 'firebase/firestore';
-// import { getStorage } from 'firebase/storage';
 // import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -17,8 +17,8 @@ const firebaseConfig = {
 
 let app: FirebaseApp;
 let auth: Auth;
+let storage: FirebaseStorage; // Declare storage variable
 // let firestore: Firestore;
-// let storage: Storage;
 // let analytics: Analytics;
 
 if (getApps().length === 0) {
@@ -28,10 +28,10 @@ if (getApps().length === 0) {
 }
 
 auth = getAuth(app);
+storage = getStorage(app); // Initialize storage
 // firestore = getFirestore(app);
-// storage = getStorage(app);
 // if (typeof window !== 'undefined') {
 //   analytics = getAnalytics(app);
 // }
 
-export { app, auth /*, firestore, storage, analytics */ };
+export { app, auth, storage /*, firestore, storage, analytics */ };

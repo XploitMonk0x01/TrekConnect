@@ -9,7 +9,7 @@ import Image from "next/image";
 import { MapPin, Search, Star, Filter, Globe } from "lucide-react";
 import type { Destination } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
-import { searchPexelsImage } from "@/services/pexels"; // Assuming this service exists
+import { searchPexelsImage } from "@/services/pexels";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -17,12 +17,11 @@ interface ExploreClientComponentProps {
   initialDestinations: Destination[];
 }
 
-// Define a new type that includes isLoadingImage
-type DestinationWithLoading = Destination & { isLoadingImage?: boolean };
+type DestinationWithLoading = Destination & { isLoadingImage?: boolean; fetchedImageUrl?: string };
 
 export default function ExploreClientComponent({ initialDestinations }: ExploreClientComponentProps) {
   const [destinations, setDestinations] = useState<DestinationWithLoading[]>(
-    initialDestinations.map(d => ({ ...d, imageUrl: d.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400), isLoadingImage: true }))
+    initialDestinations.map(d => ({ ...d, isLoadingImage: true, fetchedImageUrl: d.imageUrl }))
   );
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -30,13 +29,14 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     const fetchImages = async () => {
       const destinationsWithFetchedImages = await Promise.all(
         initialDestinations.map(async (dest) => {
-          const query = dest.aiHint || dest.name; // Use aiHint from DB, fallback to name
+          const query = dest.aiHint || dest.name;
           try {
             const pexelsImageUrl = await searchPexelsImage(query, 600, 400);
-            return { ...dest, imageUrl: pexelsImageUrl, isLoadingImage: false };
+            return { ...dest, fetchedImageUrl: pexelsImageUrl, isLoadingImage: false };
           } catch (error) {
             console.error(`Failed to load image for ${dest.name}:`, error);
-            return { ...dest, imageUrl: dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400), isLoadingImage: false };
+            // Fallback to original imageUrl from DB (which might be a placeholder)
+            return { ...dest, fetchedImageUrl: dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400), isLoadingImage: false };
           }
         })
       );
@@ -46,11 +46,10 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     if (initialDestinations.length > 0) {
       fetchImages();
     } else {
-      // If no initial destinations, ensure loading is false for empty state
       setDestinations([]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDestinations]); // Rerun when initialDestinations prop changes
+  }, [initialDestinations]);
 
   const filteredDestinations = destinations.filter(destination =>
     destination.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,10 +68,10 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input 
-                type="search" 
-                placeholder="Search treks (e.g., Roopkund, Ladakh, Winter trek)" 
-                className="pl-10" 
+              <Input
+                type="search"
+                placeholder="Search treks (e.g., Roopkund, Ladakh, Winter trek)"
+                className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -110,43 +109,73 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredDestinations.map((destination) => (
-          <Card key={destination.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
-            <CardHeader className="p-0 relative h-48">
-              {destination.isLoadingImage ? (
-                <Skeleton className="h-full w-full" />
-              ) : (
+        {destinations.map((destination) => (
+          destination.isLoadingImage ? (
+            <Card key={destination.id || Math.random()} className="overflow-hidden flex flex-col">
+              <Skeleton className="h-48 w-full" />
+              <CardContent className="p-4 flex-grow">
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2 mb-3" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+              <CardFooter className="p-4 border-t flex justify-between items-center">
+                <Skeleton className="h-5 w-12" />
+                <Skeleton className="h-8 w-24" />
+              </CardFooter>
+            </Card>
+          ) : (
+            filteredDestinations.find(fd => fd.id === destination.id) && // Only render if it's in filtered list
+            <Card key={destination.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
+              <CardHeader className="p-0 relative h-48">
                 <Image
-                  src={destination.imageUrl} // This will be updated by Pexels fetch
+                  src={destination.fetchedImageUrl || PLACEHOLDER_IMAGE_URL(600,400)}
                   alt={destination.name}
                   layout="fill"
                   objectFit="cover"
-                  data-ai-hint={destination.aiHint || destination.name} // Use aiHint from object
+                  data-ai-hint={destination.aiHint || destination.name.toLowerCase().split(' ').slice(0,2).join(' ')}
                   onError={(e) => {
-                     // Fallback if Pexels image also fails or if initial URL was bad
                     (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(600,400);
                   }}
                 />
-              )}
-            </CardHeader>
-            <CardContent className="p-4 flex-grow">
-              <CardTitle className="font-headline text-lg mb-1">{destination.name}</CardTitle>
-              <div className="flex items-center text-sm text-muted-foreground mb-2">
-                <MapPin className="h-4 w-4 mr-1" />
-                {destination.country}{destination.region ? `, ${destination.region}` : ''}
-              </div>
-              <CardDescription className="text-sm line-clamp-3">{destination.description}</CardDescription>
-            </CardContent>
-            <CardFooter className="p-4 border-t flex justify-between items-center">
-              <div className="flex items-center">
-                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400 mr-1" />
-                <span className="text-sm font-semibold">{destination.averageRating}</span>
-              </div>
-              <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/5">
-                <Link href={`/explore/${destination.id}`}>View Details</Link>
-              </Button>
-            </CardFooter>
-          </Card>
+              </CardHeader>
+              <CardContent className="p-4 flex-grow">
+                <CardTitle className="font-headline text-lg mb-1">{destination.name}</CardTitle>
+                <div className="flex items-center text-sm text-muted-foreground mb-2">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {destination.country}{destination.region ? `, ${destination.region}` : ''}
+                </div>
+                <CardDescription className="text-sm line-clamp-3">{destination.description}</CardDescription>
+              </CardContent>
+              <CardFooter className="p-4 border-t flex justify-between items-center">
+                <div className="flex items-center">
+                  <Star className="h-5 w-5 text-yellow-400 fill-yellow-400 mr-1" />
+                  <span className="text-sm font-semibold">{destination.averageRating}</span>
+                </div>
+                <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/5">
+                  <Link href={`/explore/${destination.id}`}>View Details</Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          )
+        ))}
+        {/* Render skeletons for items still loading but not yet in filteredDestinations if searchQuery is active */}
+        {searchQuery && destinations.filter(d => d.isLoadingImage).map(destination => (
+            <Card key={destination.id || Math.random()} className="overflow-hidden flex flex-col">
+              <Skeleton className="h-48 w-full" />
+              <CardContent className="p-4 flex-grow">
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2 mb-3" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+              <CardFooter className="p-4 border-t flex justify-between items-center">
+                <Skeleton className="h-5 w-12" />
+                <Skeleton className="h-8 w-24" />
+              </CardFooter>
+            </Card>
         ))}
       </div>
     </div>
