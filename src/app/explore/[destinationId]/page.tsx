@@ -25,7 +25,7 @@ const mockDestinationsList: Destination[] = [
 ];
 
 const mockWeather: WeatherInfo = {
-  temperature: "10°C", 
+  temperature: "10°C",
   condition: "Partly Cloudy",
   iconCode: "02d",
   forecast: [
@@ -53,29 +53,37 @@ const destinationAITags: Record<string, string> = {
 
 
 export default function DestinationDetailPage({ params: incomingParams }: { params: { destinationId: string } }) {
-  const resolvedParams = use(incomingParams as any); 
-  const initialDestination = mockDestinationsList.find(d => d.id === resolvedParams.destinationId);
+  const resolvedParams = use(incomingParams as any);
+  // initialDestination is now derived directly inside useEffect or based on state that is set by useEffect
+  // to ensure it's only calculated after resolvedParams is definitively available and processed.
 
-  const [destination, setDestination] = useState<Destination | undefined>(initialDestination);
+  const [destination, setDestination] = useState<Destination | undefined>(undefined);
   const [isMainImageLoading, setIsMainImageLoading] = useState(true);
   const [travelerPhotos, setTravelerPhotos] = useState<string[]>([]);
   const [areTravelerPhotosLoading, setAreTravelerPhotosLoading] = useState(true);
-  
+
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (initialDestination) {
+    const currentDestinationId = resolvedParams.destinationId;
+    const foundDestination = mockDestinationsList.find(d => d.id === currentDestinationId);
+
+    if (foundDestination) {
+      // Set initial destination state
+      setDestination(prev => ({...foundDestination, imageUrl: prev?.imageUrl || foundDestination.imageUrl })); // Preserve already loaded image if any
+
       const fetchMainImage = async () => {
         setIsMainImageLoading(true);
-        const query = destinationAITags[initialDestination.id] || `${initialDestination.name} landscape`;
+        const query = destinationAITags[foundDestination.id] || `${foundDestination.name} landscape`;
         try {
           const imageUrl = await searchPexelsImage(query, 1200, 600);
-          setDestination(prev => prev ? { ...prev, imageUrl } : undefined);
+          setDestination(prevDest => prevDest ? { ...prevDest, imageUrl } : { ...foundDestination, imageUrl });
         } catch (error) {
           console.error("Failed to load main image:", error);
-          // Keep placeholder if fetch fails
+          // Keep placeholder if fetch fails, already set via foundDestination.imageUrl
+           setDestination(prevDest => prevDest || {...foundDestination}); // Ensure destination is set if fetch fails early
         } finally {
           setIsMainImageLoading(false);
         }
@@ -84,7 +92,7 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
 
       const fetchTravelerPhotos = async () => {
         setAreTravelerPhotosLoading(true);
-        const photoQueryBase = destinationAITags[initialDestination.id] || initialDestination.name;
+        const photoQueryBase = destinationAITags[foundDestination.id] || foundDestination.name;
         const queries = [
           `${photoQueryBase} trek photo`,
           `${photoQueryBase} landscape detail`,
@@ -95,7 +103,7 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
         try {
           const photoPromises = queries.map(q => searchPexelsImage(q, 300, 300));
           const photos = await Promise.all(photoPromises);
-          setTravelerPhotos(photos.filter(p => !p.includes('placehold.co'))); // Filter out placeholders if Pexels fails for a query
+          setTravelerPhotos(photos.filter(p => !p.includes('placehold.co')));
         } catch (error) {
           console.error("Failed to load traveler photos:", error);
           setTravelerPhotos([...Array(5)].map(() => PLACEHOLDER_IMAGE_URL(300,300)));
@@ -104,8 +112,10 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
         }
       };
       fetchTravelerPhotos();
+    } else {
+      setDestination(undefined); // Destination not found
     }
-  }, [resolvedParams.destinationId, initialDestination]);
+  }, [resolvedParams.destinationId]); // Depend only on the unwrapped param ID
 
 
   const handleGenerateImage = async () => {
@@ -139,12 +149,21 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
   };
 
 
-  if (!destination) {
+  if (!resolvedParams.destinationId && !destination) { // Initial loading state or if params somehow not resolved yet
     return (
+      <div className="flex flex-col items-center justify-center h-full text-center">
+        <Loader2 className="w-16 h-16 text-muted-foreground mb-4 animate-spin" />
+        <h1 className="text-2xl font-semibold">Loading destination...</h1>
+      </div>
+    );
+  }
+  
+  if (!destination) {
+     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <MapPin className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-semibold">Destination not found</h1>
-        <p className="text-muted-foreground">The destination you are looking for does not exist or has been moved.</p>
+        <p className="text-muted-foreground">The destination you are looking for ({resolvedParams.destinationId}) does not exist or has been moved.</p>
         <Button asChild className="mt-4">
           <Link href="/explore">Back to Explore</Link>
         </Button>
@@ -153,7 +172,7 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
   }
 
   const AITag = destinationAITags[destination.id] || "trekking india";
-  const mapEmbedUrl = destination.coordinates 
+  const mapEmbedUrl = destination.coordinates
     ? `https://www.openstreetmap.org/export/embed.html?bbox=${destination.coordinates.lng-0.05}%2C${destination.coordinates.lat-0.05}%2C${destination.coordinates.lng+0.05}%2C${destination.coordinates.lat+0.05}&layer=mapnik&marker=${destination.coordinates.lat}%2C${destination.coordinates.lng}`
     : null;
 
@@ -189,6 +208,7 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
               priority
               data-ai-hint={AITag}
               onError={() => {
+                 // If Pexels image fails, setDestination might not have imageUrl, so ensure it falls back.
                 setDestination(prev => prev ? { ...prev, imageUrl: PLACEHOLDER_IMAGE_URL(1200,600) } : undefined);
               }}
             />
@@ -354,12 +374,12 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
           ) : (
             travelerPhotos.map((photoUrl, i) => (
               <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
-                <Image 
-                  src={photoUrl} 
-                  alt={`User photo ${i+1} from ${destination.name}`} 
-                  layout="fill" 
-                  objectFit="cover" 
-                  data-ai-hint={`${AITag} photo ${i+1}`} 
+                <Image
+                  src={photoUrl}
+                  alt={`User photo ${i+1} from ${destination.name}`}
+                  layout="fill"
+                  objectFit="cover"
+                  data-ai-hint={`${AITag} photo ${i+1}`}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(300,300);
                   }}
@@ -376,3 +396,5 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
     </div>
   );
 }
+
+    
