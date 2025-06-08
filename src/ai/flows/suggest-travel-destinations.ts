@@ -50,4 +50,5 @@ const prompt = ai.definePrompt({
 Travel Preferences: {{{preferences}}}
 Travel History: {{{travelHistory}}}
 
-Suggested Destinations:`, // Ensure the LLM includes the 
+Suggested Destinations:`,
+});

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -14,7 +15,7 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { SiteLogo } from '@/components/SiteLogo';
-import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, NavItem } from '@/lib/constants';
+import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, NavItem, AUTH_SIGNIN_NAV_ITEM } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -50,7 +51,7 @@ export function AppSidebar() {
         <SidebarMenu>
           {NAV_ITEMS.map((item) => (
             <SidebarMenuItem key={item.label}>
-              <Link href={item.href as Route} passHref legacyBehavior>
+              <Link href={item.href as Route} passHref>
                 <SidebarMenuButton
                   isActive={isActive(item)}
                   tooltip={item.label}
@@ -59,6 +60,7 @@ export function AppSidebar() {
                     isActive(item) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
                   )}
                   aria-current={isActive(item) ? 'page' : undefined}
+                  asChild={false} // Ensure it's not forwarding props if Link doesn't have legacyBehavior
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
@@ -71,7 +73,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-2 border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link href={SETTINGS_NAV_ITEM.href as Route} passHref legacyBehavior>
+            <Link href={SETTINGS_NAV_ITEM.href as Route} passHref>
               <SidebarMenuButton
                 isActive={isActive(SETTINGS_NAV_ITEM)}
                 tooltip={SETTINGS_NAV_ITEM.label}
@@ -79,6 +81,7 @@ export function AppSidebar() {
                   'justify-start',
                   isActive(SETTINGS_NAV_ITEM) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
                 )}
+                asChild={false}
               >
                 <SETTINGS_NAV_ITEM.icon className="h-5 w-5" />
                 <span>{SETTINGS_NAV_ITEM.label}</span>
@@ -88,11 +91,12 @@ export function AppSidebar() {
           <Separator className="my-1 bg-sidebar-border" />
            {isAuthenticated ? (
              <SidebarMenuItem>
-                <Link href={AUTH_SIGNOUT_NAV_ITEM.href as Route} passHref legacyBehavior>
+                <Link href={AUTH_SIGNOUT_NAV_ITEM.href as Route} passHref>
                   <SidebarMenuButton
                     tooltip={AUTH_SIGNOUT_NAV_ITEM.label}
                     className="justify-start w-full text-left"
                     // onClick={() => { /* Handle sign out */ }}
+                    asChild={false}
                   >
                     <AUTH_SIGNOUT_NAV_ITEM.icon className="h-5 w-5" />
                     <span>{AUTH_SIGNOUT_NAV_ITEM.label}</span>
@@ -101,12 +105,13 @@ export function AppSidebar() {
               </SidebarMenuItem>
            ) : (
             <SidebarMenuItem>
-              <Link href={AUTH_SIGNOUT_NAV_ITEM.href as Route} passHref legacyBehavior>
+              <Link href={AUTH_SIGNIN_NAV_ITEM.href as Route} passHref>
                 <SidebarMenuButton
-                  tooltip={AUTH_SIGNOUT_NAV_ITEM.label}
+                  tooltip={AUTH_SIGNIN_NAV_ITEM.label}
                   className="justify-start w-full text-left"
+                  asChild={false}
                 >
-                  <AUTH_SIGNOUT_NAV_ITEM.icon className="h-5 w-5" />
+                  <AUTH_SIGNIN_NAV_ITEM.icon className="h-5 w-5" />
                   <span>Sign In</span>
                 </SidebarMenuButton>
               </Link>
