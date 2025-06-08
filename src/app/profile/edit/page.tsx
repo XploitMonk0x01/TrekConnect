@@ -324,8 +324,8 @@ export default function EditProfilePage() {
                   <Image 
                     src={imagePreview || currentPhotoUrl || PLACEHOLDER_IMAGE_URL(96,96)} 
                     alt="Profile" 
-                    layout="fill" 
-                    objectFit="cover" 
+                    fill
+                    className="object-cover"
                     data-ai-hint="person portrait"
                     key={imagePreview || currentPhotoUrl} 
                   />
