@@ -8,73 +8,73 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --background: 49 50% 94%; /* Light warm ivory */
+    --foreground: 49 25% 25%; /* Dark warm brown */
+    --card: 49 60% 97%; /* Slightly off-white, warmer */
+    --card-foreground: 49 25% 25%;
+    --popover: 49 60% 97%;
+    --popover-foreground: 49 25% 25%;
+    --primary: 49 100% 45%; /* Bright Gold */
+    --primary-foreground: 49 100% 95%; /* Very light gold */
+    --secondary: 49 30% 85%; /* Lighter, less saturated gold/brown */
+    --secondary-foreground: 49 25% 20%; /* Darker text for secondary */
+    --muted: 49 20% 90%; /* Very subtle warm gray */
+    --muted-foreground: 49 15% 50%; /* Readable gray on muted */
+    --accent: 30 100% 50%; /* Bright Orange */
+    --accent-foreground: 30 100% 95%; /* Very light orange */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --border: 49 20% 80%; /* Subtle warm border */
+    --input: 49 20% 88%; /* Slightly darker than muted for input */
+    --ring: 30 100% 60%; /* Slightly lighter accent for focus rings */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Sidebar specific colors */
+    --sidebar-background: 49 40% 90%; /* A slightly darker shade of the main background */
+    --sidebar-foreground: 49 25% 20%; /* Dark text for readability */
+    --sidebar-primary: 49 100% 45%;
+    --sidebar-primary-foreground: 49 100% 95%;
+    --sidebar-accent: 30 100% 50%;
+    --sidebar-accent-foreground: 30 100% 95%;
+    --sidebar-border: 49 30% 75%;
+    --sidebar-ring: 30 100% 60%;
   }
+
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    /* Define dark theme colors if needed, or adjust existing ones. For now, keeping light theme focus. */
+    --background: 49 15% 10%; /* Dark warm charcoal */
+    --foreground: 49 30% 90%; /* Light warm gray for text */
+    --card: 49 15% 15%; /* Darker card background */
+    --card-foreground: 49 30% 90%;
+    --popover: 49 15% 15%;
+    --popover-foreground: 49 30% 90%;
+    --primary: 49 100% 50%; /* Gold, slightly lighter for dark mode */
+    --primary-foreground: 49 25% 10%; /* Dark text on primary */
+    --secondary: 49 20% 25%; /* Muted dark gold/brown */
+    --secondary-foreground: 49 30% 85%; /* Lighter text for secondary */
+    --muted: 49 15% 20%; /* Dark subtle warm gray */
+    --muted-foreground: 49 20% 60%; /* Readable gray on dark muted */
+    --accent: 30 100% 55%; /* Orange, slightly lighter for dark mode */
+    --accent-foreground: 49 25% 10%; /* Dark text on accent */
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 49 15% 30%; /* Dark subtle warm border */
+    --input: 49 15% 25%; /* Darker input background */
+    --ring: 30 100% 65%; /* Lighter accent for focus rings in dark */
+
+    --sidebar-background: 49 15% 12%;
+    --sidebar-foreground: 49 30% 85%;
+    --sidebar-primary: 49 100% 50%;
+    --sidebar-primary-foreground: 49 25% 10%;
+    --sidebar-accent: 30 100% 55%;
+    --sidebar-accent-foreground: 49 25% 10%;
+    --sidebar-border: 49 15% 25%;
+    --sidebar-ring: 30 100% 65%;
   }
 }
 
