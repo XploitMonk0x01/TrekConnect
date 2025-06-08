@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -7,16 +8,19 @@ import type { Destination, WeatherInfo } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 
-// Mock data - in a real app, this would come from an API
 const mockDestinations: Destination[] = [
-  { id: "1", name: "Everest Base Camp", description: "Embark on a legendary trek to the foot of Mount Everest, the world's highest peak. Experience Sherpa culture, breathtaking Himalayan scenery, and the challenge of high-altitude trekking. This journey is not for the faint of heart but rewards with unparalleled views and a profound sense of accomplishment.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "Nepal", region: "Himalayas", attractions: ["Kala Patthar Viewpoint", "Tengboche Monastery", "Namche Bazaar"], travelTips: "Acclimatize properly. Pack warm layers. Stay hydrated.", averageRating: 4.8, coordinates: { lat: 28.0046, lng: 86.8529 } },
-  { id: "2", name: "Patagonia Wilderness", description: "Explore the raw, untamed beauty of Patagonia, spanning Chile and Argentina. Witness towering granite peaks, vast glaciers, turquoise lakes, and unique wildlife. Ideal for hiking, photography, and escaping into pristine nature.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "Chile/Argentina", region: "Andes", attractions: ["Torres del Paine National Park", "Perito Moreno Glacier", "Fitz Roy Massif"], travelTips: "Weather is unpredictable; pack for all seasons. Book accommodations in advance.", averageRating: 4.9, coordinates: { lat: -50.942, lng: -73.4059 } },
+  { id: "in1", name: "Roopkund Trek", description: "A thrilling trek in Uttarakhand leading to the mysterious Roopkund Lake, known for the human skeletons found at its edge. Offers stunning views of Trishul and Nanda Ghunti peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Roopkund Lake", "Bedni Bugyal", "Trishul Peak views"], travelTips: "High altitude trek, requires good fitness. Best season: May-June, Aug-Sep.", averageRating: 4.7, coordinates: { lat: 30.257, lng: 79.723 } },
+  { id: "in2", name: "Hampta Pass Trek", description: "A popular trek in Himachal Pradesh that offers a dramatic crossover from the lush green Kullu valley to the arid landscapes of Lahaul. Features beautiful river crossings and camping spots.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Chandratal Lake (optional extension)", "Shea Goru campsite", "Hampta Pass crossing"], travelTips: "Moderate difficulty, suitable for beginners with good fitness. Best season: June-September.", averageRating: 4.6, coordinates: { lat: 32.270, lng: 77.395 } },
+  { id: "in3", name: "Valley of Flowers Trek", description: "A vibrant and picturesque trek in Uttarakhand, leading to a UNESCO World Heritage site known for its meadows of endemic alpine flowers and diverse flora.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Valley of Flowers National Park", "Hemkund Sahib"], travelTips: "Best visited during monsoon (July-August) when flowers are in full bloom. Moderate difficulty.", averageRating: 4.8, coordinates: { lat: 30.727, lng: 79.605 } },
+  { id: "in4", name: "Kedarkantha Trek", description: "A popular winter trek in Uttarakhand known for its stunning summit views of Himalayan peaks and snow-covered landscapes. Suitable for beginners.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Juda-ka-Talab", "Kedarkantha Peak summit"], travelTips: "Best done in winter (Dec-Apr) for snow. Requires warm clothing. Moderate difficulty.", averageRating: 4.5, coordinates: { lat: 31.022, lng: 78.178 } },
+  { id: "in5", name: "Triund Trek", description: "A short and popular trek near McLeod Ganj, Himachal Pradesh, offering panoramic views of the Dhauladhar range. Ideal for beginners and weekend getaways.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Triund Hilltop", "Views of Dhauladhar range"], travelTips: "Easy to moderate trek, can be done year-round (except heavy snowfall). Camping facilities available.", averageRating: 4.4, coordinates: { lat: 32.269, lng: 76.347 } },
+  { id: "in6", name: "Kashmir Great Lakes Trek", description: "A breathtaking trek in Kashmir traversing several high-altitude alpine lakes, lush meadows, and stunning mountain passes. Offers a glimpse into the pristine beauty of Kashmir.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Kashmir, Himalayas", attractions: ["Vishansar Lake", "Gadsar Lake", "Gangabal Lake", "Nichnai Pass"], travelTips: "Challenging trek, requires good physical fitness and acclimatization. Best season: July-September.", averageRating: 4.9, coordinates: { lat: 34.260, lng: 75.060 } },
 ];
 
 const mockWeather: WeatherInfo = {
-  temperature: "10°C",
+  temperature: "10°C", // Example, will vary greatly
   condition: "Partly Cloudy",
-  iconCode: "02d", // Example OpenWeatherMap icon code
+  iconCode: "02d",
   forecast: [
     { date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), minTemp: "5°C", maxTemp: "12°C", condition: "Sunny", iconCode: "01d" },
     { date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), minTemp: "3°C", maxTemp: "10°C", condition: "Showers", iconCode: "09d" },
@@ -25,12 +29,20 @@ const mockWeather: WeatherInfo = {
 
 function getWeatherIcon(iconCode?: string) {
   if (!iconCode) return <Sun className="h-5 w-5" />;
-  if (iconCode.includes("01")) return <Sun className="h-5 w-5" />; // Clear sky
-  if (iconCode.includes("02") || iconCode.includes("03") || iconCode.includes("04")) return <CloudSun className="h-5 w-5" />; // Clouds
-  if (iconCode.includes("09") || iconCode.includes("10")) return <CloudRain className="h-5 w-5" />; // Rain
-  // Add more mappings as needed
+  if (iconCode.includes("01")) return <Sun className="h-5 w-5" />;
+  if (iconCode.includes("02") || iconCode.includes("03") || iconCode.includes("04")) return <CloudSun className="h-5 w-5" />;
+  if (iconCode.includes("09") || iconCode.includes("10")) return <CloudRain className="h-5 w-5" />;
   return <Sun className="h-5 w-5" />;
 }
+
+const destinationAITags: Record<string, string> = {
+  "in1": "uttarakhand roopkund",
+  "in2": "himachal hampta",
+  "in3": "uttarakhand valley flowers",
+  "in4": "uttarakhand kedarkantha",
+  "in5": "himachal triund",
+  "in6": "kashmir lakes",
+};
 
 
 export default function DestinationDetailPage({ params }: { params: { destinationId: string } }) {
@@ -49,7 +61,7 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
     );
   }
 
-  const AITag = destination.id === "1" ? "himalayas mountains" : "patagonia torres del paine";
+  const AITag = destinationAITags[destination.id] || "trekking india";
 
   return (
     <div className="space-y-8">
@@ -64,7 +76,7 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
             <Share2 className="h-5 w-5" />
           </Button>
           <Button variant="outline" size="icon" aria-label="Add to Wishlist">
-            <Star className="h-5 w-5" /> {/* Toggle fill for wishlist state */}
+            <Star className="h-5 w-5" />
           </Button>
         </div>
       </div>
@@ -111,7 +123,6 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
               </div>
             )}
             
-            {/* Placeholder for Route Planning */}
             <div>
               <h3 className="font-headline text-xl mb-2">Route Planning</h3>
               <Button variant="outline" className="border-accent text-accent hover:bg-accent/5">
@@ -149,7 +160,6 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
               </CardContent>
             </Card>
 
-            {/* Placeholder for Google Maps */}
             <Card>
               <CardHeader>
                 <CardTitle className="font-headline text-lg flex items-center"><MapPin className="mr-2 h-5 w-5 text-red-500"/> Location</CardTitle>
@@ -168,7 +178,6 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">No upcoming events listed. Check local resources.</p>
-                {/* Placeholder for events */}
               </CardContent>
             </Card>
 
@@ -177,7 +186,7 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
                 <CardTitle className="font-headline text-lg flex items-center"><ShieldCheck className="mr-2 h-5 w-5 text-green-500"/> Safety Info</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Emergency: 123 (Police), 456 (Ambulance)</p>
+                <p className="text-sm text-muted-foreground">Emergency: 100 (Police), 108 (Ambulance)</p>
                 <Button variant="link" size="sm" className="p-0 h-auto mt-1 text-primary">
                     View More Safety Details <ExternalLink className="ml-1 h-3 w-3" />
                 </Button>
@@ -188,7 +197,6 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
         </CardContent>
       </Card>
 
-      {/* User-uploaded Photos Section (placeholder) */}
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl text-primary">Photos from Travelers</CardTitle>
@@ -197,7 +205,7 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
         <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
-              <Image src={PLACEHOLDER_IMAGE_URL(300,300)} alt={`User photo ${i+1}`} layout="fill" objectFit="cover" data-ai-hint="travel photo" />
+              <Image src={PLACEHOLDER_IMAGE_URL(300,300)} alt={`User photo ${i+1} from ${destination.name}`} layout="fill" objectFit="cover" data-ai-hint={`${AITag} photo`} />
             </div>
           ))}
            <Button variant="outline" className="aspect-square flex flex-col items-center justify-center text-muted-foreground hover:bg-primary/5 hover:text-primary border-primary">
@@ -209,11 +217,3 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
     </div>
   );
 }
-
-// Generate static paths if needed, or handle dynamic fetching.
-// For now, this will work with Next.js dynamic segments.
-// export async function generateStaticParams() {
-//   return mockDestinations.map((destination) => ({
-//     destinationId: destination.id,
-//   }))
-// }

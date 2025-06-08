@@ -1,3 +1,4 @@
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,31 +12,32 @@ import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 
 const mockUserProfile: UserProfile = {
   id: "currentUser",
-  name: "Wanderlust Weaver",
-  age: 29,
-  gender: "Female",
-  photoUrl: PLACEHOLDER_IMAGE_URL(128,128) + "?text=WW",
-  bio: "Passionate trekker, photographer, and storyteller. Always seeking the next horizon and a good cup of coffee. My goal is to visit every continent and hike its most iconic trails.",
-  travelPreferences: { soloOrGroup: "Flexible", budget: "Mid-range", style: "Adventure & Cultural" },
-  languagesSpoken: ["English", "Spanish", "Basic French"],
+  name: "Rohan Sharma",
+  age: 32,
+  gender: "Male",
+  photoUrl: PLACEHOLDER_IMAGE_URL(128,128),
+  bio: "Enthusiastic trekker exploring the Indian Himalayas. Love sharing stories and connecting with fellow adventurers. Aiming to complete all major treks in Uttarakhand and Himachal!",
+  travelPreferences: { soloOrGroup: "Group", budget: "Mid-range", style: "Adventure & Photography" },
+  languagesSpoken: ["Hindi", "English", "Basic Garhwali"],
   trekkingExperience: "Advanced",
   wishlistDestinations: [
-    { id: "dest3", name: "Annapurna Circuit", description: "Classic trek in Nepal with diverse landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "Nepal", averageRating: 4.9, region: "Himalayas" },
-    { id: "dest4", name: "Inca Trail to Machu Picchu", description: "Iconic trek through ancient Inca ruins.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "Peru", averageRating: 4.8, region: "Andes" },
+    { id: "in6", name: "Kashmir Great Lakes Trek", description: "Breathtaking trek traversing several high-altitude alpine lakes in Kashmir.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "India", averageRating: 4.9, region: "Kashmir" },
+    { id: "in1", name: "Roopkund Trek", description: "Mysterious skeletal lake trek in Uttarakhand.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "India", averageRating: 4.7, region: "Uttarakhand" },
   ],
   travelHistory: [
-    { id: "1", name: "Everest Base Camp", description: "Challenging trek to the foot of the world's highest peak.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "Nepal", averageRating: 4.8, region: "Himalayas" },
-    { id: "2", name: "Patagonia Wilderness", description: "Rugged mountains, glaciers, and pristine lakes.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "Chile/Argentina", averageRating: 4.9, region: "Andes" },
+    { id: "in2", name: "Hampta Pass Trek", description: "Dramatic crossover trek in Himachal Pradesh.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "India", averageRating: 4.6, region: "Himachal Pradesh" },
+    { id: "in4", name: "Kedarkantha Trek", description: "Popular winter trek in Uttarakhand.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "India", averageRating: 4.5, region: "Uttarakhand" },
+    { id: "in5", name: "Triund Trek", description: "Short scenic trek near McLeod Ganj.", imageUrl: PLACEHOLDER_IMAGE_URL(300,200), country: "India", averageRating: 4.4, region: "Himachal Pradesh" },
   ],
   badges: [
-    { id: "b1", name: "Himalayan Hero", description: "Conquered Everest Base Camp" },
-    { id: "b2", name: "Patagonia Pioneer", description: "Explored the Patagonian Wilderness" },
-    { id: "b3", name: "Storyteller", description: "Shared 5+ travel stories" },
+    { id: "b1", name: "Himalayan Explorer", description: "Completed 3+ Himalayan Treks" },
+    { id: "b2", name: "Uttarakhand Voyager", description: "Explored treks in Uttarakhand" },
+    { id: "b3", name: "Himachal Hiker", description: "Trekking enthusiast in Himachal" },
   ]
 };
 
-const WishlistAITags = ["nepal mountains", "peru machu picchu"];
-const HistoryAITags = ["himalayas nepal", "patagonia argentina"];
+const WishlistAITags = ["kashmir lakes", "uttarakhand roopkund"];
+const HistoryAITags = ["himachal hampta", "uttarakhand kedarkantha", "himachal triund"];
 
 
 function DestinationItemCard({ destination, aiHint }: { destination: Destination, aiHint: string }) {
@@ -61,7 +63,7 @@ export default function ProfilePage() {
       <Card className="shadow-lg">
         <CardHeader className="items-center text-center md:text-left md:flex-row md:items-start md:gap-6">
           <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-primary shadow-md">
-            <AvatarImage src={user.photoUrl} alt={user.name} data-ai-hint="person portrait" />
+            <AvatarImage src={user.photoUrl} alt={user.name} data-ai-hint="person portrait Rohan" />
             <AvatarFallback className="text-4xl">{user.name.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex-1 mt-4 md:mt-0">

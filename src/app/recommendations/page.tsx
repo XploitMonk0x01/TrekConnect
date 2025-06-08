@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -16,7 +17,7 @@ import { Loader2, User, MapPin, Wand2, ThumbsUp, ThumbsDown } from "lucide-react
 import Image from 'next/image';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import { UserProfileCard } from '@/components/UserProfileCard';
-import type { UserProfile as AppUserProfile } from '@/lib/types'; // Renaming to avoid conflict with AI input type
+import type { UserProfile as AppUserProfile } from '@/lib/types'; 
 
 const smartMatchSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -45,24 +46,24 @@ export default function RecommendationsPage() {
   const matchForm = useForm<z.infer<typeof smartMatchSchema>>({
     resolver: zodResolver(smartMatchSchema),
     defaultValues: {
-      name: "Alex Doe",
-      age: 30,
-      gender: "Non-binary",
-      soloOrGroup: "Flexible",
+      name: "Rahul Verma",
+      age: 28,
+      gender: "Male",
+      soloOrGroup: "Group",
       budget: "Mid-range",
-      languagesSpoken: "English, Spanish",
+      languagesSpoken: "Hindi, English",
       trekkingExperience: "Intermediate",
-      wishlistDestinations: "Patagonia, Swiss Alps",
-      travelHistory: "Machu Picchu, Dolomites",
-      currentDestination: "Chamonix",
+      wishlistDestinations: "Roopkund Trek, Kashmir Great Lakes",
+      travelHistory: "Hampta Pass, Triund Trek",
+      currentDestination: "Manali",
     },
   });
 
   const destinationForm = useForm<z.infer<typeof suggestDestinationsSchema>>({
     resolver: zodResolver(suggestDestinationsSchema),
     defaultValues: {
-      preferences: "I love hiking in mountains, scenic views, budget-friendly travel, and meeting new people. Prefer off-beat locations.",
-      travelHistory: "Visited Peru (Machu Picchu), Italy (Dolomites). Enjoyed multi-day treks and cultural immersion.",
+      preferences: "I love trekking in the Indian Himalayas, especially challenging routes with great views. Enjoy photography and cultural experiences. Prefer group travel.",
+      travelHistory: "Completed Hampta Pass and Kedarkantha. Looking for my next big adventure in Uttarakhand or Himachal.",
     },
   });
 
@@ -121,14 +122,14 @@ export default function RecommendationsPage() {
           <CardTitle className="font-headline text-3xl text-primary flex items-center">
             <Wand2 className="mr-3 h-8 w-8" /> Smart Recommendations
           </CardTitle>
-          <CardDescription>Let our AI help you find compatible travel partners and exciting new destinations.</CardDescription>
+          <CardDescription>Let our AI help you find compatible travel partners and exciting new Indian treks.</CardDescription>
         </CardHeader>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl">Find Travel Companions</CardTitle>
-          <CardDescription>Enter your details to get matched with like-minded travelers.</CardDescription>
+          <CardTitle className="font-headline text-xl">Find Indian Trek Companions</CardTitle>
+          <CardDescription>Enter your details to get matched with like-minded travelers for Indian treks.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...matchForm}>
@@ -142,9 +143,9 @@ export default function RecommendationsPage() {
                 <FormField control={matchForm.control} name="trekkingExperience" render={({ field }) => ( <FormItem><FormLabel>Trekking Experience</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select experience" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Beginner">Beginner</SelectItem><SelectItem value="Intermediate">Intermediate</SelectItem><SelectItem value="Advanced">Advanced</SelectItem><SelectItem value="Expert">Expert</SelectItem></SelectContent></Select><FormMessage /></FormItem> )} />
               </div>
               <FormField control={matchForm.control} name="languagesSpoken" render={({ field }) => ( <FormItem><FormLabel>Languages Spoken (comma separated)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={matchForm.control} name="wishlistDestinations" render={({ field }) => ( <FormItem><FormLabel>Wishlist Destinations (comma separated, optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={matchForm.control} name="travelHistory" render={({ field }) => ( <FormItem><FormLabel>Travel History (comma separated, optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={matchForm.control} name="currentDestination" render={({ field }) => ( <FormItem><FormLabel>Current or Next Planned Destination (optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={matchForm.control} name="wishlistDestinations" render={({ field }) => ( <FormItem><FormLabel>Wishlist Indian Treks (comma separated, optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={matchForm.control} name="travelHistory" render={({ field }) => ( <FormItem><FormLabel>Indian Trek History (comma separated, optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={matchForm.control} name="currentDestination" render={({ field }) => ( <FormItem><FormLabel>Current or Next Planned Indian Destination (optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
               <Button type="submit" disabled={isMatchLoading} className="w-full sm:w-auto bg-primary hover:bg-primary/90">
                 {isMatchLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Get Companion Matches
@@ -157,16 +158,15 @@ export default function RecommendationsPage() {
             <h3 className="font-headline text-lg">Companion Recommendations:</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
             {matchResults.recommendedMatches.map((match, index) => {
-                // Adapt AI output to UserProfileCard structure
                 const userProfileForCard: AppUserProfile = {
                     id: `match-${index}`,
                     name: match.name,
                     age: match.age,
                     gender: match.gender,
-                    photoUrl: PLACEHOLDER_IMAGE_URL(400,400) + `?text=${match.name.charAt(0)}`, // Placeholder image
-                    bio: match.reason, // Use reason as bio
+                    photoUrl: `${PLACEHOLDER_IMAGE_URL(400,400)}?ai_hint=person ${match.name.charAt(0)}`,
+                    bio: match.reason,
                     travelPreferences: {
-                        soloOrGroup: match.travelPreferences.soloOrGroup as any, // Cast needed if types differ
+                        soloOrGroup: match.travelPreferences.soloOrGroup as any, 
                         budget: match.travelPreferences.budget as any,
                     },
                     languagesSpoken: match.languagesSpoken,
@@ -177,7 +177,7 @@ export default function RecommendationsPage() {
             </div>
              {matchResults.recommendedDestinations.length > 0 && (
                 <>
-                    <h3 className="font-headline text-lg mt-4">Suggested Destinations For You:</h3>
+                    <h3 className="font-headline text-lg mt-4">Suggested Indian Treks For You:</h3>
                     <ul className="list-disc list-inside">
                         {matchResults.recommendedDestinations.map((dest, i) => <li key={i}>{dest}</li>)}
                     </ul>
@@ -189,24 +189,24 @@ export default function RecommendationsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl">Suggest New Destinations</CardTitle>
-          <CardDescription>Tell us about your preferences and past trips to discover new places to explore.</CardDescription>
+          <CardTitle className="font-headline text-xl">Suggest New Indian Treks</CardTitle>
+          <CardDescription>Tell us about your preferences and past trips to discover new Indian treks to explore.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...destinationForm}>
             <form onSubmit={destinationForm.handleSubmit(onDestinationSubmit)} className="space-y-6">
-              <FormField control={destinationForm.control} name="preferences" render={({ field }) => ( <FormItem><FormLabel>Your Travel Preferences</FormLabel><FormControl><Textarea placeholder="e.g., I enjoy solo backpacking, historical sites, and trying local food. My budget is usually mid-range..." {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={destinationForm.control} name="travelHistory" render={({ field }) => ( <FormItem><FormLabel>Your Travel History</FormLabel><FormControl><Textarea placeholder="e.g., I've been to Italy (Rome, Florence), Thailand (Bangkok, Chiang Mai), and hiked parts of the Appalachian Trail..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={destinationForm.control} name="preferences" render={({ field }) => ( <FormItem><FormLabel>Your Trekking Preferences</FormLabel><FormControl><Textarea placeholder="e.g., I enjoy multi-day treks in Uttarakhand, challenging passes, alpine lakes, and camping. My budget is usually mid-range..." {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={destinationForm.control} name="travelHistory" render={({ field }) => ( <FormItem><FormLabel>Your Indian Trek History</FormLabel><FormControl><Textarea placeholder="e.g., I've trekked to Kedarkantha and Triund. Looking for treks similar to Roopkund or Buran Ghati..." {...field} /></FormControl><FormMessage /></FormItem> )} />
               <Button type="submit" disabled={isDestinationLoading} className="w-full sm:w-auto bg-accent hover:bg-accent/90">
                 {isDestinationLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Suggest Destinations
+                Suggest Treks
               </Button>
             </form>
           </Form>
         </CardContent>
         {destinationResults && (
           <CardFooter className="flex-col items-start gap-2 mt-6 border-t pt-6">
-            <h3 className="font-headline text-lg">Destination Suggestions:</h3>
+            <h3 className="font-headline text-lg">Trek Suggestions:</h3>
             <p>{destinationResults.suggestedDestinations}</p>
           </CardFooter>
         )}

@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -12,11 +13,33 @@ interface PhotoCardProps {
 }
 
 export function PhotoCard({ photo }: PhotoCardProps) {
+  // Extract AI hint from imageUrl if it's appended with ?ai_hint=...
+  let imageUrl = photo.imageUrl;
+  let imageAiHint = "travel landscape"; // Default hint
+  if (photo.imageUrl.includes("?ai_hint=")) {
+    const parts = photo.imageUrl.split("?ai_hint=");
+    imageUrl = parts[0];
+    if (parts[1]) {
+      imageAiHint = decodeURIComponent(parts[1]);
+    }
+  }
+
+  let avatarUrl = photo.userAvatarUrl || `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person ${photo.userName.charAt(0)}`;
+  let avatarAiHint = `person ${photo.userName.charAt(0)}`;
+  if (photo.userAvatarUrl && photo.userAvatarUrl.includes("?ai_hint=")) {
+     const parts = photo.userAvatarUrl.split("?ai_hint=");
+     avatarUrl = parts[0];
+     if (parts[1]) {
+       avatarAiHint = decodeURIComponent(parts[1]);
+     }
+  }
+
+
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="flex flex-row items-center gap-3 p-4">
         <Avatar className="h-10 w-10 border">
-          <AvatarImage src={photo.userAvatarUrl || PLACEHOLDER_IMAGE_URL(40,40) + `?text=${photo.userName.charAt(0)}`} alt={photo.userName} data-ai-hint="person avatar" />
+          <AvatarImage src={avatarUrl} alt={photo.userName} data-ai-hint={avatarAiHint} />
           <AvatarFallback>{photo.userName.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="grid gap-0.5">
@@ -33,11 +56,11 @@ export function PhotoCard({ photo }: PhotoCardProps) {
       </CardHeader>
       <div className="relative aspect-square w-full overflow-hidden">
         <Image
-          src={photo.imageUrl}
+          src={imageUrl}
           alt={photo.caption || `Photo by ${photo.userName}`}
           layout="fill"
           objectFit="cover"
-          data-ai-hint="travel landscape"
+          data-ai-hint={imageAiHint}
         />
       </div>
       <CardContent className="p-4">

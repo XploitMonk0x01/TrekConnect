@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,20 +8,33 @@ import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 interface UserProfileCardProps {
   user: UserProfile;
-  onSwipe?: (direction: 'left' | 'right') => void; // For potential future tinder-like library
+  onSwipe?: (direction: 'left' | 'right') => void;
 }
 
 export function UserProfileCard({ user }: UserProfileCardProps) {
+  let photoUrl = user.photoUrl || PLACEHOLDER_IMAGE_URL(400,400);
+  let photoAiHint = "person portrait";
+  if (user.photoUrl && user.photoUrl.includes("?ai_hint=")) {
+    const parts = user.photoUrl.split("?ai_hint=");
+    photoUrl = parts[0];
+    if (parts[1]) {
+      photoAiHint = decodeURIComponent(parts[1]);
+    }
+  } else if (user.name) {
+    photoAiHint = `person ${user.name.split(' ')[0]}`;
+  }
+
+
   return (
     <Card className="w-full max-w-sm rounded-xl overflow-hidden shadow-xl transform transition-all duration-300 hover:scale-105 bg-card">
       <div className="relative h-72">
         <Image
-          src={user.photoUrl || PLACEHOLDER_IMAGE_URL(400,400)}
+          src={photoUrl}
           alt={user.name}
           layout="fill"
           objectFit="cover"
           className="rounded-t-xl"
-          data-ai-hint="person portrait"
+          data-ai-hint={photoAiHint}
         />
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
           <CardTitle className="font-headline text-2xl text-primary-foreground">{user.name}, {user.age}</CardTitle>
@@ -58,12 +72,6 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
             </div>
         )}
       </CardContent>
-      {/* Footer can be used for swipe actions or match button */}
-      {/* <CardFooter className="p-4 border-t">
-        <Button className="w-full bg-accent hover:bg-accent/90">
-          <Heart className="mr-2 h-4 w-4" /> Connect
-        </Button>
-      </CardFooter> */}
     </Card>
   );
 }

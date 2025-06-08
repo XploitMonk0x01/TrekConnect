@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,26 +12,46 @@ import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 interface StoryCardProps {
   story: Story;
-  isDetailedView?: boolean; // To control content truncation
+  isDetailedView?: boolean; 
 }
 
 export function StoryCard({ story, isDetailedView = false }: StoryCardProps) {
+  let imageUrl = story.imageUrl;
+  let imageAiHint = "travel story"; 
+  if (story.imageUrl && story.imageUrl.includes("?ai_hint=")) {
+    const parts = story.imageUrl.split("?ai_hint=");
+    imageUrl = parts[0];
+    if (parts[1]) {
+      imageAiHint = decodeURIComponent(parts[1]);
+    }
+  }
+
+  let avatarUrl = story.userAvatarUrl || `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person ${story.userName.charAt(0)}`;
+  let avatarAiHint = `person ${story.userName.charAt(0)}`;
+  if (story.userAvatarUrl && story.userAvatarUrl.includes("?ai_hint=")) {
+     const parts = story.userAvatarUrl.split("?ai_hint=");
+     avatarUrl = parts[0];
+     if (parts[1]) {
+       avatarAiHint = decodeURIComponent(parts[1]);
+     }
+  }
+
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
-      {story.imageUrl && (
+      {imageUrl && (
         <div className="relative h-56 w-full overflow-hidden">
           <Image
-            src={story.imageUrl}
+            src={imageUrl}
             alt={story.title}
             layout="fill"
             objectFit="cover"
-            data-ai-hint="travel story"
+            data-ai-hint={imageAiHint}
           />
         </div>
       )}
       <CardHeader className="flex flex-row items-center gap-3 p-4">
         <Avatar className="h-10 w-10 border">
-          <AvatarImage src={story.userAvatarUrl || PLACEHOLDER_IMAGE_URL(40,40) + `?text=${story.userName.charAt(0)}`} alt={story.userName} data-ai-hint="person avatar"/>
+          <AvatarImage src={avatarUrl} alt={story.userName} data-ai-hint={avatarAiHint}/>
           <AvatarFallback>{story.userName.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="grid gap-0.5">
