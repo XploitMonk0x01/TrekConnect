@@ -1,21 +1,26 @@
 
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StoryCard } from "@/components/StoryCard";
 import type { Story } from "@/lib/types";
 import { Edit, BookOpen } from "lucide-react";
-import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
+import { getAllStories } from "@/services/stories"; // Import service
 
-const mockStories: Story[] = [
-  { id: "s1_in", userId: "u1", userName: "Aanya", userAvatarUrl: PLACEHOLDER_IMAGE_URL(40,40), title: "Journey to the Mysterious Roopkund Lake", content: "The Roopkund trek in Uttarakhand was an unforgettable journey into the heart of the Himalayas. We navigated through dense forests, expansive meadows (bugyals), and challenging snowy paths to reach the enigmatic skeletal lake...", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), destinationId: "in1", destinationName: "Roopkund Trek", createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 95, commentsCount: 15, tags: ["uttarakhand", "roopkund", "mystery", "high altitude"] },
-  { id: "s2_in", userId: "u2", userName: "Rohan", userAvatarUrl: PLACEHOLDER_IMAGE_URL(40,40), title: "Hampta Pass: A Himalayan Crossover Adventure", content: "Crossing Hampta Pass in Himachal Pradesh felt like stepping into another world. The lush green Kullu valley on one side, and the stark, beautiful desert landscapes of Lahaul on the other. Camping at Shea Goru was a highlight...", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), destinationId: "in2", destinationName: "Hampta Pass Trek", createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 130, commentsCount: 22, tags: ["himachal", "hampta pass", "adventure", "crossover"] },
-  { id: "s3_in", userId: "u3", userName: "Mira", userAvatarUrl: PLACEHOLDER_IMAGE_URL(40,40), title: "Winter Magic on the Kedarkantha Trek", content: "My first winter trek to Kedarkantha in Uttarakhand was simply magical. Walking on fresh snow, the crisp mountain air, and the 360-degree views of Himalayan giants from the summit were breathtaking. Juda-ka-Talab campsite was surreal...", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), destinationId: "in4", destinationName: "Kedarkantha Trek", createdAt: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 110, commentsCount: 19, tags: ["winter trek", "kedarkantha", "uttarakhand", "snow"] },
-];
+export default async function TravelStoriesPage() {
+  const stories: Story[] = await getAllStories();
 
-const AITagsStories = ["uttarakhand himalayas", "himachal mountains", "winter snow trek"];
+  // Simple AI hint generation for story cards, can be more sophisticated
+  const generateStoryAiHint = (story: Story, index: number): string => {
+    if (story.tags && story.tags.length > 0) return story.tags.slice(0, 2).join(' ');
+    if (story.destinationName) return story.destinationName.toLowerCase().split(' ').slice(0,2).join(' ');
+    return `travel story ${index + 1}`;
+  };
+   const generateAvatarAiHint = (userName: string): string => {
+    return `person ${userName?.split(' ')[0] || 'author'}`;
+  };
 
 
-export default function TravelStoriesPage() {
   return (
     <div className="space-y-8">
       <Card className="shadow-lg">
@@ -26,21 +31,43 @@ export default function TravelStoriesPage() {
             </CardTitle>
             <CardDescription>Read inspiring tales from the Indian Himalayas and share your own adventures.</CardDescription>
           </div>
-          <Button className="mt-4 sm:mt-0 bg-accent hover:bg-accent/90 text-accent-foreground">
-            <Edit className="mr-2 h-5 w-5" /> Write Your Story
+          <Button asChild className="mt-4 sm:mt-0 bg-accent hover:bg-accent/90 text-accent-foreground">
+            <Link href="/stories/new">
+                <Edit className="mr-2 h-5 w-5" /> Write Your Story
+            </Link>
           </Button>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockStories.map((story, index) => (
-          <StoryCard key={story.id} story={{...story, imageUrl: story.imageUrl ? `${story.imageUrl}?ai_hint=${AITagsStories[index % AITagsStories.length]}` : undefined, userAvatarUrl: `${story.userAvatarUrl}?ai_hint=person ${story.userName}` }} />
-        ))}
-      </div>
-
-      <div className="flex justify-center mt-8">
-        <Button variant="outline">Load More Stories</Button>
-      </div>
+      {stories.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {stories.map((story, index) => {
+            // Add AI hints for images within StoryCard
+            const storyWithAIHints = {
+              ...story,
+              imageUrl: story.imageUrl ? `${story.imageUrl}${story.imageUrl.includes('?') ? '&' : '?'}ai_hint=${generateStoryAiHint(story, index)}` : undefined,
+              userAvatarUrl: story.userAvatarUrl ? `${story.userAvatarUrl}${story.userAvatarUrl.includes('?') ? '&' : '?'}ai_hint=${generateAvatarAiHint(story.userName)}` : undefined,
+            };
+            return <StoryCard key={story.id} story={storyWithAIHints} />;
+          })}
+        </div>
+      ) : (
+         <Card>
+            <CardContent className="p-6 text-center">
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold">No Stories Yet</h3>
+                <p className="text-muted-foreground">
+                    Be the first to share your trekking adventure or check back later for new stories!
+                </p>
+            </CardContent>
+        </Card>
+      )}
+      
+      {stories.length > 0 && (
+        <div className="flex justify-center mt-8">
+            <Button variant="outline">Load More Stories (Coming Soon)</Button>
+        </div>
+      )}
     </div>
   );
 }

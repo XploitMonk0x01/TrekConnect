@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview This file defines a Genkit flow for suggesting travel destinations based on user preferences and past travel experiences.
@@ -52,3 +53,15 @@ Travel History: {{{travelHistory}}}
 
 Suggested Destinations:`,
 });
+
+const suggestTravelDestinationsFlow = ai.defineFlow(
+  {
+    name: 'suggestTravelDestinationsFlow',
+    inputSchema: SuggestTravelDestinationsInputSchema,
+    outputSchema: SuggestTravelDestinationsOutputSchema,
+  },
+  async input => {
+    const {output} = await prompt(input);
+    return output!;
+  }
+);

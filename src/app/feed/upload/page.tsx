@@ -37,7 +37,7 @@ type PhotoFormValues = z.infer<typeof photoFormSchema>;
 
 export default function UploadPhotoPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user: firebaseUser, loading: authLoading } = useAuth(); // Renamed to firebaseUser for clarity
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -84,7 +84,7 @@ export default function UploadPhotoPage() {
   };
 
   async function onSubmit(data: PhotoFormValues) {
-    if (!user) {
+    if (!firebaseUser) {
       toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to upload a photo.' });
       return;
     }
@@ -105,9 +105,9 @@ export default function UploadPhotoPage() {
 
     try {
       const newPhoto = await createPhoto(photoData, {
-        id: user.uid,
-        name: user.displayName,
-        photoUrl: user.photoURL
+        id: firebaseUser.uid, // Firebase UID
+        name: firebaseUser.displayName, // Firebase Display Name
+        photoUrl: firebaseUser.photoURL // Firebase Photo URL
       });
 
       if (newPhoto) {
@@ -128,7 +128,7 @@ export default function UploadPhotoPage() {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  if (!user && !authLoading) {
+  if (!firebaseUser && !authLoading) {
      return (
       <div className="flex flex-col items-center justify-center h-screen text-center p-4">
         <ImageIcon className="h-12 w-12 text-muted-foreground mb-4" />

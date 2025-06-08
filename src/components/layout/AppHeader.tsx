@@ -14,13 +14,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { NAV_ITEMS, APP_NAME, AUTH_SIGNIN_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM } from '@/lib/constants';
-import { UserCircle, ChevronDown, LogOut } from 'lucide-react';
+import { NAV_ITEMS, APP_NAME, AUTH_SIGNIN_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { UserCircle, ChevronDown, LogOut, LogIn } from 'lucide-react'; // Added LogIn
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -38,16 +38,17 @@ export function AppHeader() {
     try {
       await signOut(auth);
       toast({ title: 'Signed Out', description: 'You have been successfully signed out.' });
-      router.push(AUTH_SIGNOUT_NAV_ITEM.href); // Redirect to sign-in or home
+      router.push(AUTH_SIGNOUT_NAV_ITEM.href); 
     } catch (error: any) {
       console.error('Sign out error:', error);
       toast({ variant: 'destructive', title: 'Sign Out Failed', description: error.message || 'Could not sign out.' });
     }
   };
 
-  // Fallback for avatar initial
-  const getAvatarFallback = (displayName?: string | null) => {
-    return displayName ? displayName.charAt(0).toUpperCase() : <UserCircle className="h-8 w-8" />;
+  const getAvatarFallback = (displayName?: string | null, email?: string | null) => {
+    if (displayName) return displayName.charAt(0).toUpperCase();
+    if (email) return email.charAt(0).toUpperCase();
+    return <UserCircle className="h-6 w-6" />; // Slightly smaller for fallback icon
   };
 
   return (
@@ -65,10 +66,15 @@ export function AppHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-auto px-2 rounded-full flex items-center gap-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user.photoURL || PLACEHOLDER_IMAGE_URL(40,40)} alt={user.displayName || 'User'} data-ai-hint="profile person" />
-                <AvatarFallback>{getAvatarFallback(user.displayName)}</AvatarFallback>
+                <AvatarImage 
+                  src={user.photoURL || PLACEHOLDER_IMAGE_URL(40,40)} 
+                  alt={user.displayName || 'User'} 
+                  data-ai-hint="profile person" 
+                  onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(40,40);}}
+                />
+                <AvatarFallback>{getAvatarFallback(user.displayName, user.email)}</AvatarFallback>
               </Avatar>
-              <span className="hidden sm:inline">{user.displayName || 'User'}</span>
+              <span className="hidden sm:inline">{user.displayName || user.email || 'User'}</span>
               <ChevronDown className="h-4 w-4 opacity-70 hidden sm:inline" />
             </Button>
           </DropdownMenuTrigger>
@@ -98,8 +104,8 @@ export function AppHeader() {
       ) : (
         <Button asChild variant="outline">
           <Link href={AUTH_SIGNIN_NAV_ITEM.href}>
-            <UserCircle className="mr-2 h-4 w-4" />
-            Sign In
+            <LogIn className="mr-2 h-4 w-4" />
+            {AUTH_SIGNIN_NAV_ITEM.label}
           </Link>
         </Button>
       )}

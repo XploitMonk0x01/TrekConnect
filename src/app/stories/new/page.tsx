@@ -30,11 +30,11 @@ type StoryFormValues = z.infer<typeof storyFormSchema>;
 
 export default function NewStoryPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user: firebaseUser, loading: authLoading } = useAuth(); // Renamed to firebaseUser
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  // const [coverImageFile, setCoverImageFile] = useState<File | null>(null); // Not strictly needed if only Data URI is stored
 
 
   const form = useForm<StoryFormValues>({
@@ -51,7 +51,21 @@ export default function NewStoryPage() {
   const handleCoverImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setCoverImageFile(file);
+      // Basic client-side validation (optional, as Zod handles it on submit too for URL)
+      if (file.size > 5000000) { // Example: 5MB limit
+          form.setError("imageUrl", { type: "manual", message: "Max file size is 5MB." });
+          setCoverImagePreview(null);
+          form.setValue("imageUrl", "");
+          return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+          form.setError("imageUrl", { type: "manual", message: "Invalid image type." });
+          setCoverImagePreview(null);
+          form.setValue("imageUrl", "");
+          return;
+      }
+      form.clearErrors("imageUrl");
+      // setCoverImageFile(file); // Store file if needed for direct upload later
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverImagePreview(reader.result as string);
@@ -59,7 +73,7 @@ export default function NewStoryPage() {
       };
       reader.readAsDataURL(file);
     } else {
-      setCoverImageFile(null);
+      // setCoverImageFile(null);
       setCoverImagePreview(null);
       form.setValue('imageUrl', '');
     }
@@ -67,7 +81,7 @@ export default function NewStoryPage() {
 
 
   async function onSubmit(data: StoryFormValues) {
-    if (!user) {
+    if (!firebaseUser) {
       toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to create a story.' });
       return;
     }
@@ -76,18 +90,17 @@ export default function NewStoryPage() {
     const storyData: CreateStoryInput = {
       title: data.title,
       content: data.content,
-      // imageUrl will be the Data URI from the form if a file was selected and previewed
       imageUrl: data.imageUrl || null, 
       destinationName: data.destinationName || undefined,
-      destinationId: undefined, // For now, not linking to specific destination ID
+      destinationId: undefined, 
       tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
     };
 
     try {
       const newStory = await createStory(storyData, {
-        id: user.uid,
-        name: user.displayName,
-        photoUrl: user.photoURL
+        id: firebaseUser.uid,
+        name: firebaseUser.displayName,
+        photoUrl: firebaseUser.photoURL 
       });
 
       if (newStory) {
@@ -108,7 +121,7 @@ export default function NewStoryPage() {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  if (!user && !authLoading) {
+  if (!firebaseUser && !authLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center p-4">
         <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
@@ -170,7 +183,7 @@ export default function NewStoryPage() {
                     <Input
                       id="cover-image-upload"
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
                       onChange={handleCoverImageChange}
                       className="hidden"
                     />
@@ -182,17 +195,20 @@ export default function NewStoryPage() {
                       <img src={coverImagePreview} alt="Cover preview" className="h-20 w-auto rounded border object-cover"/>
                     )}
                 </div>
+                {/* This field will pass the Data URI or the manually pasted URL */}
                 <FormField
                     control={form.control}
                     name="imageUrl"
                     render={({ field }) => (
-                    <FormControl>
-                        <Input type="hidden" {...field} />
-                    </FormControl>
+                    <FormItem className="mt-2">
+                        <FormLabel className="text-xs text-muted-foreground">Or paste image URL (if not uploading)</FormLabel>
+                        <FormControl>
+                            <Input type="url" placeholder="https://example.com/image.jpg" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
                     )}
                 />
-                <FormMessage>{form.formState.errors.imageUrl?.message}</FormMessage>
-                 <p className="text-xs text-muted-foreground mt-1">If you have a direct image URL, you can also paste it in the 'Story Title' field (temporarily) and then copy it here. This field will be hidden and auto-filled if you select an image.</p>
               </FormItem>
 
 

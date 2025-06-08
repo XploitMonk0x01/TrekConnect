@@ -1,5 +1,6 @@
+
 import type { LucideIcon } from 'lucide-react';
-import { Compass, Users, Wand2, Image as ImageIcon, BookOpen, UserCircle, Settings, LogOut, LayoutDashboard } from 'lucide-react';
+import { Compass, Users, Wand2, Image as ImageIcon, BookOpen, UserCircle, Settings, LogOut, LayoutDashboard, LogIn } from 'lucide-react';
 
 export interface NavItem {
   href: string;
@@ -19,7 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const SETTINGS_NAV_ITEM: NavItem = { href: '/settings', label: 'Settings', icon: Settings, matchSegments: 1 };
-export const AUTH_SIGNIN_NAV_ITEM: NavItem = { href: '/auth/signin', label: 'Sign In', icon: UserCircle, matchSegments: 2 };
+export const AUTH_SIGNIN_NAV_ITEM: NavItem = { href: '/auth/signin', label: 'Sign In', icon: LogIn, matchSegments: 2 };
 export const AUTH_SIGNUP_NAV_ITEM: NavItem = { href: '/auth/signup', label: 'Sign Up', icon: UserCircle, matchSegments: 2 };
 export const AUTH_SIGNOUT_NAV_ITEM: NavItem = { href: '/auth/signin', label: 'Sign Out', icon: LogOut, matchSegments: 0 }; // href to signin after signout
 
