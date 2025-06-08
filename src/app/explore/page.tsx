@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Search, Star, Filter, Globe, Loader2 } from "lucide-react";
+import { MapPin, Search, Star, Filter, Globe } from "lucide-react";
 import type { Destination } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { searchPexelsImage } from "@/services/pexels";
@@ -14,21 +14,36 @@ import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const initialMockDestinations: Destination[] = [
-  { id: "in1", name: "Roopkund Trek", description: "Mysterious skeletal lake trek in Uttarakhand with stunning Himalayan views.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.7, region: "Uttarakhand" },
-  { id: "in2", name: "Hampta Pass Trek", description: "Dramatic crossover trek from Kullu's lush greenery to Lahaul's arid landscapes in Himachal.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.6, region: "Himachal Pradesh" },
-  { id: "in3", name: "Valley of Flowers Trek", description: "UNESCO site in Uttarakhand, a vibrant meadow of alpine flowers.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.8, region: "Uttarakhand" },
-  { id: "in4", name: "Kedarkantha Trek", description: "Popular winter trek in Uttarakhand with panoramic summit views.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.5, region: "Uttarakhand" },
-  { id: "in5", name: "Triund Trek", description: "Short, scenic trek near McLeod Ganj, Himachal, offering Dhauladhar views.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.4, region: "Himachal Pradesh" },
-  { id: "in6", name: "Kashmir Great Lakes Trek", description: "Breathtaking trek traversing several high-altitude alpine lakes in Kashmir.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.9, region: "Kashmir" },
+  // Uttarakhand
+  { id: "UT1", name: "Roopkund Trek", description: "Mysterious skeletal lake trek in Uttarakhand with stunning Himalayan views of Trishul and Nanda Ghunti.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.7, region: "Uttarakhand" },
+  { id: "UT2", name: "Valley of Flowers & Hemkund Sahib", description: "UNESCO site paired with a sacred Sikh shrine, offering vibrant floral meadows and serene spirituality.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.8, region: "Uttarakhand" },
+  { id: "UT3", name: "Kedarkantha Trek", description: "Popular winter trek in Uttarakhand with panoramic summit views and enchanting snowy landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.5, region: "Uttarakhand" },
+  { id: "UT4", name: "Har Ki Dun Trek", description: "Cradle-shaped valley known as 'Valley of Gods', with views of Swargarohini peaks and traditional villages.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.6, region: "Uttarakhand" },
+  // Himachal Pradesh
+  { id: "HP1", name: "Hampta Pass Trek", description: "Dramatic crossover trek from Kullu's lush greenery to Lahaul's arid landscapes in Himachal.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.6, region: "Himachal Pradesh" },
+  { id: "HP2", name: "Bhrigu Lake Trek", description: "High-altitude alpine lake trek near Manali, known for its stunning blue waters and panoramic views.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.5, region: "Himachal Pradesh" },
+  { id: "HP3", name: "Beas Kund Trek", description: "Trek to the source of the Beas River, offering close views of Pir Panjal range peaks like Hanuman Tibba.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.4, region: "Himachal Pradesh" },
+  { id: "HP4", name: "Kareri Lake Trek", description: "Serene trek to a freshwater lake in the Dhauladhar range, surrounded by lush forests and meadows.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.3, region: "Himachal Pradesh" },
+  // Ladakh
+  { id: "LA1", name: "Markha Valley Trek", description: "Classic Ladakh trek through remote villages, stunning canyons, and high passes with views of Kang Yatse.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.7, region: "Ladakh" },
+  { id: "LA2", name: "Sham Valley Trek", description: "Known as the 'Baby Trek', an easier option to experience Ladakhi culture, monasteries, and landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.2, region: "Ladakh" },
+  { id: "LA3", name: "Kang Yatse II & Stok Base Trek", description: "Challenging trek offering views of Kang Yatse II and a taste of high-altitude trekking near Leh.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.8, region: "Ladakh" },
+  { id: "LA4", name: "Lamayuru to Alchi Trek", description: "A cultural journey through ancient monasteries and unique Ladakhi landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.4, region: "Ladakh"}
 ];
 
 const AITags: Record<string, string> = {
-  "in1": "uttarakhand roopkund trek",
-  "in2": "himachal hampta pass trek",
-  "in3": "uttarakhand valley of flowers",
-  "in4": "uttarakhand kedarkantha trek",
-  "in5": "himachal triund trek",
-  "in6": "kashmir great lakes trek",
+  "UT1": "uttarakhand roopkund trek",
+  "UT2": "valley of flowers hemkund sahib",
+  "UT3": "kedarkantha winter trek",
+  "UT4": "har ki dun uttarakhand",
+  "HP1": "himachal hampta pass",
+  "HP2": "bhrigu lake manali",
+  "HP3": "beas kund himachal",
+  "HP4": "kareri lake dhauladhar",
+  "LA1": "ladakh markha valley",
+  "LA2": "ladakh sham valley trek",
+  "LA3": "kang yatse ladakh",
+  "LA4": "lamayuru alchi ladakh"
 };
 
 
@@ -75,7 +90,7 @@ export default function ExplorePage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input 
                 type="search" 
-                placeholder="Search treks (e.g., Roopkund, Himachal, Winter trek)" 
+                placeholder="Search treks (e.g., Roopkund, Ladakh, Winter trek)" 
                 className="pl-10" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -115,7 +130,6 @@ export default function ExplorePage() {
                   objectFit="cover"
                   data-ai-hint={AITags[destination.id] || destination.name}
                   onError={() => {
-                    // Fallback if Pexels image fails to load for some reason
                     setDestinations(prevDests => prevDests.map(d => 
                       d.id === destination.id ? {...d, imageUrl: PLACEHOLDER_IMAGE_URL(600,400), isLoadingImage: false } : d
                     ));

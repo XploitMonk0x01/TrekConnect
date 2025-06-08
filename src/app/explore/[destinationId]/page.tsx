@@ -16,13 +16,23 @@ import { searchPexelsImage } from '@/services/pexels';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const mockDestinationsList: Destination[] = [
-  { id: "in1", name: "Roopkund Trek", description: "A thrilling trek in Uttarakhand leading to the mysterious Roopkund Lake, known for the human skeletons found at its edge. Offers stunning views of Trishul and Nanda Ghunti peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Roopkund Lake", "Bedni Bugyal", "Trishul Peak views"], travelTips: "High altitude trek, requires good fitness. Best season: May-June, Aug-Sep.", averageRating: 4.7, coordinates: { lat: 30.257, lng: 79.723 } },
-  { id: "in2", name: "Hampta Pass Trek", description: "A popular trek in Himachal Pradesh that offers a dramatic crossover from the lush green Kullu valley to the arid landscapes of Lahaul. Features beautiful river crossings and camping spots.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Chandratal Lake (optional extension)", "Shea Goru campsite", "Hampta Pass crossing"], travelTips: "Moderate difficulty, suitable for beginners with good fitness. Best season: June-September.", averageRating: 4.6, coordinates: { lat: 32.270, lng: 77.395 } },
-  { id: "in3", name: "Valley of Flowers Trek", description: "A vibrant and picturesque trek in Uttarakhand, leading to a UNESCO World Heritage site known for its meadows of endemic alpine flowers and diverse flora.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Valley of Flowers National Park", "Hemkund Sahib"], travelTips: "Best visited during monsoon (July-August) when flowers are in full bloom. Moderate difficulty.", averageRating: 4.8, coordinates: { lat: 30.727, lng: 79.605 } },
-  { id: "in4", name: "Kedarkantha Trek", description: "A popular winter trek in Uttarakhand known for its stunning summit views of Himalayan peaks and snow-covered landscapes. Suitable for beginners.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Juda-ka-Talab", "Kedarkantha Peak summit"], travelTips: "Best done in winter (Dec-Apr) for snow. Requires warm clothing. Moderate difficulty.", averageRating: 4.5, coordinates: { lat: 31.022, lng: 78.178 } },
-  { id: "in5", name: "Triund Trek", description: "A short and popular trek near McLeod Ganj, Himachal Pradesh, offering panoramic views of the Dhauladhar range. Ideal for beginners and weekend getaways.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Triund Hilltop", "Views of Dhauladhar range"], travelTips: "Easy to moderate trek, can be done year-round (except heavy snowfall). Camping facilities available.", averageRating: 4.4, coordinates: { lat: 32.269, lng: 76.347 } },
-  { id: "in6", name: "Kashmir Great Lakes Trek", description: "A breathtaking trek in Kashmir traversing several high-altitude alpine lakes, lush meadows, and stunning mountain passes. Offers a glimpse into the pristine beauty of Kashmir.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Kashmir, Himalayas", attractions: ["Vishansar Lake", "Gadsar Lake", "Gangabal Lake", "Nichnai Pass"], travelTips: "Challenging trek, requires good physical fitness and acclimatization. Best season: July-September.", averageRating: 4.9, coordinates: { lat: 34.260, lng: 75.060 } },
+  // Uttarakhand
+  { id: "UT1", name: "Roopkund Trek", description: "A thrilling trek in Uttarakhand leading to the mysterious Roopkund Lake, known for the human skeletons found at its edge. Offers stunning views of Trishul and Nanda Ghunti peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Roopkund Lake", "Bedni Bugyal", "Trishul Peak views", "Junargali Pass"], travelTips: "High altitude trek, requires excellent fitness and acclimatization. Best season: May-June, Aug-Sep.", averageRating: 4.7, coordinates: { lat: 30.257, lng: 79.723 } },
+  { id: "UT2", name: "Valley of Flowers & Hemkund Sahib", description: "A UNESCO World Heritage site, the Valley of Flowers is a vibrant expanse of alpine flora. Paired with a visit to the sacred Hemkund Sahib lake and Gurudwara.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Valley of Flowers National Park", "Hemkund Sahib Lake & Gurudwara", "Pushpawati River", "Diverse alpine flora"], travelTips: "Best visited during monsoon (July-August) for full bloom. Moderate difficulty. Ensure permits.", averageRating: 4.8, coordinates: { lat: 30.727, lng: 79.605 } },
+  { id: "UT3", name: "Kedarkantha Trek", description: "A popular winter trek in Uttarakhand, known for its stunning 360-degree summit views of Himalayan peaks like Swargarohini and Bandarpoonch, often snow-covered.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Juda-ka-Talab", "Kedarkantha Peak summit", "Sankri village", "Govind National Park views"], travelTips: "Best done in winter (Dec-Apr) for snow. Suitable for beginners with good fitness. Requires warm clothing.", averageRating: 4.5, coordinates: { lat: 31.022, lng: 78.178 } },
+  { id: "UT4", name: "Har Ki Dun Trek", description: "Known as the 'Valley of Gods', this cradle-shaped valley in the Garhwal Himalayas offers stunning views of Swargarohini peaks, lush meadows, and traditional Garhwali villages like Osla.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Garhwal Himalayas", attractions: ["Har Ki Dun Valley", "Swargarohini Peak views", "Osla & Seema Villages", "Jaundhar Glacier (optional)"], travelTips: "Moderate trek, ideal for beginners to intermediate trekkers. Best seasons: April-June, September-November.", averageRating: 4.6, coordinates: { lat: 31.065, lng: 78.215 } },
+  // Himachal Pradesh
+  { id: "HP1", name: "Hampta Pass Trek", description: "A popular trek in Himachal Pradesh that offers a dramatic crossover from the lush green Kullu valley to the arid, stark landscapes of Lahaul. Features beautiful river crossings and camping at Shea Goru.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Chandratal Lake (optional extension)", "Shea Goru campsite", "Hampta Pass crossing (14,100 ft)", "Rohtang Pass views"], travelTips: "Moderate difficulty, suitable for beginners with good fitness. Best season: June-September.", averageRating: 4.6, coordinates: { lat: 32.270, lng: 77.395 } },
+  { id: "HP2", name: "Bhrigu Lake Trek", description: "A high-altitude alpine lake trek near Manali, Himachal Pradesh. The lake is believed to be the meditation spot of Sage Bhrigu and is known for its stunning blue waters and panoramic Himalayan views.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Bhrigu Lake", "Vashisht Village", "Views of Pir Panjal and Dhauladhar ranges", "Alpine meadows"], travelTips: "Moderate trek, can be done in 3-4 days. Best season: May-June, September-October. Acclimatize well.", averageRating: 4.5, coordinates: { lat: 32.300, lng: 77.220 } },
+  { id: "HP3", name: "Beas Kund Trek", description: "A classic trek in Himachal Pradesh leading to Beas Kund, the source of the Beas River. Offers breathtaking close-up views of major peaks like Hanuman Tibba and Seven Sisters.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Beas Kund Glacier Lake", "Dhundi & Bakarthach campsites", "Solang Valley", "Views of Hanuman Tibba"], travelTips: "Easy to moderate trek, suitable for beginners. Best season: May-October.", averageRating: 4.4, coordinates: { lat: 32.395, lng: 77.065 } },
+  { id: "HP4", name: "Kareri Lake Trek", description: "A serene trek in Himachal to the stunning freshwater Kareri Lake, nestled in the Dhauladhar range. The trail passes through lush forests, meadows, and shepherd villages.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Kareri Lake", "Kareri Village", "Nyund Nallah", "Dhauladhar views"], travelTips: "Moderate difficulty. Best seasons: April-June, September-November. Can be slippery post-monsoon.", averageRating: 4.3, coordinates: { lat: 32.388, lng: 76.277 } },
+  // Ladakh
+  { id: "LA1", name: "Markha Valley Trek", description: "A classic trek in Ladakh, often called 'tea house trek' due to homestay options. It traverses through remote villages, stunning canyons, high passes like Ganda La & Kongmaru La, with views of Kang Yatse peak.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Ladakh, Himalayas", attractions: ["Hemis National Park", "Ganda La (4900m)", "Kongmaru La (5200m)", "Markha River", "Ladakhi villages & monasteries"], travelTips: "Moderate to strenuous trek. Requires good acclimatization to high altitude. Best season: June-September.", averageRating: 4.7, coordinates: { lat: 33.875, lng: 77.430 } },
+  { id: "LA2", name: "Sham Valley Trek", description: "Known as the 'Baby Trek' of Ladakh, this is a relatively easier option to experience Ladakhi culture, ancient monasteries (Likir, Rizong, Temisgam), and beautiful arid landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Ladakh, Himalayas", attractions: ["Likir Monastery", "Rizong Monastery", "Temisgam Village", "Apricot orchards", "Views of Indus Valley"], travelTips: "Easy trek, ideal for beginners or families. Best season: May-October. Good for acclimatization.", averageRating: 4.2, coordinates: { lat: 34.250, lng: 77.200 } },
+  { id: "LA3", name: "Kang Yatse II & Stok Base Trek", description: "A challenging yet rewarding trek in Ladakh offering an ascent of Kang Yatse II (around 6250m) or views from Stok Kangri Base Camp. Provides a true high-altitude mountaineering experience.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Ladakh, Himalayas", attractions: ["Kang Yatse II summit views", "Stok Kangri Base Camp (views)", "Nimaling plains", "Ganda La & Kongmaru La (if part of Markha Valley approach)"], travelTips: "Strenuous, requires prior high-altitude trekking experience and excellent fitness. Proper acclimatization is critical. Best season: July-September.", averageRating: 4.8, coordinates: { lat: 33.900, lng: 77.550 } },
+  { id: "LA4", name: "Lamayuru to Alchi Trek", description: "A cultural odyssey through Ladakh, connecting the ancient monasteries of Lamayuru and Alchi. The trail crosses remote passes and offers stunning views of the unique moonscape terrain.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Ladakh, Himalayas", attractions: ["Lamayuru Monastery ('Moonland')", "Alchi Monastery (UNESCO site)", "Wanla Monastery", "Prinkiti La pass"], travelTips: "Moderate trek, good for experiencing Ladakhi culture and history. Best season: June-September.", averageRating: 4.4, coordinates: { lat: 34.281, lng: 76.781 } }
 ];
+
 
 const mockWeather: WeatherInfo = {
   temperature: "10°C",
@@ -43,20 +53,24 @@ function getWeatherIcon(iconCode?: string) {
 }
 
 const destinationAITags: Record<string, string> = {
-  "in1": "uttarakhand roopkund",
-  "in2": "himachal hampta",
-  "in3": "uttarakhand valley flowers",
-  "in4": "uttarakhand kedarkantha",
-  "in5": "himachal triund",
-  "in6": "kashmir lakes",
+  "UT1": "uttarakhand roopkund trek",
+  "UT2": "valley of flowers hemkund sahib",
+  "UT3": "kedarkantha winter trek",
+  "UT4": "har ki dun uttarakhand",
+  "HP1": "himachal hampta pass",
+  "HP2": "bhrigu lake manali",
+  "HP3": "beas kund himachal",
+  "HP4": "kareri lake dhauladhar",
+  "LA1": "ladakh markha valley",
+  "LA2": "ladakh sham valley trek",
+  "LA3": "kang yatse ladakh",
+  "LA4": "lamayuru alchi ladakh"
 };
 
 
 export default function DestinationDetailPage({ params: incomingParams }: { params: { destinationId: string } }) {
   const resolvedParams = use(incomingParams as any);
-  // initialDestination is now derived directly inside useEffect or based on state that is set by useEffect
-  // to ensure it's only calculated after resolvedParams is definitively available and processed.
-
+  
   const [destination, setDestination] = useState<Destination | undefined>(undefined);
   const [isMainImageLoading, setIsMainImageLoading] = useState(true);
   const [travelerPhotos, setTravelerPhotos] = useState<string[]>([]);
@@ -71,8 +85,7 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
     const foundDestination = mockDestinationsList.find(d => d.id === currentDestinationId);
 
     if (foundDestination) {
-      // Set initial destination state
-      setDestination(prev => ({...foundDestination, imageUrl: prev?.imageUrl || foundDestination.imageUrl })); // Preserve already loaded image if any
+      setDestination(prev => ({...foundDestination, imageUrl: prev?.imageUrl || foundDestination.imageUrl }));
 
       const fetchMainImage = async () => {
         setIsMainImageLoading(true);
@@ -82,8 +95,7 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
           setDestination(prevDest => prevDest ? { ...prevDest, imageUrl } : { ...foundDestination, imageUrl });
         } catch (error) {
           console.error("Failed to load main image:", error);
-          // Keep placeholder if fetch fails, already set via foundDestination.imageUrl
-           setDestination(prevDest => prevDest || {...foundDestination}); // Ensure destination is set if fetch fails early
+           setDestination(prevDest => prevDest || {...foundDestination});
         } finally {
           setIsMainImageLoading(false);
         }
@@ -113,9 +125,9 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
       };
       fetchTravelerPhotos();
     } else {
-      setDestination(undefined); // Destination not found
+      setDestination(undefined);
     }
-  }, [resolvedParams.destinationId]); // Depend only on the unwrapped param ID
+  }, [resolvedParams.destinationId]);
 
 
   const handleGenerateImage = async () => {
@@ -149,7 +161,7 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
   };
 
 
-  if (!resolvedParams.destinationId && !destination) { // Initial loading state or if params somehow not resolved yet
+  if (!resolvedParams.destinationId && !destination) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center">
         <Loader2 className="w-16 h-16 text-muted-foreground mb-4 animate-spin" />
@@ -208,7 +220,6 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
               priority
               data-ai-hint={AITag}
               onError={() => {
-                 // If Pexels image fails, setDestination might not have imageUrl, so ensure it falls back.
                 setDestination(prev => prev ? { ...prev, imageUrl: PLACEHOLDER_IMAGE_URL(1200,600) } : undefined);
               }}
             />
@@ -396,5 +407,3 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
     </div>
   );
 }
-
-    
