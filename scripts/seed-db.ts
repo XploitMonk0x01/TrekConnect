@@ -1,6 +1,6 @@
 
 import { getDb } from '@/lib/mongodb';
-import type { Destination } from '@/lib/types';
+import type { Destination, Photo } from '@/lib/types';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import { config } from 'dotenv';
 
@@ -41,29 +41,45 @@ const TREK_DESTINATIONS_SEED_DATA: Omit<Destination, 'id'>[] = [
   { name: "Auden's Col Trek", description: "An extremely challenging and technical high-altitude pass connecting Gangotri valley with Kedarnath valley. Considered one of the toughest treks in India.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Garhwal Himalayas", attractions: ["Auden's Col (5490m)", "Khatling Glacier", "Views of Gangotri and Jogin group of peaks", "Mayali Pass"], travelTips: "Highly strenuous and technical, requires mountaineering skills, equipment, and experienced guides. For expert trekkers only. Best season: May-June, September.", averageRating: 4.9, coordinates: { lat: 30.845, lng: 78.817 }, aiHint: "audens col trek" }
 ];
 
+const PHOTO_FEED_SEED_DATA: Omit<Photo, 'id'>[] = [
+  { userId: "user_alpha_001", userName: "Priya Sharma", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person priya`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=roopkund lake`, destinationId: "mock_in1", destinationName: "Roopkund Trek", caption: "Lost in the mystery of Roopkund. What an adventure!", uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 135, commentsCount: 18 },
+  { userId: "user_beta_002", userName: "Arjun Mehta", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person arjun`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=hampta pass himachal`, destinationId: "mock_in2", destinationName: "Hampta Pass Trek", caption: "The crossover from Kullu to Lahaul at Hampta Pass was breathtaking.", uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 210, commentsCount: 25 },
+  { userId: "user_gamma_003", userName: "Sneha Patel", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person sneha`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=valley flowers uttarakhand`, destinationId: "mock_in3", destinationName: "Valley of Flowers", caption: "A carpet of flowers as far as the eye can see. Magical Uttarakhand!", uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 190, commentsCount: 20 },
+  { userId: "user_delta_004", userName: "Vikram Singh", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person vikram`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=kedarkantha snow`, destinationId: "mock_in4", destinationName: "Kedarkantha Trek", caption: "Snowy trails and majestic peaks on the Kedarkantha summit.", uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 175, commentsCount: 28 },
+  { userId: "user_epsilon_005", userName: "Riya Kapoor", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person riya`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=triund dhauladhar`, destinationId: "mock_in5", destinationName: "Triund Trek", caption: "Weekend well spent at Triund. The Dhauladhars are stunning!", uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 160, commentsCount: 15 },
+];
+
+
 async function seedDatabase() {
   let client;
   try {
     const db = await getDb();
-    client = db.client; // Get the client instance from the Db object
+    client = db.client; 
     const destinationsCollection = db.collection('destinations');
-
-    console.log('Attempting to connect to MongoDB...');
-    // Connection is implicitly handled by getDb, db.client gives access to the connected client
+    const photosCollection = db.collection('photos');
 
     console.log('Successfully connected to MongoDB.');
 
+    // Seed Destinations
     console.log('Clearing existing data from "destinations" collection...');
     await destinationsCollection.deleteMany({});
-    console.log('Existing data cleared.');
-
+    console.log('Existing destination data cleared.');
     console.log(`Inserting ${TREK_DESTINATIONS_SEED_DATA.length} trek destinations...`);
-    const result = await destinationsCollection.insertMany(TREK_DESTINATIONS_SEED_DATA);
-    console.log(`${result.insertedCount} destinations successfully inserted.`);
+    const destResult = await destinationsCollection.insertMany(TREK_DESTINATIONS_SEED_DATA);
+    console.log(`${destResult.insertedCount} destinations successfully inserted.`);
+
+    // Seed Photos
+    console.log('Clearing existing data from "photos" collection...');
+    await photosCollection.deleteMany({});
+    console.log('Existing photo data cleared.');
+    console.log(`Inserting ${PHOTO_FEED_SEED_DATA.length} photo feed items...`);
+    const photoResult = await photosCollection.insertMany(PHOTO_FEED_SEED_DATA);
+    console.log(`${photoResult.insertedCount} photos successfully inserted.`);
+
 
   } catch (error) {
     console.error('Error during database seeding:', error);
-    process.exit(1); // Exit with error code
+    process.exit(1); 
   } finally {
     if (client) {
       console.log('Closing MongoDB connection...');

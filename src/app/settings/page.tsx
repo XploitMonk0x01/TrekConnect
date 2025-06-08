@@ -1,14 +1,137 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Lock, Palette, UserCircle, ShieldQuestion } from "lucide-react";
-import { ThemeToggleSwitch } from "@/components/settings/ThemeToggleSwitch"; // Import the new component
+import { Bell, Lock, Palette, UserCircle, ShieldQuestion, Save, Loader2 } from "lucide-react";
+import { ThemeToggleSwitch } from "@/components/settings/ThemeToggleSwitch";
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { getUserProfile, updateUserProfile } from '@/services/users';
+import type { UserProfile } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+
+
+const accountFormSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }).max(50, { message: "Name must not exceed 50 characters."}),
+  bio: z.string().max(500, { message: "Bio must not exceed 500 characters." }).optional(),
+});
+
+type AccountFormValues = z.infer<typeof accountFormSchema>;
 
 export default function SettingsPage() {
+  const { user: firebaseUser, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  const form = useForm<AccountFormValues>({
+    resolver: zodResolver(accountFormSchema),
+    defaultValues: {
+      name: '',
+      bio: '',
+    },
+  });
+
+  useEffect(() => {
+    if (firebaseUser) {
+      setCurrentUserEmail(firebaseUser.email);
+      setIsLoadingProfile(true);
+      getUserProfile(firebaseUser.uid)
+        .then(profile => {
+          if (profile) {
+            form.reset({
+              name: profile.name || '',
+              bio: profile.bio || '',
+            });
+          }
+        })
+        .catch(error => {
+          console.error("Failed to fetch user profile for settings:", error);
+          toast({ variant: 'destructive', title: 'Error', description: 'Could not load profile data for settings.' });
+        })
+        .finally(() => {
+          setIsLoadingProfile(false);
+        });
+    } else if (!authLoading) {
+      setIsLoadingProfile(false);
+      // Potentially redirect or show sign-in prompt if settings require auth
+    }
+  }, [firebaseUser, authLoading, form, toast]);
+
+  async function onAccountSubmit(data: AccountFormValues) {
+    if (!firebaseUser) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
+      return;
+    }
+    setIsSaving(true);
+    
+    const profileUpdateData: Partial<Pick<UserProfile, 'name' | 'bio'>> = {
+      name: data.name,
+      bio: data.bio || undefined,
+    };
+
+    try {
+      await updateUserProfile(firebaseUser.uid, profileUpdateData);
+      toast({ title: 'Account Info Updated', description: 'Your account information has been saved.' });
+    } catch (error) {
+      console.error("Error updating account info:", error);
+      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save your account information.' });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const renderAccountForm = () => {
+    if (authLoading || isLoadingProfile) {
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><Skeleton className="h-4 w-1/4 mb-2" /><Skeleton className="h-10 w-full" /></div>
+            <div><Skeleton className="h-4 w-1/4 mb-2" /><Skeleton className="h-10 w-full" /></div>
+          </div>
+          <div><Skeleton className="h-4 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /></div>
+          <Skeleton className="h-10 w-24" />
+        </div>
+      );
+    }
+
+    if (!firebaseUser && !authLoading) {
+        return <p className="text-muted-foreground">Please <Link href="/auth/signin" className="text-primary underline">sign in</Link> to manage your account settings.</p>;
+    }
+
+    return (
+        <form onSubmit={form.handleSubmit(onAccountSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormFieldItem control={form.control} name="name" label="Full Name" placeholder="Your full name" />
+            <div>
+                <Label htmlFor="email">Email Address</Label>
+                <Input id="email" type="email" value={currentUserEmail || ''} placeholder="your@example.com" disabled />
+            </div>
+            </div>
+            <FormFieldItem control={form.control} name="bio" label="Bio" placeholder="A short bio about yourself (optional)" isTextarea={true} />
+            
+            <Button type="submit" disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Changes
+            </Button>
+        </form>
+    );
+  }
+
+
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <Card className="shadow-lg">
@@ -22,22 +145,8 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center"><UserCircle className="mr-2 h-5 w-5" /> Account Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="Your name (managed in Profile)" />
-            </div>
-            <div>
-              <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" placeholder="your@example.com" disabled />
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Input id="bio" placeholder="Your bio (managed in Profile)" />
-          </div>
-          <Button>Save Changes</Button>
+        <CardContent>
+          {renderAccountForm()}
         </CardContent>
       </Card>
 
@@ -91,7 +200,6 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
             <ThemeToggleSwitch /> {/* Use the new Client Component here */}
-            {/* More appearance settings can go here */}
         </CardContent>
       </Card>
 
@@ -107,7 +215,6 @@ export default function SettingsPage() {
                         Control who can see your profile in ConnectSphere.
                     </span>
                 </Label>
-                {/* This would typically be a Select component */}
                 <Button variant="outline" size="sm">Manage Visibility</Button>
             </div>
              <Button variant="link" className="p-0 h-auto text-primary">View Privacy Policy</Button>
@@ -119,3 +226,38 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+// Helper component for FormField items in settings
+import { FormField, FormControl, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import type { Control } from "react-hook-form";
+
+interface FormFieldItemProps {
+  control: Control<any>;
+  name: string;
+  label: string;
+  placeholder?: string;
+  isTextarea?: boolean;
+}
+
+function FormFieldItem({ control, name, label, placeholder, isTextarea = false }: FormFieldItemProps) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>{label}</FormLabel>
+          <FormControl>
+            {isTextarea ? (
+              <Textarea placeholder={placeholder} {...field} rows={3} />
+            ) : (
+              <Input placeholder={placeholder} {...field} />
+            )}
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
