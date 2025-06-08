@@ -1,12 +1,17 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, MapPin, Star, Sun, CloudSun, CloudRain, CalendarDays, ExternalLink, Share2, ShieldCheck, Edit } from "lucide-react";
+import { ArrowLeft, MapPin, Star, Sun, CloudSun, CloudRain, CalendarDays, ExternalLink, Share2, ShieldCheck, Edit, Sparkles, Loader2 } from "lucide-react";
 import type { Destination, WeatherInfo } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
+import { generateTrekImage } from '@/ai/flows/generate-trek-image-flow';
+import { useToast } from "@/hooks/use-toast";
 
 const mockDestinations: Destination[] = [
   { id: "in1", name: "Roopkund Trek", description: "A thrilling trek in Uttarakhand leading to the mysterious Roopkund Lake, known for the human skeletons found at its edge. Offers stunning views of Trishul and Nanda Ghunti peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Roopkund Lake", "Bedni Bugyal", "Trishul Peak views"], travelTips: "High altitude trek, requires good fitness. Best season: May-June, Aug-Sep.", averageRating: 4.7, coordinates: { lat: 30.257, lng: 79.723 } },
@@ -18,7 +23,7 @@ const mockDestinations: Destination[] = [
 ];
 
 const mockWeather: WeatherInfo = {
-  temperature: "10°C", // Example, will vary greatly
+  temperature: "10°C", 
   condition: "Partly Cloudy",
   iconCode: "02d",
   forecast: [
@@ -47,6 +52,40 @@ const destinationAITags: Record<string, string> = {
 
 export default function DestinationDetailPage({ params }: { params: { destinationId: string } }) {
   const destination = mockDestinations.find(d => d.id === params.destinationId);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const { toast } = useToast();
+
+  const handleGenerateImage = async () => {
+    if (!destination) return;
+    setIsGeneratingImage(true);
+    setGeneratedImageUrl(null);
+    try {
+      const result = await generateTrekImage({
+        destinationName: destination.name,
+        destinationDescription: destination.description,
+      });
+      if (result.imageDataUri) {
+        setGeneratedImageUrl(result.imageDataUri);
+        toast({
+          title: "AI Image Generated!",
+          description: `An AI's vision of ${destination.name} is ready.`,
+        });
+      } else {
+        throw new Error("Image data URI is missing in the response.");
+      }
+    } catch (error) {
+      console.error("Error generating AI image:", error);
+      toast({
+        variant: "destructive",
+        title: "AI Image Generation Failed",
+        description: "Could not generate an image at this time. Please try again later.",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
 
   if (!destination) {
     return (
@@ -62,6 +101,10 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
   }
 
   const AITag = destinationAITags[destination.id] || "trekking india";
+  const mapEmbedUrl = destination.coordinates 
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${destination.coordinates.lng-0.05}%2C${destination.coordinates.lat-0.05}%2C${destination.coordinates.lng+0.05}%2C${destination.coordinates.lat+0.05}&layer=mapnik&marker=${destination.coordinates.lat}%2C${destination.coordinates.lng}`
+    : null;
+
 
   return (
     <div className="space-y-8">
@@ -162,12 +205,26 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
 
             <Card>
               <CardHeader>
-                <CardTitle className="font-headline text-lg flex items-center"><MapPin className="mr-2 h-5 w-5 text-red-500"/> Location</CardTitle>
+                <CardTitle className="font-headline text-lg flex items-center"><MapPin className="mr-2 h-5 w-5 text-red-500"/> Location Map</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-                  <p>Map of {destination.name} here</p>
-                </div>
+                {mapEmbedUrl ? (
+                  <iframe
+                    width="100%"
+                    height="200"
+                    frameBorder="0"
+                    scrolling="no"
+                    marginHeight={0}
+                    marginWidth={0}
+                    src={mapEmbedUrl}
+                    className="rounded-lg"
+                    title={`Map of ${destination.name}`}
+                  ></iframe>
+                ) : (
+                  <div className="h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
+                    <p>Map data unavailable for {destination.name}</p>
+                  </div>
+                )}
                  {destination.coordinates && <p className="text-xs text-muted-foreground mt-1">Lat: {destination.coordinates.lat.toFixed(4)}, Lng: {destination.coordinates.lng.toFixed(4)}</p>}
               </CardContent>
             </Card>
@@ -199,6 +256,33 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
 
       <Card>
         <CardHeader>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Sparkles className="mr-2 h-5 w-5 text-accent" /> AI-Generated Vision
+          </CardTitle>
+          <CardDescription>See an AI's artistic interpretation of {destination.name}. Results may vary!</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={handleGenerateImage} disabled={isGeneratingImage} className="bg-accent hover:bg-accent/90 mb-4">
+            {isGeneratingImage ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            Generate AI Image of {destination.name}
+          </Button>
+          {isGeneratingImage && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Generating your image, this might take a few moments...
+            </div>
+          )}
+          {generatedImageUrl && (
+            <div className="mt-4 relative aspect-video rounded-lg overflow-hidden border shadow-md">
+              <Image src={generatedImageUrl} alt={`AI generated image of ${destination.name}`} layout="fill" objectFit="cover" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+
+      <Card>
+        <CardHeader>
           <CardTitle className="font-headline text-2xl text-primary">Photos from Travelers</CardTitle>
           <CardDescription>See {destination.name} through the eyes of the community.</CardDescription>
         </CardHeader>
@@ -217,3 +301,5 @@ export default function DestinationDetailPage({ params }: { params: { destinatio
     </div>
   );
 }
+
+    
