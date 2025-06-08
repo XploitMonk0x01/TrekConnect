@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Bell, Lock, Palette, UserCircle, ShieldQuestion } from "lucide-react";
+import { ThemeToggleSwitch } from "@/components/settings/ThemeToggleSwitch"; // Import the new component
 
 export default function SettingsPage() {
   return (
@@ -88,16 +90,7 @@ export default function SettingsPage() {
           <CardTitle className="font-headline text-xl flex items-center"><Palette className="mr-2 h-5 w-5" /> Appearance</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-                <Label htmlFor="darkMode">Dark Mode</Label>
-                <Switch id="darkMode" onCheckedChange={(checked) => {
-                    if (checked) {
-                        document.documentElement.classList.add('dark');
-                    } else {
-                        document.documentElement.classList.remove('dark');
-                    }
-                }} />
-            </div>
+            <ThemeToggleSwitch /> {/* Use the new Client Component here */}
             {/* More appearance settings can go here */}
         </CardContent>
       </Card>
