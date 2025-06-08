@@ -1,10 +1,12 @@
 
-import { getDb } from '@/lib/mongodb';
-import type { Destination, Photo } from '@/lib/types';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import { config } from 'dotenv';
-
 config(); // Load environment variables from .env file
+
+import { getDb } from '@/lib/mongodb';
+import clientPromise from '@/lib/mongodb'; // Import the clientPromise for closing the connection
+import type { Destination, Photo, Story, UserProfile } from '@/lib/types';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+
 
 const TREK_DESTINATIONS_SEED_DATA: Omit<Destination, 'id'>[] = [
   // Uttarakhand
@@ -49,14 +51,26 @@ const PHOTO_FEED_SEED_DATA: Omit<Photo, 'id'>[] = [
   { userId: "user_epsilon_005", userName: "Riya Kapoor", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person riya`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=triund dhauladhar`, destinationId: "mock_in5", destinationName: "Triund Trek", caption: "Weekend well spent at Triund. The Dhauladhars are stunning!", uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 160, commentsCount: 15 },
 ];
 
+const STORY_SEED_DATA: Omit<Story, 'id' | 'createdAt' | 'updatedAt'>[] = [
+    { userId: "user_story_alpha", userName: "Chandra P.", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person Chandra`, title: "Conquering Stok Kangri: A Summit Story", content: "The Stok Kangri expedition was the most challenging yet rewarding experience of my life. From acclimatizing in Leh to the final summit push under a star-studded sky, every moment was etched in memory. The views from the top were unparalleled, a panorama of the Karakoram and Zanskar ranges. This trek demands respect, preparation, and a bit of luck with the weather.", imageUrl: `${PLACEHOLDER_IMAGE_URL(1200,600)}?ai_hint=stok kangri ladakh`, destinationId: "mock_lad1", destinationName: "Stok Kangri Climb", tags: ["ladakh", "peak climbing", "expedition", "high altitude"], likesCount: 150, commentsCount: 30 },
+    { userId: "user_story_beta", userName: "Ananya D.", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person Ananya`, title: "My First Solo Trek: To Triund", content: "Embarking on my first solo trek to Triund was a journey of self-discovery. The trail from McLeod Ganj was beautiful, with rhododendrons in bloom. Reaching the Triund top, with the Dhauladhar range towering in front, was exhilarating. The solitude and the connection with nature were profound. It taught me resilience and the joy of my own company amidst the mountains.", imageUrl: `${PLACEHOLDER_IMAGE_URL(1200,600)}?ai_hint=triund himachal`, destinationId: "mock_hp1", destinationName: "Triund Trek", tags: ["himachal", "solo trek", "beginner", "dhauladhar"], likesCount: 95, commentsCount: 18 },
+    { userId: "user_story_gamma", userName: "Vikram R.", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person Vikram`, title: "The Colors of Valley of Flowers", content: "The Valley of Flowers in Uttarakhand is a living canvas. Trekking through it during monsoon was like walking through a dream. Countless species of flowers in vibrant hues stretched as far as the eye could see. The gentle Pushpawati river meandered through the valley, adding to its charm. Paired with a visit to Hemkund Sahib, this trek is a spiritual and visual treat.", imageUrl: `${PLACEHOLDER_IMAGE_URL(1200,600)}?ai_hint=valley flowers uttarakhand`, destinationId: "mock_utt2", destinationName: "Valley of Flowers Trek", tags: ["uttarakhand", "valley of flowers", "monsoon", "unesco", "flora"], likesCount: 210, commentsCount: 25 },
+];
+
+// Note: User profiles are typically created via the app's sign-up process.
+// Seeding users directly might be useful for testing but ensure passwords are handled securely (e.g., not in plain text).
+// For now, we are not seeding users directly in this script. User documents will be created in MongoDB when users sign up/sign in.
+
 
 async function seedDatabase() {
-  let client;
+  let mongoClient;
   try {
     const db = await getDb();
-    client = db.client; 
+    mongoClient = await clientPromise; 
     const destinationsCollection = db.collection('destinations');
     const photosCollection = db.collection('photos');
+    const storiesCollection = db.collection('stories');
+
 
     console.log('Successfully connected to MongoDB.');
 
@@ -76,14 +90,26 @@ async function seedDatabase() {
     const photoResult = await photosCollection.insertMany(PHOTO_FEED_SEED_DATA);
     console.log(`${photoResult.insertedCount} photos successfully inserted.`);
 
+    // Seed Stories
+    console.log('Clearing existing data from "stories" collection...');
+    await storiesCollection.deleteMany({});
+    console.log('Existing story data cleared.');
+    console.log(`Inserting ${STORY_SEED_DATA.length} story items...`);
+    const storyResult = await storiesCollection.insertMany(STORY_SEED_DATA.map(story => ({
+        ...story,
+        createdAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(), // Random creation date within last 30 days
+        updatedAt: new Date().toISOString(),
+    })));
+    console.log(`${storyResult.insertedCount} stories successfully inserted.`);
+
 
   } catch (error) {
     console.error('Error during database seeding:', error);
     process.exit(1); 
   } finally {
-    if (client) {
+    if (mongoClient) {
       console.log('Closing MongoDB connection...');
-      await client.close();
+      await mongoClient.close();
       console.log('MongoDB connection closed.');
     }
   }
