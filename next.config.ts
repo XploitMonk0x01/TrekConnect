@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
         hostname: 'images.pexels.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.pexels.com', // Added this line
+        port: '',
+        pathname: '/**',
       }
     ],
   },
