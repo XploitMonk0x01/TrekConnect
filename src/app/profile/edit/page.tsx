@@ -26,7 +26,6 @@ import { auth } from '@/lib/firebase'; // Import auth
 import { updateProfile as updateFirebaseProfile } from 'firebase/auth'; // Firebase client-side update
 
 
-// Simplified Zod schema: profileImageDataUri will hold the new image data if provided.
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }).max(50, { message: "Name must not exceed 50 characters."}),
   profileImageDataUri: z.string().optional(), // Will hold the Data URI if a new image is selected
@@ -75,8 +74,6 @@ export default function EditProfilePage() {
           if (profile) {
             form.reset({
               name: profile.name || firebaseUser.displayName || '',
-              // Do not set profileImageDataUri from existing profile.photoUrl here.
-              // profileImageDataUri is only for *new* uploads.
               profileImageDataUri: '', 
               age: profile.age !== undefined ? profile.age : '',
               gender: profile.gender || '',
@@ -87,9 +84,8 @@ export default function EditProfilePage() {
               languagesSpoken: profile.languagesSpoken?.join(', ') || '',
               trekkingExperience: profile.trekkingExperience || '',
             });
-            setCurrentPhotoUrl(profile.photoUrl); // For displaying current image
+            setCurrentPhotoUrl(profile.photoUrl); 
           } else {
-             // If no DB profile, prefill from Firebase Auth if available
              form.reset({
                 name: firebaseUser.displayName || '',
                 profileImageDataUri: '',
@@ -117,16 +113,16 @@ export default function EditProfilePage() {
   const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5000000) { // 5MB limit
+      if (file.size > 5000000) { 
           form.setError("profileImageDataUri", { type: "manual", message: "Max file size is 5MB." });
           setImagePreview(null);
-          form.setValue("profileImageDataUri", ""); // Clear value in form
+          form.setValue("profileImageDataUri", ""); 
           return;
       }
       if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
           form.setError("profileImageDataUri", { type: "manual", message: "Invalid file type." });
           setImagePreview(null);
-          form.setValue("profileImageDataUri", ""); // Clear value in form
+          form.setValue("profileImageDataUri", ""); 
           return;
       }
       form.clearErrors("profileImageDataUri");
@@ -139,7 +135,7 @@ export default function EditProfilePage() {
       reader.readAsDataURL(file);
     } else {
       setImagePreview(null);
-      form.setValue('profileImageDataUri', ''); // Clear if no file selected
+      form.setValue('profileImageDataUri', ''); 
     }
   };
 
@@ -151,83 +147,100 @@ export default function EditProfilePage() {
     }
     setIsSaving(true);
 
-    const languages = data.languagesSpoken && data.languagesSpoken.trim() !== ''
-      ? data.languagesSpoken.split(',').map(lang => lang.trim()).filter(lang => lang)
-      : undefined;
+    const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'updatedAt'>> = {};
 
-    const travelPrefsInput = {
-      soloOrGroup: data.travelPreferences_soloOrGroup && data.travelPreferences_soloOrGroup !== '' ? data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] : undefined,
-      budget: data.travelPreferences_budget && data.travelPreferences_budget !== '' ? data.travelPreferences_budget as UserProfile['travelPreferences']['budget'] : undefined,
-      style: data.travelPreferences_style && data.travelPreferences_style.trim() !== '' ? data.travelPreferences_style.trim() : undefined,
-    };
-
-    const travelPreferencesToUpdate = (travelPrefsInput.soloOrGroup || travelPrefsInput.budget || travelPrefsInput.style)
-      ? travelPrefsInput
-      : undefined;
-
-    const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'updatedAt'>> = {
-      name: data.name.trim(),
-      // photoUrl will be set only if new image data URI is present
-      age: data.age === '' || data.age === undefined || isNaN(Number(data.age)) ? undefined : Number(data.age),
-      gender: data.gender && data.gender !== '' ? data.gender as UserProfile['gender'] : undefined,
-      bio: data.bio && data.bio.trim() !== '' ? data.bio.trim() : null,
-      travelPreferences: travelPreferencesToUpdate,
-      languagesSpoken: languages,
-      trekkingExperience: data.trekkingExperience && data.trekkingExperience !== '' ? data.trekkingExperience as UserProfile['trekkingExperience'] : undefined,
-    };
+    profileUpdateData.name = data.name.trim();
     
     if (data.profileImageDataUri && data.profileImageDataUri.startsWith('data:image')) {
       profileUpdateData.photoUrl = data.profileImageDataUri;
     }
 
+    profileUpdateData.age = data.age === '' || data.age === undefined || isNaN(Number(data.age)) ? undefined : Number(data.age);
+    profileUpdateData.gender = data.gender === '' ? undefined : data.gender as UserProfile['gender'];
+    
+    profileUpdateData.bio = data.bio && data.bio.trim() !== '' ? data.bio.trim() : null;
+
+    const travelPrefsInput = {
+      soloOrGroup: data.travelPreferences_soloOrGroup === '' ? undefined : data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'],
+      budget: data.travelPreferences_budget === '' ? undefined : data.travelPreferences_budget as UserProfile['travelPreferences']['budget'],
+      style: data.travelPreferences_style && data.travelPreferences_style.trim() !== '' ? data.travelPreferences_style.trim() : undefined,
+    };
+
+    if (travelPrefsInput.soloOrGroup || travelPrefsInput.budget || travelPrefsInput.style) {
+      profileUpdateData.travelPreferences = travelPrefsInput;
+    } else {
+      profileUpdateData.travelPreferences = undefined; 
+    }
+    
+    profileUpdateData.languagesSpoken = data.languagesSpoken && data.languagesSpoken.trim() !== ''
+      ? data.languagesSpoken.split(',').map(lang => lang.trim()).filter(lang => lang)
+      : undefined;
+      
+    profileUpdateData.trekkingExperience = data.trekkingExperience === '' ? undefined : data.trekkingExperience as UserProfile['trekkingExperience'];
+    
     const cleanedProfileUpdateData: { [key: string]: any } = {};
     for (const key in profileUpdateData) {
-      const typedKey = key as keyof typeof profileUpdateData;
-      if (profileUpdateData[typedKey] !== undefined) {
-        cleanedProfileUpdateData[typedKey] = profileUpdateData[typedKey];
-      }
+        const typedKey = key as keyof typeof profileUpdateData;
+        if (profileUpdateData[typedKey] !== undefined) {
+            cleanedProfileUpdateData[typedKey] = profileUpdateData[typedKey];
+        }
     }
     if (profileUpdateData.bio === null) cleanedProfileUpdateData.bio = null;
-    // photoUrl is handled by its direct assignment from profileImageDataUri if present
+    if (profileUpdateData.photoUrl === null && !(data.profileImageDataUri && data.profileImageDataUri.startsWith('data:image'))) {
+      // Only set photoUrl to null if it was intentionally cleared AND no new image was uploaded
+      // This case should ideally be handled by not including photoUrl in cleanedProfileUpdateData if no new image
+    }
 
 
-    console.log("[TrekConnect Debug] Calling updateUserProfile from edit/page.tsx with UID:", firebaseUser.uid, "and data:", JSON.stringify(cleanedProfileUpdateData, null, 2));
+    console.log("[TrekConnect Debug Client] Calling updateUserProfile from edit/page.tsx with UID:", firebaseUser.uid, "and data:", JSON.stringify(cleanedProfileUpdateData, null, 2));
     
     try {
       const updatedMongoDBProfile = await updateUserProfile(firebaseUser.uid, cleanedProfileUpdateData);
       
       if (updatedMongoDBProfile) {
         toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated in our database.' });
+        setCurrentPhotoUrl(updatedMongoDBProfile.photoUrl); 
 
-        // If a new photo was uploaded and MongoDB was updated, also update Firebase Auth profile
-        if (data.profileImageDataUri && data.profileImageDataUri.startsWith('data:image') && auth.currentUser) {
+        let fbProfileNeedsUpdate = false;
+        const fbUpdatePayload: { displayName?: string | null; photoURL?: string | null } = {};
+
+        if (data.profileImageDataUri && data.profileImageDataUri.startsWith('data:image')) {
+            fbUpdatePayload.photoURL = updatedMongoDBProfile.photoUrl;
+            fbProfileNeedsUpdate = true;
+        }
+        if (updatedMongoDBProfile.name !== firebaseUser.displayName) {
+            fbUpdatePayload.displayName = updatedMongoDBProfile.name;
+            fbProfileNeedsUpdate = true;
+        }
+
+        if (fbProfileNeedsUpdate && auth.currentUser) {
           try {
-            await updateFirebaseProfile(auth.currentUser, { 
-              photoURL: updatedMongoDBProfile.photoUrl, // Use the URL from the confirmed DB update
-              displayName: updatedMongoDBProfile.name // Also update display name in Firebase
-            });
-            toast({ title: 'Firebase Profile Sync', description: 'Your Firebase profile avatar and name will update shortly.' });
-            // AuthContext should pick this up via onAuthStateChanged
+            await updateFirebaseProfile(auth.currentUser, fbUpdatePayload);
+            toast({ title: 'Firebase Profile Sync', description: 'Your Firebase profile avatar and/or name will update shortly.' });
           } catch (fbError: any) {
-            console.error("Error updating Firebase user profile (photoURL/displayName):", fbError);
+            console.error("Error updating Firebase user profile:", fbError);
             toast({ variant: 'destructive', title: 'Firebase Sync Failed', description: `Could not update your avatar/name in Firebase: ${fbError.message}` });
           }
-        } else if (auth.currentUser && data.name.trim() !== firebaseUser.displayName) {
-            // If only name changed (no new photo), still update Firebase displayName
-            try {
-                await updateFirebaseProfile(auth.currentUser, { displayName: data.name.trim() });
-                toast({ title: 'Firebase Profile Sync', description: 'Your Firebase profile name will update shortly.' });
-            } catch (fbError: any) {
-                console.error("Error updating Firebase user profile (displayName):", fbError);
-                toast({ variant: 'destructive', title: 'Firebase Name Sync Failed', description: `Could not update your name in Firebase: ${fbError.message}` });
-            }
         }
         
-        // Reset image preview and form's imageDataUri after successful submission
         setImagePreview(null);
-        form.setValue('profileImageDataUri', ''); 
-        setCurrentPhotoUrl(updatedMongoDBProfile.photoUrl); // Update current photo display
-
+        // form.setValue('profileImageDataUri', ''); // Already cleared or set by handleProfileImageChange
+        // Reset form with potentially updated values from DB, but keep form state managed by RHF
+        // This reset also helps clear the profileImageDataUri if it was from a previous submission that's now done
+        form.reset({ 
+            ...form.getValues(), // keep current form values
+            name: updatedMongoDBProfile.name || '',
+            bio: updatedMongoDBProfile.bio || '',
+            age: updatedMongoDBProfile.age !== undefined ? updatedMongoDBProfile.age : '',
+            gender: updatedMongoDBProfile.gender || '',
+            travelPreferences_soloOrGroup: updatedMongoDBProfile.travelPreferences?.soloOrGroup || '',
+            travelPreferences_budget: updatedMongoDBProfile.travelPreferences?.budget || '',
+            travelPreferences_style: updatedMongoDBProfile.travelPreferences?.style || '',
+            languagesSpoken: updatedMongoDBProfile.languagesSpoken?.join(', ') || '',
+            trekkingExperience: updatedMongoDBProfile.trekkingExperience || '',
+            profileImageDataUri: '', // Explicitly clear this from form state after successful processing
+        }); 
+        
         router.push('/profile'); 
       } else {
         throw new Error('Failed to update profile in database.');
@@ -239,6 +252,7 @@ export default function EditProfilePage() {
       setIsSaving(false);
     }
   }
+
 
   if (authLoading || isLoadingProfile) {
     return (
@@ -313,6 +327,7 @@ export default function EditProfilePage() {
                     layout="fill" 
                     objectFit="cover" 
                     data-ai-hint="person portrait"
+                    key={imagePreview || currentPhotoUrl} 
                   />
                 </div>
                 <Input 
@@ -329,7 +344,7 @@ export default function EditProfilePage() {
                     control={form.control}
                     name="profileImageDataUri"
                     render={({ field }) => (
-                    <FormItem className="hidden"> {/* Hidden, as value is managed by handleProfileImageChange */}
+                    <FormItem className="hidden"> 
                         <FormControl><Input type="text" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>
