@@ -4,7 +4,7 @@ config(); // Load environment variables from .env file
 
 import { getDb } from '@/lib/mongodb';
 import clientPromise from '@/lib/mongodb'; // Import the clientPromise for closing the connection
-import type { Destination, Photo, Story, UserProfile } from '@/lib/types';
+import type { Destination } from '@/lib/types'; // Photo and Story types removed as they are no longer seeded here
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 
@@ -43,23 +43,9 @@ const TREK_DESTINATIONS_SEED_DATA: Omit<Destination, 'id'>[] = [
   { name: "Auden's Col Trek", description: "An extremely challenging and technical high-altitude pass connecting Gangotri valley with Kedarnath valley. Considered one of the toughest treks in India.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Garhwal Himalayas", attractions: ["Auden's Col (5490m)", "Khatling Glacier", "Views of Gangotri and Jogin group of peaks", "Mayali Pass"], travelTips: "Highly strenuous and technical, requires mountaineering skills, equipment, and experienced guides. For expert trekkers only. Best season: May-June, September.", averageRating: 4.9, coordinates: { lat: 30.845, lng: 78.817 }, aiHint: "audens col trek" }
 ];
 
-const PHOTO_FEED_SEED_DATA: Omit<Photo, 'id'>[] = [
-  { userId: "user_alpha_001", userName: "Priya Sharma", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person priya`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=roopkund lake`, destinationId: "mock_in1", destinationName: "Roopkund Trek", caption: "Lost in the mystery of Roopkund. What an adventure!", uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 135, commentsCount: 18 },
-  { userId: "user_beta_002", userName: "Arjun Mehta", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person arjun`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=hampta pass himachal`, destinationId: "mock_in2", destinationName: "Hampta Pass Trek", caption: "The crossover from Kullu to Lahaul at Hampta Pass was breathtaking.", uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 210, commentsCount: 25 },
-  { userId: "user_gamma_003", userName: "Sneha Patel", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person sneha`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=valley flowers uttarakhand`, destinationId: "mock_in3", destinationName: "Valley of Flowers", caption: "A carpet of flowers as far as the eye can see. Magical Uttarakhand!", uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 190, commentsCount: 20 },
-  { userId: "user_delta_004", userName: "Vikram Singh", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person vikram`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=kedarkantha snow`, destinationId: "mock_in4", destinationName: "Kedarkantha Trek", caption: "Snowy trails and majestic peaks on the Kedarkantha summit.", uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 175, commentsCount: 28 },
-  { userId: "user_epsilon_005", userName: "Riya Kapoor", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person riya`, imageUrl: `${PLACEHOLDER_IMAGE_URL(600,600)}?ai_hint=triund dhauladhar`, destinationId: "mock_in5", destinationName: "Triund Trek", caption: "Weekend well spent at Triund. The Dhauladhars are stunning!", uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), likesCount: 160, commentsCount: 15 },
-];
-
-const STORY_SEED_DATA: Omit<Story, 'id' | 'createdAt' | 'updatedAt'>[] = [
-    { userId: "user_story_alpha", userName: "Chandra P.", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person Chandra`, title: "Conquering Stok Kangri: A Summit Story", content: "The Stok Kangri expedition was the most challenging yet rewarding experience of my life. From acclimatizing in Leh to the final summit push under a star-studded sky, every moment was etched in memory. The views from the top were unparalleled, a panorama of the Karakoram and Zanskar ranges. This trek demands respect, preparation, and a bit of luck with the weather.", imageUrl: `${PLACEHOLDER_IMAGE_URL(1200,600)}?ai_hint=stok kangri ladakh`, destinationId: "mock_lad1", destinationName: "Stok Kangri Climb", tags: ["ladakh", "peak climbing", "expedition", "high altitude"], likesCount: 150, commentsCount: 30 },
-    { userId: "user_story_beta", userName: "Ananya D.", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person Ananya`, title: "My First Solo Trek: To Triund", content: "Embarking on my first solo trek to Triund was a journey of self-discovery. The trail from McLeod Ganj was beautiful, with rhododendrons in bloom. Reaching the Triund top, with the Dhauladhar range towering in front, was exhilarating. The solitude and the connection with nature were profound. It taught me resilience and the joy of my own company amidst the mountains.", imageUrl: `${PLACEHOLDER_IMAGE_URL(1200,600)}?ai_hint=triund himachal`, destinationId: "mock_hp1", destinationName: "Triund Trek", tags: ["himachal", "solo trek", "beginner", "dhauladhar"], likesCount: 95, commentsCount: 18 },
-    { userId: "user_story_gamma", userName: "Vikram R.", userAvatarUrl: `${PLACEHOLDER_IMAGE_URL(40,40)}?ai_hint=person Vikram`, title: "The Colors of Valley of Flowers", content: "The Valley of Flowers in Uttarakhand is a living canvas. Trekking through it during monsoon was like walking through a dream. Countless species of flowers in vibrant hues stretched as far as the eye could see. The gentle Pushpawati river meandered through the valley, adding to its charm. Paired with a visit to Hemkund Sahib, this trek is a spiritual and visual treat.", imageUrl: `${PLACEHOLDER_IMAGE_URL(1200,600)}?ai_hint=valley flowers uttarakhand`, destinationId: "mock_utt2", destinationName: "Valley of Flowers Trek", tags: ["uttarakhand", "valley of flowers", "monsoon", "unesco", "flora"], likesCount: 210, commentsCount: 25 },
-];
-
-// Note: User profiles are typically created via the app's sign-up process.
-// Seeding users directly might be useful for testing but ensure passwords are handled securely (e.g., not in plain text).
-// For now, we are not seeding users directly in this script. User documents will be created in MongoDB when users sign up/sign in.
+// PHOTO_FEED_SEED_DATA and STORY_SEED_DATA are removed as per user request
+// const PHOTO_FEED_SEED_DATA: Omit<Photo, 'id'>[] = [ ... ];
+// const STORY_SEED_DATA: Omit<Story, 'id' | 'createdAt' | 'updatedAt'>[] = [ ... ];
 
 
 async function seedDatabase() {
@@ -82,25 +68,15 @@ async function seedDatabase() {
     const destResult = await destinationsCollection.insertMany(TREK_DESTINATIONS_SEED_DATA);
     console.log(`${destResult.insertedCount} destinations successfully inserted.`);
 
-    // Seed Photos
+    // Clear Photos (but do not insert new seed data)
     console.log('Clearing existing data from "photos" collection...');
     await photosCollection.deleteMany({});
-    console.log('Existing photo data cleared.');
-    console.log(`Inserting ${PHOTO_FEED_SEED_DATA.length} photo feed items...`);
-    const photoResult = await photosCollection.insertMany(PHOTO_FEED_SEED_DATA);
-    console.log(`${photoResult.insertedCount} photos successfully inserted.`);
+    console.log('Existing photo data cleared. No new photo seed data will be inserted.');
 
-    // Seed Stories
+    // Clear Stories (but do not insert new seed data)
     console.log('Clearing existing data from "stories" collection...');
     await storiesCollection.deleteMany({});
-    console.log('Existing story data cleared.');
-    console.log(`Inserting ${STORY_SEED_DATA.length} story items...`);
-    const storyResult = await storiesCollection.insertMany(STORY_SEED_DATA.map(story => ({
-        ...story,
-        createdAt: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString(), // Random creation date within last 30 days
-        updatedAt: new Date().toISOString(),
-    })));
-    console.log(`${storyResult.insertedCount} stories successfully inserted.`);
+    console.log('Existing story data cleared. No new story seed data will be inserted.');
 
 
   } catch (error) {
@@ -116,3 +92,4 @@ async function seedDatabase() {
 }
 
 seedDatabase();
+
