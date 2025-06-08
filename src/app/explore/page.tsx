@@ -14,21 +14,38 @@ import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const initialMockDestinations: Destination[] = [
-  // Uttarakhand
+  // Existing Uttarakhand
   { id: "UT1", name: "Roopkund Trek", description: "Mysterious skeletal lake trek in Uttarakhand with stunning Himalayan views of Trishul and Nanda Ghunti.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.7, region: "Uttarakhand" },
   { id: "UT2", name: "Valley of Flowers & Hemkund Sahib", description: "UNESCO site paired with a sacred Sikh shrine, offering vibrant floral meadows and serene spirituality.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.8, region: "Uttarakhand" },
   { id: "UT3", name: "Kedarkantha Trek", description: "Popular winter trek in Uttarakhand with panoramic summit views and enchanting snowy landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.5, region: "Uttarakhand" },
   { id: "UT4", name: "Har Ki Dun Trek", description: "Cradle-shaped valley known as 'Valley of Gods', with views of Swargarohini peaks and traditional villages.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.6, region: "Uttarakhand" },
-  // Himachal Pradesh
+  // Existing Himachal Pradesh
   { id: "HP1", name: "Hampta Pass Trek", description: "Dramatic crossover trek from Kullu's lush greenery to Lahaul's arid landscapes in Himachal.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.6, region: "Himachal Pradesh" },
   { id: "HP2", name: "Bhrigu Lake Trek", description: "High-altitude alpine lake trek near Manali, known for its stunning blue waters and panoramic views.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.5, region: "Himachal Pradesh" },
   { id: "HP3", name: "Beas Kund Trek", description: "Trek to the source of the Beas River, offering close views of Pir Panjal range peaks like Hanuman Tibba.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.4, region: "Himachal Pradesh" },
   { id: "HP4", name: "Kareri Lake Trek", description: "Serene trek to a freshwater lake in the Dhauladhar range, surrounded by lush forests and meadows.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.3, region: "Himachal Pradesh" },
-  // Ladakh
+  // Existing Ladakh
   { id: "LA1", name: "Markha Valley Trek", description: "Classic Ladakh trek through remote villages, stunning canyons, and high passes with views of Kang Yatse.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.7, region: "Ladakh" },
   { id: "LA2", name: "Sham Valley Trek", description: "Known as the 'Baby Trek', an easier option to experience Ladakhi culture, monasteries, and landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.2, region: "Ladakh" },
   { id: "LA3", name: "Kang Yatse II & Stok Base Trek", description: "Challenging trek offering views of Kang Yatse II and a taste of high-altitude trekking near Leh.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.8, region: "Ladakh" },
-  { id: "LA4", name: "Lamayuru to Alchi Trek", description: "A cultural journey through ancient monasteries and unique Ladakhi landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.4, region: "Ladakh"}
+  { id: "LA4", name: "Lamayuru to Alchi Trek", description: "A cultural journey through ancient monasteries and unique Ladakhi landscapes.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", averageRating: 4.4, region: "Ladakh"},
+  // New Treks (Primarily Uttarakhand)
+  { id: "UT5", name: "Satopanth Tal Trek", description: "Challenging trek to a high-altitude glacial lake with immense religious significance near Badrinath.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.8 },
+  { id: "UT6", name: "Rudranath Trek", description: "Spiritual trek to Rudranath temple, one of the Panch Kedar, through beautiful meadows and forests.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.6 },
+  { id: "UT7", name: "Tungnath - Chandrashila Trek", description: "Popular trek to the highest Shiva temple (Tungnath) and Chandrashila summit for panoramic Himalayan views.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.7 },
+  { id: "UT8", name: "Vasuki Tal Trek", description: "High-altitude trek near Kedarnath to the pristine Vasuki Tal lake, with views of Chaukhamba peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.5 },
+  { id: "UT9", name: "Gaumukh Tapovan Trek", description: "Revered trek to Gaumukh (source of Ganges) and Tapovan meadow, with views of Mt. Shivling.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.9 },
+  { id: "UT10", name: "Nag Tibba Trek", description: "Easy weekend trek near Mussoorie with panoramic Himalayan views, ideal for beginners.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.3 },
+  { id: "UT11", name: "Pindari Glacier Trek", description: "Classic Kumaon trek to Pindari Glacier, source of Pindar River, with Nanda Devi views.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.6 },
+  { id: "UT12", name: "Kuari Pass Trek", description: "Lord Curzon Trail offering magnificent views of Nanda Devi, Dronagiri, and Kamet peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.7 },
+  { id: "UT13", name: "Brahmatal Trek", description: "Popular winter trek with stunning views of Mt. Trishul and Nanda Ghunti, featuring the frozen Brahmatal lake.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.5 },
+  { id: "UT14", name: "Dayara Bugyal Trek", description: "Beautiful trek to vast alpine meadows with panoramic views of Bandarpoonch and Gangotri range.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.6 },
+  { id: "UT15", name: "Madhyamaheshwar Trek", description: "Serene Panch Kedar trek to Madhyamaheshwar temple with views of Chaukhamba and Kedarnath peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.5 },
+  { id: "UT16", name: "Kalpeshwar Trek", description: "The only Panch Kedar temple accessible year-round, a short and easy trek.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.2 },
+  { id: "UT17", name: "Panch Kedar Trek", description: "Comprehensive pilgrimage covering all five Kedar shrines: Kedarnath, Tungnath, Rudranath, Madhyamaheshwar, Kalpeshwar.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.9 },
+  { id: "UT18", name: "Bali Pass Trek", description: "Challenging crossover trek connecting Har Ki Dun valley with Yamunotri, offering wilderness experience.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.7 },
+  { id: "UT19", name: "Dodital Trek", description: "Beautiful trek to freshwater Dodital lake, believed to be Lord Ganesha's birthplace.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.4 },
+  { id: "UT20", name: "Auden's Col Trek", description: "Extremely challenging technical pass connecting Gangotri with Kedarnath valley, for experts only.", imageUrl: PLACEHOLDER_IMAGE_URL(600,400), country: "India", region: "Uttarakhand", averageRating: 4.9 }
 ];
 
 const AITags: Record<string, string> = {
@@ -43,7 +60,23 @@ const AITags: Record<string, string> = {
   "LA1": "ladakh markha valley",
   "LA2": "ladakh sham valley trek",
   "LA3": "kang yatse ladakh",
-  "LA4": "lamayuru alchi ladakh"
+  "LA4": "lamayuru alchi ladakh",
+  "UT5": "satopanth tal uttarakhand",
+  "UT6": "rudranath trek uttarakhand",
+  "UT7": "tungnath chandrashila trek",
+  "UT8": "vasuki tal kedarnath",
+  "UT9": "gaumukh tapovan trek",
+  "UT10": "nag tibba trek mussoorie",
+  "UT11": "pindari glacier kumaon",
+  "UT12": "kuari pass trek uttarakhand",
+  "UT13": "brahmatal winter trek",
+  "UT14": "dayara bugyal trek",
+  "UT15": "madhyamaheshwar trek panch kedar",
+  "UT16": "kalpeshwar temple trek",
+  "UT17": "panch kedar pilgrimage trek",
+  "UT18": "bali pass trek uttarakhand",
+  "UT19": "dodital lake trek",
+  "UT20": "audens col trek"
 };
 
 
