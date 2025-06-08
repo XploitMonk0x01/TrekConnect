@@ -1,3 +1,4 @@
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -22,13 +23,14 @@ export interface Destination {
   id: string;
   name: string;
   description: string;
-  imageUrl: string;
+  imageUrl: string; // Should store a placeholder or a default image path
   country?: string;
   region?: string;
   attractions?: string[];
   travelTips?: string;
   coordinates?: { lat: number; lng: number };
   averageRating?: number;
+  aiHint?: string; // New field for Pexels query hint
 }
 
 export interface PlannedTrip {
@@ -107,3 +109,4 @@ export type SmartMatchUserProfileInput = {
   wishlistDestinations: string[];
   travelHistory: string[];
 };
+
