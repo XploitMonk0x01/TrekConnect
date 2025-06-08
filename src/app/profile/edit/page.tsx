@@ -1,12 +1,13 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Image from 'next/image'; // For Next/Image component
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,11 +20,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { getUserProfile, updateUserProfile } from '@/services/users';
 import type { UserProfile } from '@/lib/types';
-import { ArrowLeft, Save, Loader2, UserCircle } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, UserCircle, ImagePlus } from 'lucide-react';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { auth } from '@/lib/firebase'; // Import auth
+import { updateProfile as updateFirebaseProfile } from 'firebase/auth'; // Firebase client-side update
 
+
+// Simplified Zod schema: profileImageDataUri will hold the new image data if provided.
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }).max(50, { message: "Name must not exceed 50 characters."}),
-  photoUrl: z.string().url({ message: "Please enter a valid URL." }).or(z.literal('')).optional(),
+  profileImageDataUri: z.string().optional(), // Will hold the Data URI if a new image is selected
   age: z.coerce.number().min(0, { message: "Age cannot be negative."}).max(120, {message: "Age seems unlikely."}).optional().or(z.literal('')),
   gender: z.enum(['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say', '']).optional(),
   bio: z.string().max(500, { message: "Bio must not exceed 500 characters." }).optional(),
@@ -42,12 +48,14 @@ export default function EditProfilePage() {
   const { toast } = useToast();
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: '',
-      photoUrl: '',
+      profileImageDataUri: '',
       age: '',
       gender: '',
       bio: '',
@@ -66,8 +74,10 @@ export default function EditProfilePage() {
         .then(profile => {
           if (profile) {
             form.reset({
-              name: profile.name || '',
-              photoUrl: profile.photoUrl || '',
+              name: profile.name || firebaseUser.displayName || '',
+              // Do not set profileImageDataUri from existing profile.photoUrl here.
+              // profileImageDataUri is only for *new* uploads.
+              profileImageDataUri: '', 
               age: profile.age !== undefined ? profile.age : '',
               gender: profile.gender || '',
               bio: profile.bio || '',
@@ -77,33 +87,62 @@ export default function EditProfilePage() {
               languagesSpoken: profile.languagesSpoken?.join(', ') || '',
               trekkingExperience: profile.trekkingExperience || '',
             });
+            setCurrentPhotoUrl(profile.photoUrl); // For displaying current image
           } else {
+             // If no DB profile, prefill from Firebase Auth if available
              form.reset({
                 name: firebaseUser.displayName || '',
-                photoUrl: firebaseUser.photoURL || '',
+                profileImageDataUri: '',
                 age: '', gender: '', bio: '',
                 travelPreferences_soloOrGroup: '', travelPreferences_budget: '', travelPreferences_style: '',
                 languagesSpoken: '', trekkingExperience: '',
              });
+             setCurrentPhotoUrl(firebaseUser.photoURL);
           }
         })
         .catch(error => {
           console.error("Failed to fetch user profile:", error);
           toast({ variant: 'destructive', title: 'Error', description: 'Could not load profile data.' });
-           form.reset({
-                name: firebaseUser.displayName || '',
-                photoUrl: firebaseUser.photoURL || '',
-           });
+           form.reset({ name: firebaseUser.displayName || '', profileImageDataUri: '' });
+           setCurrentPhotoUrl(firebaseUser.photoURL);
         })
         .finally(() => {
           setIsLoadingProfile(false);
         });
     } else if (!authLoading) {
       setIsLoadingProfile(false);
-      // router.push('/auth/signin'); // Commented out to prevent premature redirect during debugging
-      // toast({ variant: 'destructive', title: 'Unauthorized', description: 'Please sign in to edit your profile.' });
     }
-  }, [firebaseUser, authLoading, form, router, toast]);
+  }, [firebaseUser, authLoading, form, toast]);
+
+  const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5000000) { // 5MB limit
+          form.setError("profileImageDataUri", { type: "manual", message: "Max file size is 5MB." });
+          setImagePreview(null);
+          form.setValue("profileImageDataUri", ""); // Clear value in form
+          return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
+          form.setError("profileImageDataUri", { type: "manual", message: "Invalid file type." });
+          setImagePreview(null);
+          form.setValue("profileImageDataUri", ""); // Clear value in form
+          return;
+      }
+      form.clearErrors("profileImageDataUri");
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        form.setValue('profileImageDataUri', reader.result as string, { shouldValidate: true });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setImagePreview(null);
+      form.setValue('profileImageDataUri', ''); // Clear if no file selected
+    }
+  };
+
 
   async function onSubmit(data: ProfileFormValues) {
     if (!firebaseUser) {
@@ -114,7 +153,7 @@ export default function EditProfilePage() {
 
     const languages = data.languagesSpoken && data.languagesSpoken.trim() !== ''
       ? data.languagesSpoken.split(',').map(lang => lang.trim()).filter(lang => lang)
-      : undefined; // Undefined if empty
+      : undefined;
 
     const travelPrefsInput = {
       soloOrGroup: data.travelPreferences_soloOrGroup && data.travelPreferences_soloOrGroup !== '' ? data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] : undefined,
@@ -127,18 +166,20 @@ export default function EditProfilePage() {
       : undefined;
 
     const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'updatedAt'>> = {
-      name: data.name.trim(), // Always send name
-      photoUrl: data.photoUrl && data.photoUrl.trim() !== '' ? data.photoUrl.trim() : null, // null if empty string
+      name: data.name.trim(),
+      // photoUrl will be set only if new image data URI is present
       age: data.age === '' || data.age === undefined || isNaN(Number(data.age)) ? undefined : Number(data.age),
       gender: data.gender && data.gender !== '' ? data.gender as UserProfile['gender'] : undefined,
-      bio: data.bio && data.bio.trim() !== '' ? data.bio.trim() : null, // null if empty string
+      bio: data.bio && data.bio.trim() !== '' ? data.bio.trim() : null,
       travelPreferences: travelPreferencesToUpdate,
       languagesSpoken: languages,
       trekkingExperience: data.trekkingExperience && data.trekkingExperience !== '' ? data.trekkingExperience as UserProfile['trekkingExperience'] : undefined,
     };
     
-    // Create a new object that only contains defined properties from profileUpdateData,
-    // or null for photoUrl/bio if they were explicitly set to null.
+    if (data.profileImageDataUri && data.profileImageDataUri.startsWith('data:image')) {
+      profileUpdateData.photoUrl = data.profileImageDataUri;
+    }
+
     const cleanedProfileUpdateData: { [key: string]: any } = {};
     for (const key in profileUpdateData) {
       const typedKey = key as keyof typeof profileUpdateData;
@@ -146,23 +187,54 @@ export default function EditProfilePage() {
         cleanedProfileUpdateData[typedKey] = profileUpdateData[typedKey];
       }
     }
-    // Ensure photoUrl and bio can be explicitly set to null
-    if (profileUpdateData.photoUrl === null) cleanedProfileUpdateData.photoUrl = null;
     if (profileUpdateData.bio === null) cleanedProfileUpdateData.bio = null;
+    // photoUrl is handled by its direct assignment from profileImageDataUri if present
 
 
+    console.log("[TrekConnect Debug] Calling updateUserProfile from edit/page.tsx with UID:", firebaseUser.uid, "and data:", JSON.stringify(cleanedProfileUpdateData, null, 2));
+    
     try {
-      console.log("[TrekConnect Debug] Calling updateUserProfile from edit/page.tsx with UID:", firebaseUser.uid, "and data:", JSON.stringify(cleanedProfileUpdateData, null, 2));
-      const updatedProfile = await updateUserProfile(firebaseUser.uid, cleanedProfileUpdateData);
-      if (updatedProfile) {
-        toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated.' });
+      const updatedMongoDBProfile = await updateUserProfile(firebaseUser.uid, cleanedProfileUpdateData);
+      
+      if (updatedMongoDBProfile) {
+        toast({ title: 'Profile Updated', description: 'Your profile has been successfully updated in our database.' });
+
+        // If a new photo was uploaded and MongoDB was updated, also update Firebase Auth profile
+        if (data.profileImageDataUri && data.profileImageDataUri.startsWith('data:image') && auth.currentUser) {
+          try {
+            await updateFirebaseProfile(auth.currentUser, { 
+              photoURL: updatedMongoDBProfile.photoUrl, // Use the URL from the confirmed DB update
+              displayName: updatedMongoDBProfile.name // Also update display name in Firebase
+            });
+            toast({ title: 'Firebase Profile Sync', description: 'Your Firebase profile avatar and name will update shortly.' });
+            // AuthContext should pick this up via onAuthStateChanged
+          } catch (fbError: any) {
+            console.error("Error updating Firebase user profile (photoURL/displayName):", fbError);
+            toast({ variant: 'destructive', title: 'Firebase Sync Failed', description: `Could not update your avatar/name in Firebase: ${fbError.message}` });
+          }
+        } else if (auth.currentUser && data.name.trim() !== firebaseUser.displayName) {
+            // If only name changed (no new photo), still update Firebase displayName
+            try {
+                await updateFirebaseProfile(auth.currentUser, { displayName: data.name.trim() });
+                toast({ title: 'Firebase Profile Sync', description: 'Your Firebase profile name will update shortly.' });
+            } catch (fbError: any) {
+                console.error("Error updating Firebase user profile (displayName):", fbError);
+                toast({ variant: 'destructive', title: 'Firebase Name Sync Failed', description: `Could not update your name in Firebase: ${fbError.message}` });
+            }
+        }
+        
+        // Reset image preview and form's imageDataUri after successful submission
+        setImagePreview(null);
+        form.setValue('profileImageDataUri', ''); 
+        setCurrentPhotoUrl(updatedMongoDBProfile.photoUrl); // Update current photo display
+
         router.push('/profile'); 
       } else {
-        throw new Error('Failed to update profile.'); // This is line 154
+        throw new Error('Failed to update profile in database.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
-      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update your profile. Please try again.' });
+      toast({ variant: 'destructive', title: 'Update Failed', description: error.message || 'Could not update your profile. Please try again.' });
     } finally {
       setIsSaving(false);
     }
@@ -178,6 +250,10 @@ export default function EditProfilePage() {
         <Card>
           <CardHeader><Skeleton className="h-7 w-48" /></CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex flex-col items-center gap-4 mb-6">
+                <Skeleton className="h-24 w-24 rounded-full" />
+                <Skeleton className="h-10 w-32" />
+            </div>
             {[...Array(5)].map((_, i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="h-4 w-1/4" />
@@ -227,6 +303,40 @@ export default function EditProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              
+              <FormItem className="flex flex-col items-center gap-4">
+                <FormLabel>Profile Picture</FormLabel>
+                <div className="relative h-24 w-24 rounded-full overflow-hidden border-2 border-primary/50">
+                  <Image 
+                    src={imagePreview || currentPhotoUrl || PLACEHOLDER_IMAGE_URL(96,96)} 
+                    alt="Profile" 
+                    layout="fill" 
+                    objectFit="cover" 
+                    data-ai-hint="person portrait"
+                  />
+                </div>
+                <Input 
+                  id="profile-image-upload"
+                  type="file" 
+                  accept="image/jpeg,image/png,image/webp,image/gif" 
+                  onChange={handleProfileImageChange}
+                  className="hidden"
+                />
+                 <Button type="button" variant="outline" size="sm" onClick={() => document.getElementById('profile-image-upload')?.click()}>
+                    <ImagePlus className="mr-2 h-4 w-4"/> {imagePreview || currentPhotoUrl ? 'Change' : 'Upload'} Image
+                </Button>
+                <FormField
+                    control={form.control}
+                    name="profileImageDataUri"
+                    render={({ field }) => (
+                    <FormItem className="hidden"> {/* Hidden, as value is managed by handleProfileImageChange */}
+                        <FormControl><Input type="text" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+              </FormItem>
+
               <FormField
                 control={form.control}
                 name="name"
@@ -238,17 +348,7 @@ export default function EditProfilePage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="photoUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Photo URL</FormLabel>
-                    <FormControl><Input placeholder="https://example.com/your-photo.jpg" {...field} value={field.value || ''} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              
               <div className="grid md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -387,4 +487,6 @@ export default function EditProfilePage() {
     </div>
   );
 }
+    
+
     
