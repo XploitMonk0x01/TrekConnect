@@ -26,16 +26,16 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" defaultValue="Wanderlust Weaver" />
+              <Input id="name" placeholder="Your name (managed in Profile)" />
             </div>
             <div>
               <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" defaultValue="wanderer@example.com" disabled />
+              <Input id="email" type="email" placeholder="your@example.com" disabled />
             </div>
           </div>
           <div>
             <Label htmlFor="bio">Bio</Label>
-            <Input id="bio" defaultValue="Passionate trekker and storyteller..." />
+            <Input id="bio" placeholder="Your bio (managed in Profile)" />
           </div>
           <Button>Save Changes</Button>
         </CardContent>
