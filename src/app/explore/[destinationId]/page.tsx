@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, use } from 'react'; // Added 'use'
+import { useState, useEffect, use } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -12,8 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { generateTrekImage } from '@/ai/flows/generate-trek-image-flow';
 import { useToast } from "@/hooks/use-toast";
+import { searchPexelsImage } from '@/services/pexels';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const mockDestinations: Destination[] = [
+const mockDestinationsList: Destination[] = [
   { id: "in1", name: "Roopkund Trek", description: "A thrilling trek in Uttarakhand leading to the mysterious Roopkund Lake, known for the human skeletons found at its edge. Offers stunning views of Trishul and Nanda Ghunti peaks.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Roopkund Lake", "Bedni Bugyal", "Trishul Peak views"], travelTips: "High altitude trek, requires good fitness. Best season: May-June, Aug-Sep.", averageRating: 4.7, coordinates: { lat: 30.257, lng: 79.723 } },
   { id: "in2", name: "Hampta Pass Trek", description: "A popular trek in Himachal Pradesh that offers a dramatic crossover from the lush green Kullu valley to the arid landscapes of Lahaul. Features beautiful river crossings and camping spots.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Himachal Pradesh, Himalayas", attractions: ["Chandratal Lake (optional extension)", "Shea Goru campsite", "Hampta Pass crossing"], travelTips: "Moderate difficulty, suitable for beginners with good fitness. Best season: June-September.", averageRating: 4.6, coordinates: { lat: 32.270, lng: 77.395 } },
   { id: "in3", name: "Valley of Flowers Trek", description: "A vibrant and picturesque trek in Uttarakhand, leading to a UNESCO World Heritage site known for its meadows of endemic alpine flowers and diverse flora.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Himalayas", attractions: ["Valley of Flowers National Park", "Hemkund Sahib"], travelTips: "Best visited during monsoon (July-August) when flowers are in full bloom. Moderate difficulty.", averageRating: 4.8, coordinates: { lat: 30.727, lng: 79.605 } },
@@ -51,11 +53,60 @@ const destinationAITags: Record<string, string> = {
 
 
 export default function DestinationDetailPage({ params: incomingParams }: { params: { destinationId: string } }) {
-  const params = use(incomingParams as any); // Unwrap params using React.use() as per Next.js warning
-  const destination = mockDestinations.find(d => d.id === params.destinationId);
+  const resolvedParams = use(incomingParams as any); 
+  const initialDestination = mockDestinationsList.find(d => d.id === resolvedParams.destinationId);
+
+  const [destination, setDestination] = useState<Destination | undefined>(initialDestination);
+  const [isMainImageLoading, setIsMainImageLoading] = useState(true);
+  const [travelerPhotos, setTravelerPhotos] = useState<string[]>([]);
+  const [areTravelerPhotosLoading, setAreTravelerPhotosLoading] = useState(true);
+  
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (initialDestination) {
+      const fetchMainImage = async () => {
+        setIsMainImageLoading(true);
+        const query = destinationAITags[initialDestination.id] || `${initialDestination.name} landscape`;
+        try {
+          const imageUrl = await searchPexelsImage(query, 1200, 600);
+          setDestination(prev => prev ? { ...prev, imageUrl } : undefined);
+        } catch (error) {
+          console.error("Failed to load main image:", error);
+          // Keep placeholder if fetch fails
+        } finally {
+          setIsMainImageLoading(false);
+        }
+      };
+      fetchMainImage();
+
+      const fetchTravelerPhotos = async () => {
+        setAreTravelerPhotosLoading(true);
+        const photoQueryBase = destinationAITags[initialDestination.id] || initialDestination.name;
+        const queries = [
+          `${photoQueryBase} trek photo`,
+          `${photoQueryBase} landscape detail`,
+          `${photoQueryBase} mountain view`,
+          `${photoQueryBase} trail`,
+          `${photoQueryBase} nature scenery`
+        ];
+        try {
+          const photoPromises = queries.map(q => searchPexelsImage(q, 300, 300));
+          const photos = await Promise.all(photoPromises);
+          setTravelerPhotos(photos.filter(p => !p.includes('placehold.co'))); // Filter out placeholders if Pexels fails for a query
+        } catch (error) {
+          console.error("Failed to load traveler photos:", error);
+          setTravelerPhotos([...Array(5)].map(() => PLACEHOLDER_IMAGE_URL(300,300)));
+        } finally {
+          setAreTravelerPhotosLoading(false);
+        }
+      };
+      fetchTravelerPhotos();
+    }
+  }, [resolvedParams.destinationId, initialDestination]);
+
 
   const handleGenerateImage = async () => {
     if (!destination) return;
@@ -127,14 +178,21 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
 
       <Card className="shadow-lg overflow-hidden">
         <div className="relative h-64 md:h-96">
-          <Image
-            src={destination.imageUrl}
-            alt={destination.name}
-            layout="fill"
-            objectFit="cover"
-            priority
-            data-ai-hint={AITag}
-          />
+          {isMainImageLoading ? (
+            <Skeleton className="h-full w-full" />
+          ) : (
+            <Image
+              src={destination.imageUrl}
+              alt={destination.name}
+              layout="fill"
+              objectFit="cover"
+              priority
+              data-ai-hint={AITag}
+              onError={() => {
+                setDestination(prev => prev ? { ...prev, imageUrl: PLACEHOLDER_IMAGE_URL(1200,600) } : undefined);
+              }}
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex flex-col justify-end p-6">
             <h1 className="font-headline text-3xl md:text-4xl text-primary-foreground mb-1">{destination.name}</h1>
             <div className="flex items-center text-lg text-primary-foreground/80">
@@ -281,18 +339,34 @@ export default function DestinationDetailPage({ params: incomingParams }: { para
         </CardContent>
       </Card>
 
-
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl text-primary">Photos from Travelers</CardTitle>
           <CardDescription>See {destination.name} through the eyes of the community.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
-              <Image src={PLACEHOLDER_IMAGE_URL(300,300)} alt={`User photo ${i+1} from ${destination.name}`} layout="fill" objectFit="cover" data-ai-hint={`${AITag} photo`} />
-            </div>
-          ))}
+          {areTravelerPhotosLoading ? (
+            [...Array(5)].map((_, i) => (
+              <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
+                 <Skeleton className="h-full w-full" />
+              </div>
+            ))
+          ) : (
+            travelerPhotos.map((photoUrl, i) => (
+              <div key={i} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
+                <Image 
+                  src={photoUrl} 
+                  alt={`User photo ${i+1} from ${destination.name}`} 
+                  layout="fill" 
+                  objectFit="cover" 
+                  data-ai-hint={`${AITag} photo ${i+1}`} 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(300,300);
+                  }}
+                />
+              </div>
+            ))
+          )}
            <Button variant="outline" className="aspect-square flex flex-col items-center justify-center text-muted-foreground hover:bg-primary/5 hover:text-primary border-primary">
               <ExternalLink className="h-6 w-6 mb-1"/>
               View All Photos
