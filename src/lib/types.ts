@@ -1,36 +1,39 @@
 
 export interface UserProfile {
-  id: string;
-  name: string;
-  age: number;
-  gender: string;
-  photoUrl: string;
+  id: string; // Firebase UID
+  name: string | null; // From Firebase displayName
+  email: string | null; // From Firebase email
+  photoUrl: string | null; // From Firebase photoURL
+  age?: number;
+  gender?: string;
   bio?: string;
   travelPreferences: {
-    soloOrGroup: 'Solo' | 'Group' | 'Flexible';
-    budget: 'Budget' | 'Mid-range' | 'Luxury' | 'Flexible';
+    soloOrGroup?: 'Solo' | 'Group' | 'Flexible';
+    budget?: 'Budget' | 'Mid-range' | 'Luxury' | 'Flexible';
     style?: string; // e.g., Adventure, Relaxing, Cultural
   };
-  languagesSpoken: string[];
-  trekkingExperience: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+  languagesSpoken?: string[];
+  trekkingExperience?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
   wishlistDestinations?: Destination[];
   travelHistory?: Destination[];
   plannedTrips?: PlannedTrip[];
   badges?: Badge[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Destination {
   id: string;
   name: string;
   description: string;
-  imageUrl: string; // Should store a placeholder or a default image path
+  imageUrl: string;
   country?: string;
   region?: string;
   attractions?: string[];
   travelTips?: string;
   coordinates?: { lat: number; lng: number };
   averageRating?: number;
-  aiHint?: string; // New field for Pexels query hint
+  aiHint?: string;
 }
 
 export interface PlannedTrip {
@@ -45,7 +48,7 @@ export interface PlannedTrip {
 export interface Badge {
   id: string;
   name: string;
-  iconUrl?: string; // Or LucideIcon name
+  iconUrl?: string;
   description: string;
 }
 
@@ -69,7 +72,7 @@ export interface Story {
   userName: string;
   userAvatarUrl?: string;
   title: string;
-  content: string; // Could be Markdown or HTML
+  content: string;
   imageUrl?: string;
   destinationId?: string;
   destinationName?: string;
@@ -81,21 +84,20 @@ export interface Story {
 }
 
 export interface WeatherInfo {
-  temperature: string; // e.g., "25°C"
-  condition: string; // e.g., "Sunny"
-  iconCode?: string; // For weather icons
+  temperature: string;
+  condition: string;
+  iconCode?: string;
   forecast?: WeatherForecastDay[];
 }
 
 export interface WeatherForecastDay {
-  date: string; // ISO date string
+  date: string;
   minTemp: string;
   maxTemp: string;
   condition: string;
   iconCode?: string;
 }
 
-// For Smart Match AI
 export type SmartMatchUserProfileInput = {
   name: string;
   age: number;
@@ -109,4 +111,3 @@ export type SmartMatchUserProfileInput = {
   wishlistDestinations: string[];
   travelHistory: string[];
 };
-

@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { SiteLogo } from '@/components/SiteLogo';
 import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, type UserCredential } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { upsertUserFromFirebase } from '@/services/users'; // Import the new service
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -24,6 +25,31 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  const handleSuccessfulSignUp = async (userCredential: UserCredential, isEmailSignUp: boolean = false) => {
+    if (userCredential.user) {
+      if (isEmailSignUp && fullName) {
+        // Update Firebase profile first for email sign-up
+        await updateProfile(userCredential.user, { displayName: fullName });
+      }
+      // Now upsert to MongoDB. For Google Sign-Up, displayName might already be set from Google.
+      // For email sign-up, it's set from fullName via updateProfile.
+      // We need to ensure userCredential.user is refreshed if updateProfile was called.
+      // A simple way is to re-fetch or use the potentially updated user object from auth.currentUser
+      // For now, we'll proceed with the userCredential.user, assuming it's fresh enough or upsertUserFromFirebase handles it.
+      // A more robust approach might involve passing the updated name to upsertUserFromFirebase if needed.
+
+      const firebaseUserAfterUpdate = auth.currentUser || userCredential.user; // Prefer currentUser if available
+
+      const userProfile = await upsertUserFromFirebase(firebaseUserAfterUpdate);
+      if (!userProfile) {
+         toast({ variant: 'destructive', title: 'Profile Creation Failed', description: 'Could not save your profile to our database.' });
+         // Decide if you want to prevent login or just warn.
+      }
+    }
+    toast({ title: 'Account Created', description: 'Welcome to TrekConnect!' });
+    router.push('/'); // Redirect to dashboard
+  };
+
   const handleEmailSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password !== confirmPassword) {
@@ -33,11 +59,7 @@ export default function SignUpPage() {
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, { displayName: fullName });
-      }
-      toast({ title: 'Account Created', description: 'Welcome to TrekConnect!' });
-      router.push('/'); // Redirect to dashboard
+      await handleSuccessfulSignUp(userCredential, true);
     } catch (error: any) {
       console.error('Sign up error:', error);
       toast({ variant: 'destructive', title: 'Sign Up Failed', description: error.message || 'Could not create account.' });
@@ -50,10 +72,10 @@ export default function SignUpPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const userCredential = await signInWithPopup(auth, provider);
       // Firebase handles new user creation or sign-in with Google automatically
-      toast({ title: 'Signed Up with Google', description: 'Welcome!' });
-      router.push('/'); // Redirect to dashboard
+      // `isEmailSignUp` is false by default
+      await handleSuccessfulSignUp(userCredential); 
     } catch (error: any) {
       console.error('Google sign up error:', error);
       toast({ variant: 'destructive', title: 'Google Sign Up Failed', description: error.message || 'Could not sign up with Google.' });

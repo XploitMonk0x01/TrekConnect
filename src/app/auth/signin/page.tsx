@@ -11,8 +11,9 @@ import { Label } from '@/components/ui/label';
 import { LogIn, Loader2 } from 'lucide-react';
 import { SiteLogo } from '@/components/SiteLogo';
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, type UserCredential } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { upsertUserFromFirebase } from '@/services/users'; // Import the new service
 
 export default function SignInPage() {
   const router = useRouter();
@@ -22,13 +23,24 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  const handleSuccessfulSignIn = async (userCredential: UserCredential) => {
+    if (userCredential.user) {
+      const userProfile = await upsertUserFromFirebase(userCredential.user);
+      if (!userProfile) {
+         toast({ variant: 'destructive', title: 'Profile Sync Failed', description: 'Could not sync your profile with our database.' });
+         // Decide if you want to prevent login or just warn. For now, we'll allow login.
+      }
+    }
+    toast({ title: 'Signed In', description: 'Welcome back!' });
+    router.push('/'); // Redirect to dashboard
+  };
+
   const handleEmailSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: 'Signed In', description: 'Welcome back!' });
-      router.push('/'); // Redirect to dashboard
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await handleSuccessfulSignIn(userCredential);
     } catch (error: any) {
       console.error('Sign in error:', error);
       toast({ variant: 'destructive', title: 'Sign In Failed', description: error.message || 'Please check your credentials.' });
@@ -41,9 +53,8 @@ export default function SignInPage() {
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      toast({ title: 'Signed In with Google', description: 'Welcome!' });
-      router.push('/'); // Redirect to dashboard
+      const userCredential = await signInWithPopup(auth, provider);
+      await handleSuccessfulSignIn(userCredential);
     } catch (error: any) {
       console.error('Google sign in error:', error);
       toast({ variant: 'destructive', title: 'Google Sign In Failed', description: error.message || 'Could not sign in with Google.' });
