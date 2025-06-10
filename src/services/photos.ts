@@ -1,82 +1,149 @@
+'use server'
 
-'use server';
+import type { Db, WithId, Document } from 'mongodb'
+import { getDb } from '@/lib/mongodb'
+import type { Photo, CreatePhotoInput, UserProfile } from '@/lib/types'
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 
-import type { Db, WithId, Document } from 'mongodb';
-import { ObjectId } from 'mongodb';
-import { getDb } from '@/lib/mongodb';
-import type { Photo, CreatePhotoInput, UserProfile } from '@/lib/types';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+// Define MongoDB document structure
+interface PhotoDocument {
+  _id: string
+  userId: string
+  firebaseUid: string
+  userName: string
+  userAvatarUrl?: string | null
+  imageUrl: string
+  destinationId?: string
+  destinationName?: string
+  caption?: string
+  tags?: string[]
+  uploadedAt: Date
+  likesCount: number
+  commentsCount: number
+  likes: string[]
+}
 
-// Helper function to map MongoDB document to Photo type
-function mapDocToPhoto(doc: WithId<Document>): Photo {
+// Helper function to map MongoDB document to Photo type with user info
+function mapDocToPhoto(doc: WithId<PhotoDocument>, user?: UserProfile): Photo {
   return {
     id: doc._id.toString(),
-    userId: doc.userId || 'unknown_user',
-    userName: doc.userName || 'Anonymous User',
-    userAvatarUrl: doc.userAvatarUrl || null,
+    userId: doc.userId,
+    firebaseUid: doc.firebaseUid,
+    userName: user?.name || doc.userName || 'Anonymous User',
+    userAvatarUrl:
+      user?.photoUrl || doc.userAvatarUrl || PLACEHOLDER_IMAGE_URL(40, 40),
     imageUrl: doc.imageUrl || PLACEHOLDER_IMAGE_URL(600, 600),
     destinationId: doc.destinationId,
     destinationName: doc.destinationName,
     caption: doc.caption,
     tags: doc.tags || [],
-    uploadedAt: doc.uploadedAt ? new Date(doc.uploadedAt).toISOString() : new Date().toISOString(),
+    uploadedAt: doc.uploadedAt
+      ? new Date(doc.uploadedAt).toISOString()
+      : new Date().toISOString(),
     likesCount: doc.likesCount || 0,
     commentsCount: doc.commentsCount || 0,
-  };
-}
-
-export async function getAllPhotos(): Promise<Photo[]> {
-  try {
-    const db: Db = await getDb();
-    const photosCollection = db.collection<WithId<Document>>('photos');
-    const photoDocs = await photosCollection.find({}).sort({ uploadedAt: -1 }).toArray();
-
-    if (!photoDocs) {
-      return [];
-    }
-    return photoDocs.map(mapDocToPhoto);
-  } catch (error) {
-    console.error('Error fetching photos from MongoDB:', error);
-    return [];
+    likes: doc.likes || [],
   }
 }
 
 export async function createPhoto(
-  photoInput: CreatePhotoInput,
-  user: Pick<UserProfile, 'id' | 'name' | 'photoUrl'>
-): Promise<Photo | null> {
+  photo: Partial<Photo>,
+  user: UserProfile
+): Promise<Photo> {
   try {
-    const db: Db = await getDb();
-    const photosCollection = db.collection('photos');
+    const db: Db = await getDb()
+    const collection = db.collection<PhotoDocument>('photos')
 
-    const now = new Date();
-    const newPhotoDocument: Omit<Photo, 'id'> = {
+    const newPhoto: Omit<PhotoDocument, '_id'> = {
       userId: user.id,
+      firebaseUid: user.firebaseUid,
       userName: user.name || 'Anonymous User',
-      userAvatarUrl: user.photoUrl || null,
-      imageUrl: photoInput.imageUrl, // This will be the Data URI for now
-      caption: photoInput.caption || '',
-      destinationId: photoInput.destinationId || undefined,
-      destinationName: photoInput.destinationName || undefined,
-      tags: photoInput.tags || [],
+      userAvatarUrl: user.photoUrl,
+      imageUrl: photo.imageUrl || PLACEHOLDER_IMAGE_URL(600, 600),
+      destinationId: photo.destinationId,
+      destinationName: photo.destinationName,
+      caption: photo.caption,
+      tags: photo.tags || [],
+      uploadedAt: new Date(),
       likesCount: 0,
       commentsCount: 0,
-      uploadedAt: now.toISOString(),
-    };
-
-    const result = await photosCollection.insertOne(newPhotoDocument);
-
-    if (result.insertedId) {
-      const insertedDoc = await photosCollection.findOne({ _id: result.insertedId });
-      return insertedDoc ? mapDocToPhoto(insertedDoc) : null;
+      likes: [],
     }
-    return null;
+
+    const result = await collection.insertOne(newPhoto as PhotoDocument)
+    return mapDocToPhoto(
+      { ...newPhoto, _id: result.insertedId.toString() },
+      user
+    )
   } catch (error) {
-    console.error('Error creating photo in MongoDB:', error);
-    // Check if error is due to document size limit if using Data URIs extensively
-    if (error instanceof Error && error.message.includes('document size')) {
-        console.error("MongoDB document size limit likely exceeded. Consider using a dedicated file storage service instead of Data URIs for images.");
-    }
-    return null;
+    console.error('Error creating photo:', error)
+    throw error
+  }
+}
+
+export async function getAllPhotos(): Promise<Photo[]> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<PhotoDocument>('photos')
+    const photos = await collection.find().toArray()
+    return photos.map((photo) => mapDocToPhoto(photo))
+  } catch (error) {
+    console.error('Error getting photos:', error)
+    throw error
+  }
+}
+
+export async function getPhotosByUser(userId: string): Promise<Photo[]> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<PhotoDocument>('photos')
+    const photos = await collection
+      .find({ userId })
+      .sort({ uploadedAt: -1 })
+      .toArray()
+    return photos.map((photo) => mapDocToPhoto(photo))
+  } catch (error) {
+    console.error('Error getting user photos:', error)
+    throw error
+  }
+}
+
+export async function likePhoto(
+  photoId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<PhotoDocument>('photos')
+    await collection.updateOne(
+      { _id: photoId },
+      {
+        $addToSet: { likes: userId },
+        $inc: { likesCount: 1 },
+      }
+    )
+  } catch (error) {
+    console.error('Error liking photo:', error)
+    throw error
+  }
+}
+
+export async function unlikePhoto(
+  photoId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<PhotoDocument>('photos')
+    await collection.updateOne(
+      { _id: photoId },
+      {
+        $pull: { likes: userId },
+        $inc: { likesCount: -1 },
+      }
+    )
+  } catch (error) {
+    console.error('Error unliking photo:', error)
+    throw error
   }
 }

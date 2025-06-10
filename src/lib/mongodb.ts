@@ -1,56 +1,83 @@
-
-// This approach is taken from https://github.com/vercel/next.js/tree/canary/examples/with-mongodb
-import { MongoClient, ServerApiVersion, Db } from 'mongodb';
+import { MongoClient, MongoClientOptions } from 'mongodb'
 import { config } from 'dotenv'
-config() // Load environment variables from .env file
 
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB_NAME || "TrekConnect"; // Default DB name if not in URI or env
+config()
 
-if (!uri) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env');
+// Ensure environment variables are set
+if (!process.env.MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable')
+}
+if (!process.env.MONGODB_DB_NAME) {
+  throw new Error('Please define the MONGODB_DB_NAME environment variable')
 }
 
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
-
-// Define a type for the global object to safely attach the MongoDB client promise
-interface GlobalWithMongo extends globalThis.Window {
-  _mongoClientPromise?: Promise<MongoClient>;
+declare global {
+  var _mongoClientPromise: Promise<MongoClient> | undefined
 }
+
+const uri = process.env.MONGODB_URI
+const options: MongoClientOptions = {
+  maxPoolSize: 10,
+  minPoolSize: 5,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000,
+  retryWrites: true,
+  retryReads: true,
+  writeConcern: { w: 'majority' },
+}
+
+let clientPromise: Promise<MongoClient>
+
+let client: MongoClient
+let mongoClientPromise: Promise<MongoClient>
 
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  const globalWithMongo = globalThis as unknown as GlobalWithMongo;
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, {
-      serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-      }
-    });
-    globalWithMongo._mongoClientPromise = client.connect();
+  if (!global._mongoClientPromise) {
+    client = new MongoClient(uri, options)
+    global._mongoClientPromise = client
+      .connect()
+      .then((client) => {
+        console.log('Connected to MongoDB in development mode')
+        return client
+      })
+      .catch((error) => {
+        console.error('Failed to connect to MongoDB:', error)
+        throw error
+      })
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
+  mongoClientPromise = global._mongoClientPromise
 } else {
   // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true,
-    }
-  });
-  clientPromise = client.connect();
+  client = new MongoClient(uri, options)
+  mongoClientPromise = client
+    .connect()
+    .then((client) => {
+      console.log('Connected to MongoDB in production mode')
+      return client
+    })
+    .catch((error) => {
+      console.error('Failed to connect to MongoDB:', error)
+      throw error
+    })
 }
 
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
-export default clientPromise;
+clientPromise = mongoClientPromise
 
-export async function getDb(): Promise<Db> {
-  const mongoClient = await clientPromise;
-  return mongoClient.db(dbName);
+// Export a module-scoped MongoClient promise
+export default clientPromise
+
+export async function getDb() {
+  try {
+    const client = await clientPromise
+    if (!process.env.MONGODB_DB_NAME) {
+      throw new Error('MONGODB_DB_NAME environment variable is not defined')
+    }
+    return client.db(process.env.MONGODB_DB_NAME)
+  } catch (error) {
+    console.error('MongoDB connection error:', error)
+    throw new Error('Failed to connect to database')
+  }
 }

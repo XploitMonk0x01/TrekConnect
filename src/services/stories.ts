@@ -1,101 +1,213 @@
+'use server'
 
-'use server';
+import type { Db, WithId, Document } from 'mongodb'
+import { getDb } from '@/lib/mongodb'
+import type { Story, CreateStoryInput, UserProfile } from '@/lib/types'
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 
-import type { Db, WithId, Document } from 'mongodb';
-import { ObjectId } from 'mongodb';
-import { getDb } from '@/lib/mongodb';
-import type { Story, CreateStoryInput, UserProfile } from '@/lib/types';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+// Define MongoDB document structure
+interface StoryDocument {
+  _id: string
+  userId: string
+  firebaseUid: string
+  userName: string
+  userAvatarUrl?: string | null
+  title: string
+  content: string
+  imageUrl?: string | null
+  destinationId?: string
+  destinationName?: string
+  tags?: string[]
+  createdAt: Date
+  updatedAt: Date
+  likesCount: number
+  commentsCount: number
+  likes: string[]
+}
 
-// Helper function to map MongoDB document to Story type
-function mapDocToStory(doc: WithId<Document>): Story {
+// Helper function to map MongoDB document to Story type with user info
+function mapDocToStory(doc: WithId<StoryDocument>, user?: UserProfile): Story {
   return {
     id: doc._id.toString(),
     userId: doc.userId,
-    userName: doc.userName || 'Anonymous Author',
-    userAvatarUrl: doc.userAvatarUrl || null,
-    title: doc.title || 'Untitled Story',
-    content: doc.content || 'No content.',
-    imageUrl: doc.imageUrl || null,
+    firebaseUid: doc.firebaseUid,
+    userName: user?.name || doc.userName || 'Anonymous User',
+    userAvatarUrl:
+      user?.photoUrl || doc.userAvatarUrl || PLACEHOLDER_IMAGE_URL(40, 40),
+    title: doc.title,
+    content: doc.content,
+    imageUrl: doc.imageUrl,
     destinationId: doc.destinationId,
     destinationName: doc.destinationName,
     tags: doc.tags || [],
-    createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : new Date().toISOString(),
-    updatedAt: doc.updatedAt ? new Date(doc.updatedAt).toISOString() : new Date().toISOString(),
+    createdAt: doc.createdAt
+      ? new Date(doc.createdAt).toISOString()
+      : new Date().toISOString(),
+    updatedAt: doc.updatedAt
+      ? new Date(doc.updatedAt).toISOString()
+      : new Date().toISOString(),
     likesCount: doc.likesCount || 0,
     commentsCount: doc.commentsCount || 0,
-  };
-}
-
-export async function getAllStories(): Promise<Story[]> {
-  try {
-    const db: Db = await getDb();
-    const storiesCollection = db.collection<WithId<Document>>('stories');
-    const storyDocs = await storiesCollection.find({}).sort({ createdAt: -1 }).toArray();
-
-    if (!storyDocs) {
-      return [];
-    }
-    return storyDocs.map(mapDocToStory);
-  } catch (error) {
-    console.error('Error fetching stories from MongoDB:', error);
-    return [];
-  }
-}
-
-export async function getStoryById(id: string): Promise<Story | null> {
-  try {
-    const db: Db = await getDb();
-    const storiesCollection = db.collection('stories');
-
-    if (!ObjectId.isValid(id)) {
-      console.warn(`Invalid ID format for getStoryById: ${id}`);
-      return null;
-    }
-
-    const storyDoc = await storiesCollection.findOne({ _id: new ObjectId(id) });
-
-    if (!storyDoc) {
-      return null;
-    }
-    return mapDocToStory(storyDoc);
-  } catch (error) {
-    console.error(`Error fetching story by ID (${id}) from MongoDB:`, error);
-    return null;
+    likes: doc.likes || [],
   }
 }
 
 export async function createStory(
-  storyInput: CreateStoryInput,
-  user: Pick<UserProfile, 'id' | 'name' | 'photoUrl'>
-): Promise<Story | null> {
+  story: Partial<Story>,
+  user: UserProfile
+): Promise<Story> {
   try {
-    const db: Db = await getDb();
-    const storiesCollection = db.collection('stories');
+    const db: Db = await getDb()
+    const collection = db.collection<StoryDocument>('stories')
 
-    const now = new Date();
-    const newStoryDocument: Omit<Story, 'id'> = {
-      ...storyInput,
+    const newStory: Omit<StoryDocument, '_id'> = {
       userId: user.id,
-      userName: user.name || 'Anonymous Author',
-      userAvatarUrl: user.photoUrl || null,
-      tags: storyInput.tags || [],
-      imageUrl: storyInput.imageUrl || null,
+      firebaseUid: user.firebaseUid,
+      userName: user.name || 'Anonymous User',
+      userAvatarUrl: user.photoUrl,
+      title: story.title || '',
+      content: story.content || '',
+      imageUrl: story.imageUrl,
+      destinationId: story.destinationId,
+      destinationName: story.destinationName,
+      tags: story.tags || [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
       likesCount: 0,
       commentsCount: 0,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    };
-
-    const result = await storiesCollection.insertOne(newStoryDocument);
-
-    if (result.insertedId) {
-      const insertedDoc = await storiesCollection.findOne({ _id: result.insertedId });
-      return insertedDoc ? mapDocToStory(insertedDoc) : null;
+      likes: [],
     }
-    return null;
+
+    const result = await collection.insertOne(newStory as StoryDocument)
+    return mapDocToStory(
+      { ...newStory, _id: result.insertedId.toString() },
+      user
+    )
   } catch (error) {
-    console.error('Error creating story in MongoDB:', error);
-    return null;
+    console.error('Error creating story:', error)
+    throw error
+  }
+}
+
+export async function getAllStories(): Promise<Story[]> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<StoryDocument>('stories')
+    const stories = await collection.find().sort({ createdAt: -1 }).toArray()
+    return stories.map((story) => mapDocToStory(story))
+  } catch (error) {
+    console.error('Error getting stories:', error)
+    throw error
+  }
+}
+
+export async function getStoriesByUser(userId: string): Promise<Story[]> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<StoryDocument>('stories')
+    const stories = await collection
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray()
+    return stories.map((story) => mapDocToStory(story))
+  } catch (error) {
+    console.error('Error getting user stories:', error)
+    throw error
+  }
+}
+
+export async function updateStory(
+  storyId: string,
+  updates: Partial<Story>,
+  user: UserProfile
+): Promise<Story> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<StoryDocument>('stories')
+    const story = await collection.findOne({
+      _id: storyId,
+      userId: user.id,
+    })
+
+    if (!story) {
+      throw new Error('Story not found or user not authorized')
+    }
+
+    // Remove 'id' and ensure 'createdAt' is a Date if present
+    const { id, createdAt, ...restUpdates } = updates
+    const updatedStory: Partial<StoryDocument> = {
+      ...restUpdates,
+      ...(createdAt ? { createdAt: new Date(createdAt) } : {}),
+      updatedAt: new Date(),
+    }
+
+    await collection.updateOne({ _id: storyId }, { $set: updatedStory })
+
+    const updated = await collection.findOne({ _id: storyId })
+    return mapDocToStory(updated!, user)
+  } catch (error) {
+    console.error('Error updating story:', error)
+    throw error
+  }
+}
+
+export async function likeStory(
+  storyId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<StoryDocument>('stories')
+    await collection.updateOne(
+      { _id: storyId },
+      {
+        $addToSet: { likes: userId },
+        $inc: { likesCount: 1 },
+      }
+    )
+  } catch (error) {
+    console.error('Error liking story:', error)
+    throw error
+  }
+}
+
+export async function unlikeStory(
+  storyId: string,
+  userId: string
+): Promise<void> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<StoryDocument>('stories')
+    await collection.updateOne(
+      { _id: storyId },
+      {
+        $pull: { likes: userId },
+        $inc: { likesCount: -1 },
+      }
+    )
+  } catch (error) {
+    console.error('Error unliking story:', error)
+    throw error
+  }
+}
+
+export async function deleteStory(
+  storyId: string,
+  user: UserProfile
+): Promise<void> {
+  try {
+    const db: Db = await getDb()
+    const collection = db.collection<StoryDocument>('stories')
+    const result = await collection.deleteOne({
+      _id: storyId,
+      userId: user.id,
+    })
+
+    if (result.deletedCount === 0) {
+      throw new Error('Story not found or user not authorized')
+    }
+  } catch (error) {
+    console.error('Error deleting story:', error)
+    throw error
   }
 }
