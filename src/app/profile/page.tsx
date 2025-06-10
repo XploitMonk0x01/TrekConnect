@@ -26,8 +26,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
-import type { Destination } from '@/lib/types'; 
-import Image from 'next/image'; 
+// import type { Destination } from '@/lib/types'; // Not used directly here
+// import Image from 'next/image'; // Not used directly here
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
 
 // Wishlist and History AITags are removed as we display names directly
@@ -80,6 +80,19 @@ export default function ProfilePage() {
     return 'U';
   };
 
+  const travelPreferencesParts: string[] = [];
+  if (currentUser.travelPreferences?.soloOrGroup) {
+    travelPreferencesParts.push(currentUser.travelPreferences.soloOrGroup);
+  }
+  if (currentUser.travelPreferences?.budget) {
+    travelPreferencesParts.push(currentUser.travelPreferences.budget);
+  }
+  if (currentUser.travelPreferences?.style) {
+    travelPreferencesParts.push(currentUser.travelPreferences.style);
+  }
+  const travelPreferencesText = travelPreferencesParts.length > 0 ? travelPreferencesParts.join(', ') : 'N/A';
+
+
   return (
     <div className="space-y-8">
       <Card className="shadow-lg">
@@ -122,16 +135,13 @@ export default function ProfilePage() {
             <div className="flex items-center p-3 bg-background rounded-lg border">
               <Briefcase className="h-5 w-5 mr-3 text-primary" />
               <div>
-                <strong>Preferences:</strong>
-                {currentUser.travelPreferences?.soloOrGroup || 'N/A'},{' '}
-                {currentUser.travelPreferences?.budget || 'N/A'}
-                {currentUser.travelPreferences?.style ? `, ${currentUser.travelPreferences.style}` : ''}
+                <strong>Preferences:</strong> {travelPreferencesText}
               </div>
             </div>
             <div className="flex items-center p-3 bg-background rounded-lg border">
               <Languages className="h-5 w-5 mr-3 text-primary" />
               <div>
-                <strong>Languages:</strong> {currentUser.languagesSpoken?.join(', ') || 'N/A'}
+                <strong>Languages:</strong> {currentUser.languagesSpoken && currentUser.languagesSpoken.length > 0 ? currentUser.languagesSpoken.join(', ') : 'N/A'}
               </div>
             </div>
             <div className="flex items-center p-3 bg-background rounded-lg border">
@@ -212,3 +222,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
