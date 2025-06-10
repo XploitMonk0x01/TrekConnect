@@ -1,70 +1,100 @@
-import { compare } from 'bcryptjs'
-import { sign } from 'jsonwebtoken'
-import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
+import { compare } from 'bcryptjs';
+import { sign } from 'jsonwebtoken';
+import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/mongodb';
+import type { UserProfile } from '@/lib/types'; // Assuming UserProfile is adapted
+import { ObjectId } from 'mongodb';
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET is not defined in the environment variables');
+}
 
 export async function POST(req: Request) {
   try {
-    const { email, password } = await req.json()
+    const { email, password } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: email and password' },
         { status: 400 }
-      )
+      );
     }
 
-    const db = await getDb()
-    const usersCollection = db.collection('users')
+    const db = await getDb();
+    const usersCollection = db.collection('users');
 
-    // Find user
-    const user = await usersCollection.findOne({ email })
-    if (!user) {
+    const userDoc = await usersCollection.findOne({ email });
+    if (!userDoc) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
-      )
+      );
     }
 
-    // Verify password
-    const isValid = await compare(password, user.password)
-    if (!isValid) {
+    const isValidPassword = await compare(password, userDoc.password);
+    if (!isValidPassword) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
-      )
+      );
     }
+    
+    // Update lastLoginAt
+    const updatedUser = await usersCollection.findOneAndUpdate(
+        { _id: userDoc._id },
+        { $set: { lastLoginAt: new Date() } },
+        { returnDocument: 'after' }
+    );
 
-    // Create auth token
+    const effectiveUserDoc = updatedUser || userDoc;
+
+
     const token = sign(
       {
-        id: user._id.toString(),
-        email: user.email,
-        name: user.name,
+        id: effectiveUserDoc._id.toString(),
+        email: effectiveUserDoc.email,
+        name: effectiveUserDoc.name,
       },
       JWT_SECRET,
       { expiresIn: '7d' }
-    )
+    );
 
-    // Remove password from response and transform user data
-    const { password: _, ...userWithoutPassword } = user
+    // Prepare user object for response (excluding password)
+    const { password: _, ...userSafeForResponse } = effectiveUserDoc;
+
+    const userForResponse: UserProfile = {
+      id: effectiveUserDoc._id.toString(),
+      email: userSafeForResponse.email,
+      name: userSafeForResponse.name,
+      photoUrl: userSafeForResponse.photoUrl || null,
+      age: userSafeForResponse.age,
+      gender: userSafeForResponse.gender,
+      bio: userSafeForResponse.bio,
+      travelPreferences: userSafeForResponse.travelPreferences || {},
+      languagesSpoken: userSafeForResponse.languagesSpoken || [],
+      trekkingExperience: userSafeForResponse.trekkingExperience,
+      wishlistDestinations: userSafeForResponse.wishlistDestinations || [],
+      travelHistory: userSafeForResponse.travelHistory || [],
+      plannedTrips: userSafeForResponse.plannedTrips || [],
+      badges: userSafeForResponse.badges || [],
+      createdAt: userSafeForResponse.createdAt,
+      updatedAt: userSafeForResponse.updatedAt,
+      lastLoginAt: userSafeForResponse.lastLoginAt,
+    };
 
     return NextResponse.json({
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        name: user.name,
-        photoUrl: user.photoUrl || null,
-      },
+      user: userForResponse,
       token,
-    })
+    });
+
   } catch (error) {
-    console.error('Signin error:', error)
+    console.error('Signin error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error during signin' },
       { status: 500 }
-    )
+    );
   }
 }
