@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { NAV_ITEMS, APP_NAME, AUTH_SIGNIN_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM } from '@/lib/constants';
+import { NAV_ITEMS, APP_NAME, AUTH_SIGNIN_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, SETTINGS_NAV_ITEM } from '@/lib/constants'; // Added SETTINGS_NAV_ITEM
 import { LogIn, UserCircle, ChevronDown, LogOut as LogOutIcon } from 'lucide-react';
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
