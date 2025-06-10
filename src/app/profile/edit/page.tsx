@@ -2,28 +2,24 @@
 'use client'
 
 import { useState, useEffect, ChangeEvent } from 'react'
-// import { useRouter } from 'next/navigation' // Keep
 import Link from 'next/link';
-import { useToast } from '@/components/ui/use-toast'
-import {
-  Button, // Shadcn Button
-  Input,  // Shadcn Input
-  Label,  // Shadcn Label
-  Textarea, // Shadcn Textarea
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue // Shadcn Select
-} from '@/components/ui/form-elements-shadcn' // Assuming you'll create this or use individual Shadcn imports
+import { useToast } from '@/hooks/use-toast'; // Corrected path
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Loader2, Save, ImageUp, AlertTriangle } from 'lucide-react';
 import NextImage from 'next/image';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-// Removed useAuth
-// import { updateUserProfile } from '@/services/users'; // Custom user service for MongoDB
-// import { updateProfile as updateFirebaseProfile } from 'firebase/auth'; // Firebase specific
-// import { auth } from '@/lib/firebase'; // Firebase specific
+import { useCustomAuth } from '@/contexts/CustomAuthContext';
+import { updateUserProfile } from '@/services/users';
+import type { UserProfile } from '@/lib/types';
 
-// Updated Zod schema for custom auth
+
 const profileFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   age: z.coerce.number().positive('Age must be a positive number.').optional().or(z.literal('')),
@@ -40,18 +36,12 @@ const profileFormSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function EditProfilePage() {
-  // const router = useRouter() // Keep
   const { toast } = useToast()
-  // const { user: firebaseUser, loading: authLoading } = useAuth() // Removed
-  const [isLoading, setIsLoading] = useState(true) // For loading profile data
+  const { user: currentUser, isLoading: authIsLoading, validateSession } = useCustomAuth();
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
-
-  // Placeholder for custom auth state
-  const authLoading = false; // Simulate auth loaded
-  const currentUser = null; // Simulate logged out, replace with actual custom user object
-  // const currentUserId = currentUser?.id; // Get from custom auth token/context
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -70,41 +60,43 @@ export default function EditProfilePage() {
   });
 
   useEffect(() => {
-    // This effect needs to be rewritten for custom auth.
-    // It should fetch the user's profile from MongoDB using their custom ID.
-    // For now, it simulates a loading state and then an empty form.
-    // if (!currentUserId && !authLoading) {
-    //   // router.push('/auth/signin?redirect=/profile/edit');
-    //   setIsLoading(false);
-    //   return;
-    // }
-
-    // if (currentUserId) {
-    //   const loadProfile = async () => {
-    //     setIsLoading(true);
-    //     try {
-    //       // const profile = await getUserProfileService(currentUserId); // Your new service
-    //       // if (profile) {
-    //       //   form.reset({ /* map profile to form values */});
-    //       //   setCurrentPhotoUrl(profile.photoUrl);
-    //       // } else {
-    //       //   toast({ variant: 'destructive', title: 'Error', description: 'Could not load profile.' });
-    //       // }
-    //     } catch (error) { /* ... */ } finally { setIsLoading(false); }
-    //   };
-    //   // loadProfile();
-    // }
-    setIsLoading(false); // Simulate loading done
-  }, [/* currentUserId from custom auth */, authLoading, form, toast /*, router */]);
+    if (!authIsLoading && currentUser) {
+      setIsLoadingProfile(true);
+      console.log("[TrekConnect Debug Client] EditProfilePage - Populating form with currentUser:", currentUser);
+      form.reset({
+        name: currentUser.name || '',
+        age: currentUser.age || '',
+        gender: currentUser.gender || '',
+        bio: currentUser.bio || '',
+        profileImageDataUri: '', 
+        travelPreferences_soloOrGroup: currentUser.travelPreferences?.soloOrGroup || '',
+        travelPreferences_budget: currentUser.travelPreferences?.budget || '',
+        travelPreferences_style: currentUser.travelPreferences?.style || '',
+        languagesSpoken: currentUser.languagesSpoken?.join(', ') || '',
+        trekkingExperience: currentUser.trekkingExperience || '',
+      });
+      setCurrentPhotoUrl(currentUser.photoUrl);
+      setIsLoadingProfile(false);
+    } else if (!authIsLoading && !currentUser) {
+      setIsLoadingProfile(false);
+    }
+  }, [currentUser, authIsLoading, form]);
 
 
   const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5000000) { // 5MB limit
+      if (file.size > 5000000) { 
         toast({ variant: "destructive", title: "Image Too Large", description: "Maximum file size is 5MB." });
+        form.setError("profileImageDataUri", { type: "manual", message: "Max file size is 5MB."});
         return;
       }
+      if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+        toast({ variant: "destructive", title: "Invalid File Type", description: "Only JPG, PNG, GIF, WEBP allowed." });
+        form.setError("profileImageDataUri", { type: "manual", message: "Invalid file type."});
+        return;
+      }
+      form.clearErrors("profileImageDataUri");
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImagePreview(reader.result as string);
@@ -118,33 +110,55 @@ export default function EditProfilePage() {
   };
 
   const onSubmit = async (data: ProfileFormValues) => {
-    // if (!currentUserId) {
-    //   toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
-    //   return;
-    // }
+    if (!currentUser || !currentUser.id) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
+      return;
+    }
     setIsSaving(true);
-    console.log('Custom profile update attempt:', data);
-    toast({
-      title: 'Profile Update (Custom)',
-      description: 'Profile update logic with MongoDB needs to be implemented.',
-    });
-    // Placeholder:
-    // const profileUpdateData = { /* map data from ProfileFormValues to UserProfile update structure */};
-    // if (data.profileImageDataUri) profileUpdateData.photoUrl = data.profileImageDataUri;
-    // else if (profileImagePreview === null && currentPhotoUrl) { /* Logic to remove photo if needed */ }
+    
+    const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'lastLoginAt' | 'password'>> = {
+        name: data.name,
+        age: data.age ? Number(data.age) : undefined,
+        gender: data.gender as UserProfile['gender'] || undefined,
+        bio: data.bio || null,
+        // photoUrl handled below
+        travelPreferences: {
+            soloOrGroup: data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] || undefined,
+            budget: data.travelPreferences_budget as UserProfile['travelPreferences']['budget'] || undefined,
+            style: data.travelPreferences_style || undefined,
+        },
+        languagesSpoken: data.languagesSpoken ? data.languagesSpoken.split(',').map(s => s.trim()).filter(s => s) : [],
+        trekkingExperience: data.trekkingExperience as UserProfile['trekkingExperience'] || undefined,
+    };
 
-    // try {
-    //   // const updatedMongoDBProfile = await updateUserProfileService(currentUserId, profileUpdateData);
-    //   // if (!updatedMongoDBProfile) throw new Error('Failed to update profile in database.');
-    //   // toast({ title: 'Profile Updated', description: 'Your profile has been saved.'});
-    //   // setCurrentPhotoUrl(updatedMongoDBProfile.photoUrl);
-    //   // setProfileImagePreview(null); // Reset preview
-    //   // router.push('/profile');
-    // } catch (error: any) { /* ... */ } finally { setIsSaving(false); }
-    setIsSaving(false);
+    if (data.profileImageDataUri) {
+        profileUpdateData.photoUrl = data.profileImageDataUri;
+    } else {
+        profileUpdateData.photoUrl = currentPhotoUrl; 
+    }
+    
+    console.log(`[TrekConnect Debug Client] Calling updateUserProfile from edit/page.tsx with UID: ${currentUser.id} and data:`, JSON.stringify(profileUpdateData));
+
+    try {
+      const updatedMongoDBProfile = await updateUserProfile(currentUser.id, profileUpdateData);
+      
+      if (updatedMongoDBProfile) {
+        toast({ title: 'Profile Updated', description: 'Your profile has been successfully saved.'});
+        await validateSession(); 
+        setCurrentPhotoUrl(updatedMongoDBProfile.photoUrl); 
+        setProfileImagePreview(null); 
+      } else {
+        throw new Error('Failed to update profile in database.');
+      }
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast({ variant: 'destructive', title: 'Update Failed', description: error.message || 'Could not save your profile.' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  if (isLoading) {
+  if (authIsLoading || isLoadingProfile) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading Editor...</span>
@@ -152,7 +166,7 @@ export default function EditProfilePage() {
     );
   }
 
-  if (!currentUser && !authLoading) { // currentUser from custom auth
+  if (!currentUser && !authIsLoading) {
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -177,14 +191,18 @@ export default function EditProfilePage() {
       </div>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card p-6 rounded-lg shadow-xl">
-        {/* Profile Image Section */}
         <div className="space-y-2">
           <Label>Profile Picture</Label>
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 border-2 border-primary">
-              <AvatarImage src={profileImagePreview || currentPhotoUrl || PLACEHOLDER_IMAGE_URL(80,80)} alt="Profile" data-ai-hint="person current profile"/>
-              <AvatarFallback>{form.getValues('name')?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-            </Avatar>
+            <NextImage 
+              src={profileImagePreview || currentPhotoUrl || PLACEHOLDER_IMAGE_URL(80,80)} 
+              alt="Profile" 
+              width={80} 
+              height={80} 
+              className="rounded-full border-2 border-primary object-cover"
+              data-ai-hint="person current profile"
+              onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(80,80); }}
+            />
             <Input
               id="profile-image-upload"
               type="file"
@@ -196,85 +214,96 @@ export default function EditProfilePage() {
               <ImageUp className="mr-2 h-4 w-4" /> {currentPhotoUrl || profileImagePreview ? "Change Image" : "Upload Image"}
             </Button>
           </div>
-          {form.formState.errors.profileImageDataUri && <p className="text-sm text-destructive">{form.formState.errors.profileImageDataUri.message}</p>}
+           {form.formState.errors.profileImageDataUri && <p className="text-sm text-destructive mt-1">{form.formState.errors.profileImageDataUri.message}</p>}
         </div>
 
-        <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><Label htmlFor="name">Full Name</Label><Input id="name" {...field} required disabled={isSaving} /></FormItem> )} />
-        <FormField control={form.control} name="bio" render={({ field }) => ( <FormItem><Label htmlFor="bio">Bio (Optional)</Label><Textarea id="bio" {...field} rows={4} placeholder="Tell us a bit about your trekking adventures..." disabled={isSaving} /></FormItem> )} />
+        <div> 
+          <Label htmlFor="name">Full Name</Label>
+          <Input id="name" {...form.register('name')} required disabled={isSaving} />
+          {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
+        </div>
+        <div>
+          <Label htmlFor="bio">Bio (Optional)</Label>
+          <Textarea id="bio" {...form.register('bio')} rows={4} placeholder="Tell us a bit about your trekking adventures..." disabled={isSaving} />
+          {form.formState.errors.bio && <p className="text-sm text-destructive mt-1">{form.formState.errors.bio.message}</p>}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField control={form.control} name="age" render={({ field }) => ( <FormItem><Label htmlFor="age">Age (Optional)</Label><Input id="age" type="number" {...field} disabled={isSaving} /></FormItem> )} />
-          <FormField control={form.control} name="gender" render={({ field }) => (
-            <FormItem>
-              <Label htmlFor="gender">Gender (Optional)</Label>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSaving}>
-                <SelectTrigger id="gender"><SelectValue placeholder="Select gender" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Select gender</SelectItem>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )} />
+          <div>
+            <Label htmlFor="age">Age (Optional)</Label>
+            <Input id="age" type="number" {...form.register('age')} disabled={isSaving} />
+            {form.formState.errors.age && <p className="text-sm text-destructive mt-1">{form.formState.errors.age.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="gender">Gender (Optional)</Label>
+            <Select onValueChange={(value) => form.setValue('gender', value as ProfileFormValues['gender'])} defaultValue={form.getValues('gender')} disabled={isSaving}>
+              <SelectTrigger id="gender"><SelectValue placeholder="Select gender" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Select gender</SelectItem>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.formState.errors.gender && <p className="text-sm text-destructive mt-1">{form.formState.errors.gender.message}</p>}
+          </div>
         </div>
 
         <div>
           <h2 className="text-lg font-semibold mb-2 mt-4 border-b pb-1">Travel Preferences</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-            <FormField control={form.control} name="travelPreferences_soloOrGroup" render={({ field }) => (
-              <FormItem>
-                <Label htmlFor="travelPreferences_soloOrGroup">Travel Style</Label>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSaving}>
-                  <SelectTrigger id="travelPreferences_soloOrGroup"><SelectValue placeholder="Solo or Group?" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Select preference</SelectItem>
-                    <SelectItem value="Solo">Solo</SelectItem>
-                    <SelectItem value="Group">Group</SelectItem>
-                    <SelectItem value="Flexible">Flexible</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="travelPreferences_budget" render={({ field }) => (
-              <FormItem>
-                <Label htmlFor="travelPreferences_budget">Budget Level</Label>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSaving}>
-                  <SelectTrigger id="travelPreferences_budget"><SelectValue placeholder="Budget level" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Select budget</SelectItem>
-                    <SelectItem value="Budget">Budget</SelectItem>
-                    <SelectItem value="Mid-range">Mid-range</SelectItem>
-                    <SelectItem value="Luxury">Luxury</SelectItem>
-                     <SelectItem value="Flexible">Flexible</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )} />
+            <div>
+              <Label htmlFor="travelPreferences_soloOrGroup">Travel Style</Label>
+              <Select onValueChange={(value) => form.setValue('travelPreferences_soloOrGroup', value as ProfileFormValues['travelPreferences_soloOrGroup'])} defaultValue={form.getValues('travelPreferences_soloOrGroup')} disabled={isSaving}>
+                <SelectTrigger id="travelPreferences_soloOrGroup"><SelectValue placeholder="Solo or Group?" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Select preference</SelectItem>
+                  <SelectItem value="Solo">Solo</SelectItem>
+                  <SelectItem value="Group">Group</SelectItem>
+                  <SelectItem value="Flexible">Flexible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="travelPreferences_budget">Budget Level</Label>
+              <Select onValueChange={(value) => form.setValue('travelPreferences_budget', value as ProfileFormValues['travelPreferences_budget'])} defaultValue={form.getValues('travelPreferences_budget')} disabled={isSaving}>
+                <SelectTrigger id="travelPreferences_budget"><SelectValue placeholder="Budget level" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Select budget</SelectItem>
+                  <SelectItem value="Budget">Budget</SelectItem>
+                  <SelectItem value="Mid-range">Mid-range</SelectItem>
+                  <SelectItem value="Luxury">Luxury</SelectItem>
+                  <SelectItem value="Flexible">Flexible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-           <FormField control={form.control} name="travelPreferences_style" render={({ field }) => ( <FormItem className="mt-4"><Label htmlFor="travelPreferences_style">Preferred Activities/Style (Optional)</Label><Input id="travelPreferences_style" {...field} placeholder="e.g., Challenging treks, Photography, Cultural immersion" disabled={isSaving} /></FormItem> )} />
+           <div className="mt-4">
+            <Label htmlFor="travelPreferences_style">Preferred Activities/Style (Optional)</Label>
+            <Input id="travelPreferences_style" {...form.register('travelPreferences_style')} placeholder="e.g., Challenging treks, Photography, Cultural immersion" disabled={isSaving} />
+           </div>
         </div>
         
-        <FormField control={form.control} name="languagesSpoken" render={({ field }) => ( <FormItem><Label htmlFor="languagesSpoken">Languages Spoken (Optional, comma-separated)</Label><Input id="languagesSpoken" {...field} placeholder="e.g., English, Hindi, Local dialects" disabled={isSaving} /></FormItem> )} />
-        <FormField control={form.control} name="trekkingExperience" render={({ field }) => (
-          <FormItem>
-            <Label htmlFor="trekkingExperience">Trekking Experience (Optional)</Label>
-            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSaving}>
-              <SelectTrigger id="trekkingExperience"><SelectValue placeholder="Select experience level" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Select experience</SelectItem>
-                <SelectItem value="Beginner">Beginner</SelectItem>
-                <SelectItem value="Intermediate">Intermediate</SelectItem>
-                <SelectItem value="Advanced">Advanced</SelectItem>
-                <SelectItem value="Expert">Expert</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormItem>
-        )} />
+        <div>
+          <Label htmlFor="languagesSpoken">Languages Spoken (Optional, comma-separated)</Label>
+          <Input id="languagesSpoken" {...form.register('languagesSpoken')} placeholder="e.g., English, Hindi, Local dialects" disabled={isSaving} />
+        </div>
+        <div>
+          <Label htmlFor="trekkingExperience">Trekking Experience (Optional)</Label>
+          <Select onValueChange={(value) => form.setValue('trekkingExperience', value as ProfileFormValues['trekkingExperience'])} defaultValue={form.getValues('trekkingExperience')} disabled={isSaving}>
+            <SelectTrigger id="trekkingExperience"><SelectValue placeholder="Select experience level" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Select experience</SelectItem>
+              <SelectItem value="Beginner">Beginner</SelectItem>
+              <SelectItem value="Intermediate">Intermediate</SelectItem>
+              <SelectItem value="Advanced">Advanced</SelectItem>
+              <SelectItem value="Expert">Expert</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Button type="submit" disabled={isSaving || authLoading} className="w-full sm:w-auto">
+        <Button type="submit" disabled={isSaving || authIsLoading || isLoadingProfile} className="w-full sm:w-auto">
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save Changes
         </Button>
@@ -283,33 +312,4 @@ export default function EditProfilePage() {
   );
 }
 
-// Helper components for Shadcn form items if not already in form-elements-shadcn
-// These can be part of ui/form.tsx if you are using shadcn's Form component structure
-interface FormItemProps extends React.HTMLAttributes<HTMLDivElement> {}
-const FormItem = React.forwardRef<HTMLDivElement, FormItemProps>(({ className, ...props }, ref) => {
-  return <div ref={ref} className={cn("space-y-1.5", className)} {...props} />;
-});
-FormItem.displayName = "FormItem";
-
-// Avatar components (if not already globally available or part of a UI kit)
-const Avatar = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
-  <span className={cn("inline-block relative overflow-hidden rounded-full bg-muted", className)} {...props} />
-);
-const AvatarImage = ({ className, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-  // eslint-disable-next-line @next/next/no-img-element
-  <img className={cn("aspect-square h-full w-full object-cover", className)} {...props} alt={props.alt || "avatar"} />
-);
-const AvatarFallback = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
-  <span className={cn("flex h-full w-full items-center justify-center rounded-full bg-muted text-muted-foreground", className)} {...props} />
-);
-
-// cn utility if not imported from lib/utils
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-
-// Assuming form-elements-shadcn.tsx provides Shadcn-styled components
-// If not, you'd import them directly from @/components/ui/*
-// e.g. import { Input } from '@/components/ui/input';
+    
