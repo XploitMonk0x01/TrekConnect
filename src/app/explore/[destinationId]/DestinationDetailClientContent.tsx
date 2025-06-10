@@ -112,6 +112,7 @@ export default function DestinationDetailClientContent({
   };
 
   const handleShare = async () => {
+    if (!destination) return;
     if (navigator.share) {
       try {
         await navigator.share({
@@ -122,14 +123,27 @@ export default function DestinationDetailClientContent({
         toast({ title: "Shared Successfully!" });
       } catch (error) {
         console.error('Error sharing:', error);
-        toast({ variant: "destructive", title: "Share Failed", description: "Could not share at this moment." });
+        let description = "Could not share at this moment.";
+        // Check if the error is a DOMException and specifically a NotAllowedError (common for permission issues)
+        // or if the error message indicates permission denial.
+        if (error instanceof DOMException && error.name === 'NotAllowedError') {
+          description = "Sharing permission was denied. This often happens if the page is not served over HTTPS, or if you explicitly denied the share permission in your browser.";
+        } else if (error instanceof Error && error.message.toLowerCase().includes('permission denied')) {
+          description = "Sharing permission was denied. Please ensure the page is served over HTTPS or check your browser's site permissions.";
+        }
+        
+        toast({ 
+          variant: "destructive", 
+          title: "Share Failed", 
+          description: description 
+        });
       }
     } else {
       try {
         await navigator.clipboard.writeText(window.location.href);
-        toast({ title: "Link Copied!", description: "Destination link copied to clipboard." });
+        toast({ title: "Link Copied!", description: "Share API not available. Destination link copied to clipboard." });
       } catch (error) {
-        toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy link." });
+        toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy link to clipboard." });
       }
     }
   };
@@ -143,6 +157,7 @@ export default function DestinationDetailClientContent({
       });
       return;
     }
+    if (!destination) return;
     setIsWishlistProcessing(true);
 
     const currentWishlist = currentUser.wishlistDestinations || [];
@@ -171,15 +186,21 @@ export default function DestinationDetailClientContent({
   };
 
   const isDestinationInWishlist = (): boolean => {
-    if (!currentUser || !currentUser.wishlistDestinations) return false;
+    if (!currentUser || !currentUser.wishlistDestinations || !destination) return false;
     return currentUser.wishlistDestinations.includes(destination.name);
   };
 
 
-  const AITag = destination.aiHint || destination.name.toLowerCase().split(' ').slice(0,2).join(' ') || "trekking india";
-  const mapEmbedUrl = destination.coordinates
+  const AITag = destination?.aiHint || destination?.name.toLowerCase().split(' ').slice(0,2).join(' ') || "trekking india";
+  const mapEmbedUrl = destination?.coordinates
     ? `https://www.openstreetmap.org/export/embed.html?bbox=${destination.coordinates.lng-0.05}%2C${destination.coordinates.lat-0.05}%2C${destination.coordinates.lng+0.05}%2C${destination.coordinates.lat+0.05}&layer=mapnik&marker=${destination.coordinates.lat}%2C${destination.coordinates.lng}`
     : null;
+
+  if (!destination) {
+    // This should ideally be handled by the page.tsx getting a null destination
+    // But as a fallback within client content:
+    return <div>Loading destination details or destination not found...</div>;
+  }
 
   return (
     <div className="space-y-8 p-4 md:p-6 lg:p-8">
@@ -420,4 +441,3 @@ export default function DestinationDetailClientContent({
     </div>
   );
 }
-    
