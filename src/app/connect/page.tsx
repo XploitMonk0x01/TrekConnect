@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { UserProfileCard } from '@/components/UserProfileCard';
@@ -23,9 +23,9 @@ export default function ConnectSpherePage() {
   const [lastSwipedProfile, setLastSwipedProfile] = useState<UserProfile | null>(null);
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
   const [matchAnimationTimeoutId, setMatchAnimationTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [shouldReloadProfiles, setShouldReloadProfiles] = useState(false);
 
   useEffect(() => {
-    // Cleanup timeout if component unmounts or showMatchAnimation becomes false
     return () => {
       if (matchAnimationTimeoutId) {
         clearTimeout(matchAnimationTimeoutId);
@@ -33,7 +33,7 @@ export default function ConnectSpherePage() {
     };
   }, [matchAnimationTimeoutId]);
 
-  const loadProfiles = async () => {
+  const loadProfiles = useCallback(async () => {
     if (!currentUser?.id) {
       setProfiles([]);
       setIsLoadingProfiles(false);
@@ -43,37 +43,82 @@ export default function ConnectSpherePage() {
     try {
       const fetchedProfiles = await getOtherUsers(currentUser.id);
       setProfiles(fetchedProfiles || []);
+      // Initial load or reload might want to reset index, handled by calling useEffect
     } catch (error) {
       console.error("Failed to load profiles:", error);
-      setProfiles([]);
+      setProfiles([]); // Clear profiles on error
     } finally {
       setIsLoadingProfiles(false);
-      setCurrentIndex(0); 
     }
-  };
+  }, [currentUser?.id]);
 
+  // Initial profile load
   useEffect(() => {
-    if (!authIsLoading && currentUser?.id) { 
-      loadProfiles();
-    } else if (!authIsLoading && !currentUser) {
-      setIsLoadingProfiles(false);
-      setProfiles([]);
-    }
+    const initLoad = async () => {
+      if (!authIsLoading && currentUser?.id) {
+        setIsLoadingProfiles(true);
+        try {
+          const fetchedProfiles = await getOtherUsers(currentUser.id);
+          setProfiles(fetchedProfiles || []);
+          setCurrentIndex(0); 
+        } catch (error) {
+          console.error("Failed to load profiles on init:", error);
+          setProfiles([]);
+          setCurrentIndex(0); 
+        } finally {
+          setIsLoadingProfiles(false);
+        }
+      } else if (!authIsLoading && !currentUser) {
+        setIsLoadingProfiles(false);
+        setProfiles([]);
+        setCurrentIndex(0);
+      }
+    };
+    initLoad();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, authIsLoading]);
+  }, [currentUser?.id, authIsLoading]); // Not including loadProfiles here as it's complex
+
+  // Effect for reloading profiles when the end is reached
+  useEffect(() => {
+    if (shouldReloadProfiles) {
+      console.log("ConnectSphere: useEffect detected shouldReloadProfiles. Calling loadProfiles.");
+      loadProfiles();
+      setShouldReloadProfiles(false); // Reset the flag
+    }
+  }, [shouldReloadProfiles, loadProfiles]);
+
+  // Effect to keep currentIndex in bounds
+  useEffect(() => {
+    if (profiles.length > 0 && currentIndex >= profiles.length) {
+      setCurrentIndex(profiles.length - 1); // Adjust to last valid index if current is out of bounds
+    } else if (profiles.length === 0 && currentIndex !== 0) {
+      setCurrentIndex(0); // If profiles array becomes empty, reset index
+    }
+  }, [profiles, currentIndex]);
 
 
   const advanceToNextProfile = () => {
-    setLastSwipedProfile(null); // Clear for next potential swipe
+    setLastSwipedProfile(null); 
+    if (showMatchAnimation && matchAnimationTimeoutId) {
+      clearTimeout(matchAnimationTimeoutId);
+      setMatchAnimationTimeoutId(null);
+      setShowMatchAnimation(false);
+    }
+
+    if (profiles.length === 0) {
+      console.log("ConnectSphere: advanceToNextProfile called with no profiles. Attempting load via flag.");
+      setShouldReloadProfiles(true); // Flag to reload
+      return;
+    }
+
     setCurrentIndex(prevIndex => {
-        const newIndex = prevIndex + 1;
-        if (newIndex < profiles.length) {
-            return newIndex;
-        } else {
-            console.log("ConnectSphere: Reached end of profiles or list empty. Attempting reload.");
-            loadProfiles(); 
-            return 0; 
-        }
+      const newIndex = prevIndex + 1;
+      if (newIndex >= profiles.length) {
+        console.log("ConnectSphere: Reached end of profiles. Flagging for reload.");
+        setShouldReloadProfiles(true);
+        return 0; 
+      }
+      return newIndex;
     });
   };
 
@@ -90,7 +135,6 @@ export default function ConnectSpherePage() {
 
     if (direction === 'right') {
       console.log(`Matched with ${swipedProfile.name}`);
-      // TODO: Implement actual match logic (e.g., save to DB with currentUser.id)
       setShowMatchAnimation(true);
       const timeoutId = setTimeout(() => {
         setShowMatchAnimation(false);
@@ -105,22 +149,17 @@ export default function ConnectSpherePage() {
 
   const handleUndo = () => {
     if (!currentUser) return;
-    if (showMatchAnimation) setShowMatchAnimation(false); // Hide match animation if undoing from it
-    if (matchAnimationTimeoutId) { // Clear any pending auto-advance from a match
+    if (showMatchAnimation) setShowMatchAnimation(false); 
+    if (matchAnimationTimeoutId) { 
         clearTimeout(matchAnimationTimeoutId);
         setMatchAnimationTimeoutId(null);
     }
 
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
-      console.log("Undo last swipe to show profile:", profiles[currentIndex - 1]?.name);
-      setLastSwipedProfile(null); // Clear last swiped as we are undoing
+      setLastSwipedProfile(null); 
     } else if (lastSwipedProfile && currentIndex === 0) {
-      // This case is tricky: if at index 0 and lastSwipedProfile exists,
-      // it means we swiped the first profile. "Undo" should bring it back.
-      // However, our simple currentIndex decrement won't work.
-      // For now, we'll just log. A more complex history might be needed for full undo.
-      console.log("Undo: At the beginning, cannot go further back with current logic.");
+      console.log("Undo: At the beginning, cannot go further back with current logic or lastSwiped was first.");
     } else {
       console.log("Nothing to undo or already at the beginning.");
     }
@@ -160,8 +199,10 @@ export default function ConnectSpherePage() {
       <div className="flex flex-col items-center space-y-6 p-4 h-full">
         <Skeleton className="h-32 w-full max-w-md" />
         <div className="relative w-full max-w-sm h-[calc(100vh-20rem)] min-h-[480px] flex items-center justify-center">
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          <p className="mt-2 text-muted-foreground">Finding trekkers...</p>
+          <div className="text-center">
+            <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
+            <p className="mt-2 text-muted-foreground">Finding trekkers...</p>
+          </div>
         </div>
         <div className="flex space-x-4 items-center">
           <Skeleton className="h-16 w-16 rounded-full" /><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-16 w-16 rounded-full" />
@@ -226,14 +267,23 @@ export default function ConnectSpherePage() {
       </Card>
 
       <div className="relative w-full max-w-sm h-[calc(100vh-22rem)] min-h-[480px] flex items-center justify-center">
-        {currentProfileForCard ? (
+        {(!isLoadingProfiles && profiles.length === 0) ? (
+           <div className="text-center p-8 bg-card rounded-xl shadow-lg">
+            <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-headline text-xl">No More Profiles</h3>
+            <p className="text-muted-foreground">Check back later or adjust your filters!</p>
+             <Button onClick={() => setShouldReloadProfiles(true)} className="mt-4" disabled={isLoadingProfiles || authIsLoading}>
+                {isLoadingProfiles ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Reload Profiles"}
+            </Button>
+          </div>
+        ) : currentProfileForCard ? (
             <UserProfileCard user={currentProfileForCard} />
         ) : (
           <div className="text-center p-8 bg-card rounded-xl shadow-lg">
             <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-headline text-xl">No More Profiles</h3>
-            <p className="text-muted-foreground">Check back later or adjust your filters!</p>
-             <Button onClick={loadProfiles} className="mt-4" disabled={isLoadingProfiles || authIsLoading}>
+            <h3 className="font-headline text-xl">Loading Profiles...</h3>
+            <p className="text-muted-foreground">Or no profiles found yet.</p>
+             <Button onClick={() => setShouldReloadProfiles(true)} className="mt-4" disabled={isLoadingProfiles || authIsLoading}>
                 {isLoadingProfiles ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Reload Profiles"}
             </Button>
           </div>
@@ -256,3 +306,5 @@ export default function ConnectSpherePage() {
     </div>
   );
 }
+
+    
