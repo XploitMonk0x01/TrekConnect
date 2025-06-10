@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link'
-// import { useRouter } from 'next/navigation' // Keep if needed for custom auth redirect
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -15,44 +15,31 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/components/ui/use-toast'
-// Removed: useAuth, signIn (Firebase service), z, signInSchema
+import { useToast } from '@/hooks/use-toast'
+import { useCustomAuth } from '@/contexts/CustomAuthContext'
+import { Loader2 } from 'lucide-react'
 
 export default function SignInPage() {
-  // const router = useRouter() // Keep if needed for custom auth redirect
+  const router = useRouter()
   const { toast } = useToast()
-  // const { setUser } = useAuth() // Removed
+  const { signIn: customSignIn, isLoading: authIsLoading } = useCustomAuth(); // Use custom hook
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
-    // Placeholder for custom MongoDB sign-in logic
-    // This will involve calling your /api/auth/signin endpoint
-    // which uses bcrypt and generates a JWT.
-    console.log('Custom sign-in attempt with:', { email, password });
-    toast({
-      title: 'Sign In (Custom)',
-      description: 'Sign-in logic with MongoDB needs to be implemented.',
-    });
-    // Example:
-    // try {
-    //   const response = await fetch('/api/auth/signin', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ email, password }),
-    //   });
-    //   const data = await response.json();
-    //   if (!response.ok) throw new Error(data.error || 'Sign-in failed');
-    //   localStorage.setItem('customAuthToken', data.token); // Store custom token
-    //   // Update custom auth context with user data
-    //   // router.push('/profile');
-    // } catch (error: any) {
-    //   toast({ variant: 'destructive', title: 'Sign In Error', description: error.message });
-    // }
-    setIsLoading(false)
+    setIsSubmitting(true);
+    const success = await customSignIn(email, password);
+    if (success) {
+      toast({
+        title: 'Signed In!',
+        description: 'Welcome back to TrekConnect!',
+      });
+      router.push('/'); // Redirect to dashboard or desired page
+    }
+    // Error toasts are handled within customSignIn
+    setIsSubmitting(false);
   }
 
   return (
@@ -77,15 +64,12 @@ export default function SignInPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting || authIsLoading}
               />
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
-                {/* <Link href="#" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link> */}
               </div>
               <Input
                 id="password"
@@ -94,15 +78,18 @@ export default function SignInPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting || authIsLoading}
               />
             </div>
             <Button
               type="submit"
               className="w-full bg-primary hover:bg-primary/90"
-              disabled={isLoading}
+              disabled={isSubmitting || authIsLoading}
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {(isSubmitting || authIsLoading) ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : 'Sign In'
+              }
             </Button>
           </form>
         </CardContent>

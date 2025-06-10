@@ -2,7 +2,7 @@
 'use client'
 
 import Link from 'next/link'
-// import { useRouter } from 'next/navigation' // Keep if needed
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,19 +17,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { UserPlus, Loader2 } from 'lucide-react'
 import { SiteLogo } from '@/components/SiteLogo'
-import { useToast } from '@/components/ui/use-toast'
-// Removed: useAuth, signUp (Firebase service), auth (Firebase), GoogleAuthProvider, signInWithPopup, googleSignIn (Firebase service)
+import { useToast } from '@/hooks/use-toast'
+import { useCustomAuth } from '@/contexts/CustomAuthContext'
 
 export default function SignUpPage() {
-  // const router = useRouter() // Keep if needed
+  const router = useRouter()
   const { toast } = useToast()
-  // const { setUser } = useAuth() // Removed
+  const { signUp: customSignUp, isLoading: authIsLoading } = useCustomAuth(); // Use custom hook
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  // const [isGoogleLoading, setIsGoogleLoading] = useState(false) // Removed Google Sign-Up logic for now
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,34 +41,24 @@ export default function SignUpPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Passwords do not match.' });
       return
     }
+    if (password.length < 6) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Password must be at least 6 characters.' });
+        return;
+    }
 
-    setIsLoading(true)
-    // Placeholder for custom MongoDB sign-up logic
-    // This will involve calling your /api/auth/signup endpoint.
-    console.log('Custom sign-up attempt with:', { fullName, email, password });
-    toast({
-      title: 'Sign Up (Custom)',
-      description: 'Sign-up logic with MongoDB needs to be implemented.',
-    });
-    // Example:
-    // try {
-    //   const response = await fetch('/api/auth/signup', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({ email, password, name: fullName }),
-    //   });
-    //   const data = await response.json();
-    //   if (!response.ok) throw new Error(data.error || 'Sign-up failed');
-    //   localStorage.setItem('customAuthToken', data.token); // Store custom token
-    //   // Update custom auth context with user data
-    //   // router.push('/profile/edit');
-    // } catch (error: any) {
-    //   toast({ variant: 'destructive', title: 'Sign Up Error', description: error.message });
-    // }
-    setIsLoading(false)
+
+    setIsSubmitting(true)
+    const success = await customSignUp(fullName, email, password);
+    if (success) {
+      toast({
+        title: 'Account Created!',
+        description: 'Welcome to TrekConnect! Please complete your profile.',
+      });
+      router.push('/profile/edit'); // Redirect to edit profile page
+    }
+    // Error toasts are handled within customSignUp
+    setIsSubmitting(false)
   }
-
-  // Removed handleGoogleSignUp
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-accent/10 p-4">
@@ -96,7 +85,7 @@ export default function SignUpPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting || authIsLoading}
               />
             </div>
             <div className="space-y-2">
@@ -108,7 +97,7 @@ export default function SignUpPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting || authIsLoading}
               />
             </div>
             <div className="space-y-2">
@@ -116,11 +105,11 @@ export default function SignUpPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Create a strong password"
+                placeholder="Create a strong password (min. 6 characters)"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting || authIsLoading}
               />
             </div>
             <div className="space-y-2">
@@ -132,15 +121,15 @@ export default function SignUpPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting || authIsLoading}
               />
             </div>
             <Button
               type="submit"
               className="w-full bg-accent hover:bg-accent/90"
-              disabled={isLoading}
+              disabled={isSubmitting || authIsLoading}
             >
-              {isLoading ? (
+              {(isSubmitting || authIsLoading) ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <UserPlus className="mr-2 h-5 w-5" />
@@ -148,27 +137,6 @@ export default function SignUpPage() {
               Create Account
             </Button>
           </form>
-          {/* Google Sign-Up button removed
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                Or sign up with
-              </span>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleSignUp}
-            disabled={isLoading || isGoogleLoading}
-          >
-            Google SVG or Icon
-            Sign up with Google
-          </Button>
-          */}
         </CardContent>
         <CardFooter className="flex flex-col items-center space-y-2">
           <p className="text-sm text-muted-foreground">
