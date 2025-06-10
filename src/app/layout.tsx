@@ -10,6 +10,11 @@ export const metadata: Metadata = {
     template: `%s | ${APP_NAME}`,
   },
   description: APP_DESCRIPTION,
+  icons: {
+    icon: '/favicon.ico', // Assumes favicon.ico is in the public directory. Change if your filename differs.
+    // apple: '/apple-icon.png', // Example for Apple touch icon if you have one
+    // shortcut: '/favicon-16x16.png', // Example for another shortcut icon
+  },
 }
 
 export default function RootLayout({
