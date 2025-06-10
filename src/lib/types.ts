@@ -1,12 +1,13 @@
+
 export interface UserProfile {
-  id: string // MongoDB _id
-  firebaseUid: string // Firebase UID for authentication
-  name: string | null // From Firebase displayName
-  email: string | null // From Firebase email
-  photoUrl: string | null // From Firebase photoURL
+  id: string // MongoDB _id (string representation of ObjectId for new users)
+  // firebaseUid field removed
+  name: string | null
+  email: string | null // Email will be primary identifier for login with custom auth
+  photoUrl: string | null
   age?: number
-  gender?: string
-  bio?: string
+  gender?: 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say' | string // Allow string for flexibility
+  bio?: string | null
   travelPreferences: {
     soloOrGroup?: 'Solo' | 'Group' | 'Flexible'
     budget?: 'Budget' | 'Mid-range' | 'Luxury' | 'Flexible'
@@ -14,35 +15,35 @@ export interface UserProfile {
   }
   languagesSpoken?: string[]
   trekkingExperience?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'
-  wishlistDestinations?: string[] // Array of destination IDs
-  travelHistory?: string[] // Array of destination IDs
+  wishlistDestinations?: string[] // Array of destination names or IDs
+  travelHistory?: string[] // Array of destination names or IDs
   plannedTrips?: PlannedTrip[]
   badges?: Badge[]
   createdAt?: Date
   updatedAt?: Date
-  lastLoginAt?: Date
+  lastLoginAt?: Date // For custom auth
 }
 
 export interface Destination {
   id: string
   name: string
   description: string
-  imageUrl: string // Can be placeholder or actual URL
+  imageUrl: string 
   country?: string
   region?: string
   attractions?: string[]
   travelTips?: string
   coordinates?: { lat: number; lng: number }
   averageRating?: number
-  aiHint?: string // Hint for Pexels or other AI services
+  aiHint?: string
 }
 
 export interface PlannedTrip {
   id: string
-  destinationId: string
+  destinationId: string // Could be destination name if IDs are not stable
   destinationName: string
-  startDate: string // ISO date string
-  endDate: string // ISO date string
+  startDate: string 
+  endDate: string 
   notes?: string
 }
 
@@ -55,47 +56,45 @@ export interface Badge {
 
 export interface Photo {
   id: string // MongoDB _id
-  userId: string // MongoDB user ID
-  firebaseUid: string // Firebase UID for auth checks
-  userName: string
-  userAvatarUrl?: string | null
-  imageUrl: string // URL from storage (or Data URI for now)
+  userId: string // MongoDB user _id (who uploaded)
+  // firebaseUid removed
+  userName: string // Denormalized for easier display
+  userAvatarUrl?: string | null // Denormalized
+  imageUrl: string 
   destinationId?: string
   destinationName?: string
   caption?: string
   tags?: string[]
-  uploadedAt: string // ISO date string
+  uploadedAt: string 
   likesCount: number
   commentsCount: number
-  likes?: string[] // Array of user IDs who liked the photo
+  likes?: string[] // Array of user IDs who liked
 }
 
-// For creating a photo, some fields are set by the backend or default
 export type CreatePhotoInput = Pick<
   Photo,
   'imageUrl' | 'caption' | 'destinationId' | 'destinationName' | 'tags'
->
+> & { userId: string; userName: string; userAvatarUrl?: string | null }; // Add user info for creation
 
 export interface Story {
   id: string // MongoDB _id
-  userId: string // MongoDB user ID
-  firebaseUid: string // Firebase UID for auth checks
-  userName: string
-  userAvatarUrl?: string | null
+  userId: string // MongoDB user _id (author)
+  // firebaseUid removed
+  userName: string // Denormalized
+  userAvatarUrl?: string | null // Denormalized
   title: string
   content: string
-  imageUrl?: string | null // Optional cover image for story (URL from storage or Data URI)
+  imageUrl?: string | null
   destinationId?: string
   destinationName?: string
   tags?: string[]
-  createdAt: string // ISO date string
-  updatedAt: string // ISO date string
+  createdAt: string 
+  updatedAt: string 
   likesCount: number
   commentsCount: number
-  likes?: string[] // Array of user IDs who liked the story
+  likes?: string[] // Array of user IDs who liked
 }
 
-// For creating a story
 export type CreateStoryInput = Pick<
   Story,
   | 'title'
@@ -104,7 +103,8 @@ export type CreateStoryInput = Pick<
   | 'destinationId'
   | 'destinationName'
   | 'tags'
->
+> & { userId: string; userName: string; userAvatarUrl?: string | null }; // Add user info for creation
+
 
 export interface WeatherInfo {
   temperature: string

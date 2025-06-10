@@ -1,7 +1,8 @@
+
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation' // Keep if needed
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,90 +18,58 @@ import { Label } from '@/components/ui/label'
 import { UserPlus, Loader2 } from 'lucide-react'
 import { SiteLogo } from '@/components/SiteLogo'
 import { useToast } from '@/components/ui/use-toast'
-import { useAuth } from '@/contexts/AuthContext'
-import { signUp } from '@/services/auth/auth.service'
-import { auth } from '@/lib/firebase'
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
-// import { googleSignIn } from '@/services/auth/google.service'
+// Removed: useAuth, signUp (Firebase service), auth (Firebase), GoogleAuthProvider, signInWithPopup, googleSignIn (Firebase service)
 
 export default function SignUpPage() {
-  const router = useRouter()
+  // const router = useRouter() // Keep if needed
   const { toast } = useToast()
-  const { setUser } = useAuth()
+  // const { setUser } = useAuth() // Removed
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  // const [isGoogleLoading, setIsGoogleLoading] = useState(false) // Removed Google Sign-Up logic for now
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!fullName || !email || !password || !confirmPassword) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please fill in all fields.',
-      })
+      toast({ variant: 'destructive', title: 'Error', description: 'Please fill in all fields.' });
       return
     }
-
     if (password !== confirmPassword) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Passwords do not match.',
-      })
+      toast({ variant: 'destructive', title: 'Error', description: 'Passwords do not match.' });
       return
     }
 
     setIsLoading(true)
-
-    try {
-      const { user, token } = await signUp(email, password, fullName)
-      localStorage.setItem('authToken', token)
-      setUser(user)
-      toast({ title: 'Success', description: 'Account created successfully!' })
-      router.push('/profile/edit')
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Sign Up Error',
-        description: error.message || 'An error occurred during sign up.',
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    // Placeholder for custom MongoDB sign-up logic
+    // This will involve calling your /api/auth/signup endpoint.
+    console.log('Custom sign-up attempt with:', { fullName, email, password });
+    toast({
+      title: 'Sign Up (Custom)',
+      description: 'Sign-up logic with MongoDB needs to be implemented.',
+    });
+    // Example:
+    // try {
+    //   const response = await fetch('/api/auth/signup', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify({ email, password, name: fullName }),
+    //   });
+    //   const data = await response.json();
+    //   if (!response.ok) throw new Error(data.error || 'Sign-up failed');
+    //   localStorage.setItem('customAuthToken', data.token); // Store custom token
+    //   // Update custom auth context with user data
+    //   // router.push('/profile/edit');
+    // } catch (error: any) {
+    //   toast({ variant: 'destructive', title: 'Sign Up Error', description: error.message });
+    // }
+    setIsLoading(false)
   }
 
-  const handleGoogleSignUp = async () => {
-    setIsGoogleLoading(true)
-    try {
-      // Initialize firebase auth here if not already done
-      const result = await signInWithPopup(auth, new GoogleAuthProvider())
-      const googleUser = {
-        email: result.user.email!,
-        name: result.user.displayName!,
-        picture: result.user.photoURL,
-      }
-
-      const { user, token } = await googleSignIn(googleUser)
-      localStorage.setItem('authToken', token)
-      setUser(user)
-      toast({ title: 'Success', description: 'Signed in successfully!' })
-      router.push('/profile/edit')
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Google Sign In Error',
-        description:
-          error.message || 'An error occurred during Google sign in.',
-      })
-    } finally {
-      setIsGoogleLoading(false)
-    }
-  }
+  // Removed handleGoogleSignUp
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-accent/10 p-4">
@@ -113,7 +82,7 @@ export default function SignUpPage() {
             Join TrekConnect
           </CardTitle>
           <CardDescription>
-            Create your account and start your journey with fellow adventurers.
+            Create your account and start your journey.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -127,7 +96,7 @@ export default function SignUpPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -139,7 +108,7 @@ export default function SignUpPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -151,7 +120,7 @@ export default function SignUpPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -163,13 +132,13 @@ export default function SignUpPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
               />
             </div>
             <Button
               type="submit"
               className="w-full bg-accent hover:bg-accent/90"
-              disabled={isLoading || isGoogleLoading}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -179,6 +148,7 @@ export default function SignUpPage() {
               Create Account
             </Button>
           </form>
+          {/* Google Sign-Up button removed
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
@@ -189,34 +159,16 @@ export default function SignUpPage() {
               </span>
             </div>
           </div>
-          {/* google Provider */}
           <Button
             variant="outline"
             className="w-full"
             onClick={handleGoogleSignUp}
             disabled={isLoading || isGoogleLoading}
           >
-            {isGoogleLoading ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <svg
-                className="mr-2 h-4 w-4"
-                aria-hidden="true"
-                focusable="false"
-                data-prefix="fab"
-                data-icon="google"
-                role="img"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 488 512"
-              >
-                <path
-                  fill="currentColor"
-                  d="M488 261.8C488 403.3 381.5 512 244 512 112.8 512 0 398.9 0 256S112.8 0 244 0c71.8 0 130.3 29.2 172.9 73.4l-65.3 64.2C335.5 111.3 294.8 88 244 88c-81.1 0-146.9 65.8-146.9 146.9s65.8 146.9 146.9 146.9c104.4 0 132.1-72.7 134.7-109.7H244V261.8h244z"
-                ></path>
-              </svg>
-            )}
+            Google SVG or Icon
             Sign up with Google
           </Button>
+          */}
         </CardContent>
         <CardFooter className="flex flex-col items-center space-y-2">
           <p className="text-sm text-muted-foreground">

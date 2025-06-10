@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 
 import {
@@ -15,21 +15,17 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { SiteLogo } from '@/components/SiteLogo';
-import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, NavItem, AUTH_SIGNIN_NAV_ITEM } from '@/lib/constants';
+import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNIN_NAV_ITEM, NavItem } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
-import { useToast } from '@/hooks/use-toast';
-import { LogOut } from 'lucide-react';
-
+// Removed useAuth, auth, signOut, useToast, LogOut, AUTH_SIGNOUT_NAV_ITEM
+import { Loader2 } from 'lucide-react'; // Kept for potential loading state for new auth
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { toast } = useToast();
-  const { user, loading } = useAuth();
+  // const router = useRouter(); // Kept if needed for navigation from sidebar
+  // const { toast } = useToast(); // Kept if sidebar actions need toasts
+  // const { user, loading } = useAuth(); // Removed
 
   const isActive = (item: NavItem) => {
     if (item.href === '/') {
@@ -45,17 +41,12 @@ export function AppSidebar() {
     return pathname.startsWith(item.href);
   };
   
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      toast({ title: 'Signed Out', description: 'You have been successfully signed out.' });
-      router.push(AUTH_SIGNOUT_NAV_ITEM.href); 
-    } catch (error: any) {
-      console.error('Sign out error:', error);
-      toast({ variant: 'destructive', title: 'Sign Out Failed', description: error.message || 'Could not sign out.' });
-    }
-  };
+  // Removed handleSignOut
 
+  // Placeholder for new auth loading state, default to false (not loading)
+  const loading = false; 
+  // Placeholder for new auth user state, default to null (logged out)
+  const user = null; 
 
   return (
     <Sidebar side="left" variant="sidebar" collapsible="icon">
@@ -104,16 +95,19 @@ export function AppSidebar() {
             </Link>
           </SidebarMenuItem>
           <Separator className="my-1 bg-sidebar-border" />
+           {/* Simplified auth-dependent UI */}
            {!loading && user ? (
              <SidebarMenuItem>
+                {/* This block will be unreachable with user=null, for future custom auth */}
                 <SidebarMenuButton
-                  onClick={handleSignOut}
-                  tooltip={AUTH_SIGNOUT_NAV_ITEM.label}
+                  onClick={() => { /* Implement custom sign out */ }}
+                  tooltip={"Sign Out"}
                   className="justify-start w-full text-left cursor-pointer"
                   asChild={false}
                 >
-                  <LogOut className="h-5 w-5" />
-                  <span>{AUTH_SIGNOUT_NAV_ITEM.label}</span>
+                  {/* Replace LogOut icon if needed for custom auth */}
+                  <SETTINGS_NAV_ITEM.icon className="h-5 w-5" /> 
+                  <span>{"Sign Out"}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
            ) : !loading && !user ? (

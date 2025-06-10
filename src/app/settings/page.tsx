@@ -3,26 +3,25 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useForm, Controller } from 'react-hook-form'; // Import Controller
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button"; // Shadcn Button
+import { Input } from "@/components/ui/input";   // Shadcn Input
+import { Label } from "@/components/ui/label";   // Shadcn Label
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Lock, Palette, UserCircle, ShieldQuestion, Save, Loader2 } from "lucide-react";
+import { Bell, Lock, Palette, UserCircle, ShieldQuestion, Save, Loader2, AlertTriangle } from "lucide-react";
 import { ThemeToggleSwitch } from "@/components/settings/ThemeToggleSwitch";
-import { useAuth } from '@/hooks/useAuth';
+// Removed useAuth
 import { useToast } from '@/hooks/use-toast';
-import { getUserProfile, updateUserProfile } from '@/services/users';
-import type { UserProfile } from '@/lib/types';
+// import { getUserProfile, updateUserProfile } from '@/services/users'; // Custom services
+// import type { UserProfile } from '@/lib/types'; // Keep
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"; // Import Form components
-import type { Control } from "react-hook-form";
+import { Textarea } from '@/components/ui/textarea'; // Shadcn Textarea
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 
 const accountFormSchema = z.object({
@@ -33,72 +32,58 @@ const accountFormSchema = z.object({
 type AccountFormValues = z.infer<typeof accountFormSchema>;
 
 export default function SettingsPage() {
-  const { user: firebaseUser, loading: authLoading } = useAuth();
+  // const { user: firebaseUser, loading: authLoading } = useAuth(); // Removed
   const { toast } = useToast();
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true); // For loading form data
   const [isSaving, setIsSaving] = useState(false);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null); // From custom auth
+
+  // Placeholder for custom auth state
+  const authLoading = false; // Simulate auth loaded
+  const customUser = null; // Simulate logged out. Replace with actual user from custom auth context.
+  // const currentUserId = customUser?.id; // Get from custom auth token/context
 
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: {
-      name: '',
-      bio: '',
-    },
+    defaultValues: { name: '', bio: '' },
   });
 
   useEffect(() => {
-    if (firebaseUser?.uid) {
-      setCurrentUserEmail(firebaseUser.email);
-      setIsLoadingProfile(true); 
-      getUserProfile(firebaseUser.uid)
-        .then(profile => {
-          if (profile) {
-            form.reset({
-              name: profile.name || '',
-              bio: profile.bio || '',
-            });
-          }
-        })
-        .catch(error => {
-          console.error("Failed to fetch user profile for settings:", error);
-          toast({ variant: 'destructive', title: 'Error', description: 'Could not load profile data for settings.' });
-        })
-        .finally(() => {
-          setIsLoadingProfile(false);
-        });
-    } else {
-      // Handles cases where firebaseUser is null (logged out) or auth is still loading
-      // If auth is done loading and there's no user, ensure form is reset and loading indicators are off.
-      form.reset({ name: '', bio: '' });
-      setCurrentUserEmail(null);
-      if (!authLoading) {
-        setIsLoadingProfile(false);
-      }
-    }
-  }, [firebaseUser?.uid, authLoading, form, toast]); // Use firebaseUser.uid for more stable dependency
+    // This effect needs to be rewritten for custom auth.
+    // It should fetch the user's profile (name, bio, email) from MongoDB.
+    // if (customUser) { // customUser from your new auth context
+    //   setCurrentUserEmail(customUser.email);
+    //   setIsLoadingProfile(true); 
+    //   // getUserProfileService(customUser.id) // Your new service
+    //   //   .then(profile => { /* form.reset */ })
+    //   //   .catch(error => { /* ... */ })
+    //   //   .finally(() => setIsLoadingProfile(false));
+    // } else {
+    //   form.reset({ name: '', bio: '' });
+    //   setCurrentUserEmail(null);
+    //   if (!authLoading) setIsLoadingProfile(false);
+    // }
+    setIsLoadingProfile(false); // Simulate loading done
+    if(customUser && (customUser as any).email) setCurrentUserEmail((customUser as any).email);
+  }, [customUser, authLoading, form, toast]);
 
   async function onAccountSubmit(data: AccountFormValues) {
-    if (!firebaseUser) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
-      return;
-    }
+    // if (!currentUserId) {
+    //   toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
+    //   return;
+    // }
     setIsSaving(true);
-    
-    const profileUpdateData: Partial<Pick<UserProfile, 'name' | 'bio'>> = {
-      name: data.name,
-      bio: data.bio || undefined,
-    };
-
-    try {
-      await updateUserProfile(firebaseUser.uid, profileUpdateData);
-      toast({ title: 'Account Info Updated', description: 'Your account information has been saved.' });
-    } catch (error) {
-      console.error("Error updating account info:", error);
-      toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not save your account information.' });
-    } finally {
-      setIsSaving(false);
-    }
+    console.log("Custom account update attempt:", data);
+    toast({
+      title: 'Account Update (Custom)',
+      description: 'Account update logic with MongoDB needs to be implemented.',
+    });
+    // const profileUpdateData = { name: data.name, bio: data.bio || undefined };
+    // try {
+    //   // await updateUserProfileService(currentUserId, profileUpdateData); // Your new service
+    //   toast({ title: 'Account Info Updated', description: 'Your account information has been saved.' });
+    // } catch (error) { /* ... */ } finally { setIsSaving(false); }
+    setIsSaving(false);
   }
 
   const renderAccountForm = () => {
@@ -115,23 +100,29 @@ export default function SettingsPage() {
       );
     }
 
-    if (!firebaseUser && !authLoading) {
-        return <p className="text-muted-foreground">Please <Link href="/auth/signin" className="text-primary underline">sign in</Link> to manage your account settings.</p>;
+    if (!customUser && !authLoading) { // customUser from your new auth context
+        return (
+            <div className="text-center p-4 text-muted-foreground">
+                <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
+                <p>Please <Link href="/auth/signin?redirect=/settings" className="text-primary underline">sign in</Link> to manage your account settings.</p>
+            </div>
+        );
     }
 
     return (
-      <Form {...form}> {/* Wrap with Form provider */}
+      <Form {...form}>
         <form onSubmit={form.handleSubmit(onAccountSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormFieldItem control={form.control} name="name" label="Full Name" placeholder="Your full name" />
+            <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Your full name" /></FormControl><FormMessage /></FormItem> )} />
             <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Input id="email" type="email" value={currentUserEmail || ''} placeholder="your@example.com" disabled />
+                <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here.</p>
             </div>
             </div>
-            <FormFieldItem control={form.control} name="bio" label="Bio" placeholder="A short bio about yourself (optional)" isTextarea={true} />
+            <FormField control={form.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>Bio</FormLabel><FormControl><Textarea {...field} placeholder="A short bio about yourself (optional)" rows={3} /></FormControl><FormMessage /></FormItem> )} />
             
-            <Button type="submit" disabled={isSaving}>
+            <Button type="submit" disabled={isSaving || authLoading}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Changes
             </Button>
@@ -139,7 +130,6 @@ export default function SettingsPage() {
       </Form>
     );
   }
-
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
@@ -165,16 +155,17 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Button variant="outline">Change Password</Button>
+            <Button variant="outline" disabled={!customUser}>Change Password</Button> 
+            {!customUser && <p className="text-xs text-muted-foreground mt-1">Sign in to change password.</p>}
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="twoFactorAuth" className="flex flex-col space-y-1">
               <span>Two-Factor Authentication</span>
               <span className="font-normal leading-snug text-muted-foreground">
-                Add an extra layer of security to your account.
+                Add an extra layer of security to your account. (Coming Soon)
               </span>
             </Label>
-            <Switch id="twoFactorAuth" aria-label="Toggle Two-Factor Authentication" />
+            <Switch id="twoFactorAuth" aria-label="Toggle Two-Factor Authentication" disabled />
           </div>
         </CardContent>
       </Card>
@@ -186,20 +177,13 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <Label htmlFor="matchNotifications">New Match Notifications</Label>
-            <Switch id="matchNotifications" defaultChecked />
+            <Switch id="matchNotifications" defaultChecked disabled={!customUser}/>
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="messageNotifications">New Message Notifications</Label>
-            <Switch id="messageNotifications" defaultChecked />
+            <Switch id="messageNotifications" defaultChecked disabled={!customUser}/>
           </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="eventNotifications">Local Event Alerts</Label>
-            <Switch id="eventNotifications" />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="suggestionNotifications">Personalized Suggestions</Label>
-            <Switch id="suggestionNotifications" defaultChecked />
-          </div>
+           {!customUser && <p className="text-xs text-muted-foreground">Sign in to manage notifications.</p>}
         </CardContent>
       </Card>
       
@@ -208,7 +192,7 @@ export default function SettingsPage() {
           <CardTitle className="font-headline text-xl flex items-center"><Palette className="mr-2 h-5 w-5" /> Appearance</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-            <ThemeToggleSwitch /> {/* Use the new Client Component here */}
+            <ThemeToggleSwitch />
         </CardContent>
       </Card>
 
@@ -221,50 +205,17 @@ export default function SettingsPage() {
                 <Label htmlFor="profileVisibility" className="flex flex-col space-y-1">
                     <span>Profile Visibility</span>
                     <span className="font-normal leading-snug text-muted-foreground">
-                        Control who can see your profile in ConnectSphere.
+                        Control who can see your profile. (Coming Soon)
                     </span>
                 </Label>
-                <Button variant="outline" size="sm">Manage Visibility</Button>
+                <Button variant="outline" size="sm" disabled>Manage Visibility</Button>
             </div>
              <Button variant="link" className="p-0 h-auto text-primary">View Privacy Policy</Button>
              <Separator />
-             <Button variant="destructive" className="w-full sm:w-auto">Delete Account</Button>
+             <Button variant="destructive" className="w-full sm:w-auto" disabled={!customUser}>Delete Account</Button>
+             {!customUser && <p className="text-xs text-muted-foreground mt-1">Sign in to delete your account.</p>}
         </CardContent>
       </Card>
-
     </div>
   );
 }
-
-// Helper component for FormField items in settings
-
-interface FormFieldItemProps {
-  control: Control<any>;
-  name: string;
-  label: string;
-  placeholder?: string;
-  isTextarea?: boolean;
-}
-
-function FormFieldItem({ control, name, label, placeholder, isTextarea = false }: FormFieldItemProps) {
-  return (
-    <FormField
-      control={control}
-      name={name}
-      render={({ field }) => (
-        <FormItem>
-          <FormLabel>{label}</FormLabel>
-          <FormControl>
-            {isTextarea ? (
-              <Textarea placeholder={placeholder} {...field} rows={3} />
-            ) : (
-              <Input placeholder={placeholder} {...field} />
-            )}
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-  );
-}
-

@@ -1,9 +1,8 @@
+
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
-import { getAuth, Auth, onAuthStateChanged } from 'firebase/auth'
-import { upsertUserFromFirebase, getUserProfile } from '@/services/users'
+// Auth related imports removed: getAuth, Auth, onAuthStateChanged
+// Service imports for user sync removed: upsertUserFromFirebase, getUserProfile
 import { getStorage, FirebaseStorage } from 'firebase/storage'
-// import { getFirestore } from 'firebase/firestore';
-// import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,10 +15,8 @@ const firebaseConfig = {
 }
 
 let app: FirebaseApp
-let auth: Auth
-let storage: FirebaseStorage // Declare storage variable
-// let firestore: Firestore;
-// let analytics: Analytics;
+// Auth variable removed
+let storage: FirebaseStorage
 
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig)
@@ -27,52 +24,10 @@ if (getApps().length === 0) {
   app = getApps()[0]
 }
 
-auth = getAuth(app)
-storage = getStorage(app) // Initialize storage
-// firestore = getFirestore(app);
-// if (typeof window !== 'undefined') {
-//   analytics = getAnalytics(app);
-// }
+// Auth initialization removed
+storage = getStorage(app)
 
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    console.log(
-      '[TrekConnect Debug] Auth state changed: User signed in.',
-      user.uid
-    )
-    try {
-      // Check if user already exists in MongoDB
-      const userProfile = await getUserProfile(user.uid)
+// onAuthStateChanged listener and related user synchronization logic removed.
+// The application will now rely on a custom MongoDB-based authentication system.
 
-      if (!userProfile) {
-        console.log(
-          '[TrekConnect Debug] No MongoDB profile found, creating one...'
-        )
-        const createdProfile = await upsertUserFromFirebase(user)
-        if (!createdProfile) {
-          console.error(
-            '[TrekConnect Debug] Failed to create MongoDB profile for user:',
-            user.uid
-          )
-        } else {
-          console.log(
-            '[TrekConnect Debug] Successfully created MongoDB profile for user:',
-            user.uid
-          )
-        }
-      } else {
-        console.log(
-          '[TrekConnect Debug] Existing MongoDB profile found for user:',
-          user.uid
-        )
-      }
-    } catch (error) {
-      console.error(
-        '[TrekConnect Debug] Error handling auth state change:',
-        error
-      )
-    }
-  }
-})
-
-export { app, auth, storage }
+export { app, storage }

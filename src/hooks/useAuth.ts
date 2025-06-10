@@ -1,13 +1,4 @@
 
-'use client';
-
-import { useContext } from 'react';
-import { AuthContext, type AuthContextType } from '@/contexts/AuthContext';
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+// This file is removed as Firebase Authentication and AuthContext are being replaced.
+// Components previously using this hook will need to be refactored to use
+// the new custom MongoDB-based authentication state.
