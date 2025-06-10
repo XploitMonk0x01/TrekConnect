@@ -37,8 +37,8 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function EditProfilePage() {
   const { toast } = useToast()
-  const { user: currentUser, isLoading: authIsLoading, validateSession } = useCustomAuth();
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true) // For initial form population
+  const { user: currentUser, isLoading: authIsLoading, updateUserInContext } = useCustomAuth();
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true) 
   const [isSaving, setIsSaving] = useState(false)
   const [currentPhotoUrlForPreview, setCurrentPhotoUrlForPreview] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -77,7 +77,7 @@ export default function EditProfilePage() {
       setCurrentPhotoUrlForPreview(currentUser.photoUrl);
       setIsLoadingProfile(false);
     } else if (!authIsLoading && !currentUser) {
-      setIsLoadingProfile(false); // Not logged in, no profile to load
+      setIsLoadingProfile(false); 
     }
   }, [currentUser, authIsLoading, form]);
 
@@ -136,15 +136,14 @@ export default function EditProfilePage() {
     }
     
     try {
-      console.log(`[TrekConnect Debug Client] Calling updateUserProfile from edit/page.tsx with UID: ${currentUser.id} and data:`, JSON.stringify(profileUpdateData));
       const updatedMongoDBProfile = await updateUserProfile(currentUser.id, profileUpdateData);
       
       if (updatedMongoDBProfile) {
+        updateUserInContext(updatedMongoDBProfile); // Directly update context
         toast({ title: 'Profile Updated', description: 'Your profile has been successfully saved.'});
-        await validateSession(); // Refresh context user data
         setCurrentPhotoUrlForPreview(updatedMongoDBProfile.photoUrl); 
-        setProfileImagePreview(null); // Clear file input preview
-        form.setValue('profileImageDataUri', ''); // Clear DataURI from form
+        setProfileImagePreview(null); 
+        form.setValue('profileImageDataUri', ''); 
       } else {
         throw new Error('Failed to update profile in database.');
       }
