@@ -8,19 +8,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button"; // Shadcn Button
-import { Input } from "@/components/ui/input";   // Shadcn Input
-import { Label } from "@/components/ui/label";   // Shadcn Label
+import { Button } from "@/components/ui/button"; 
+import { Input } from "@/components/ui/input";   
+import { Label } from "@/components/ui/label";   
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Bell, Lock, Palette, UserCircle, ShieldQuestion, Save, Loader2, AlertTriangle } from "lucide-react";
 import { ThemeToggleSwitch } from "@/components/settings/ThemeToggleSwitch";
-// Removed useAuth
+import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { useToast } from '@/hooks/use-toast';
-// import { getUserProfile, updateUserProfile } from '@/services/users'; // Custom services
-// import type { UserProfile } from '@/lib/types'; // Keep
+import { updateUserProfile } from '@/services/users'; 
+import type { UserProfile } from '@/lib/types'; 
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea'; // Shadcn Textarea
+import { Textarea } from '@/components/ui/textarea'; 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 
@@ -32,62 +32,57 @@ const accountFormSchema = z.object({
 type AccountFormValues = z.infer<typeof accountFormSchema>;
 
 export default function SettingsPage() {
-  // const { user: firebaseUser, loading: authLoading } = useAuth(); // Removed
+  const { user: currentUser, isLoading: authIsLoading, validateSession } = useCustomAuth();
   const { toast } = useToast();
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true); // For loading form data
+  const [isLoadingForm, setIsLoadingForm] = useState(true); 
   const [isSaving, setIsSaving] = useState(false);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null); // From custom auth
-
-  // Placeholder for custom auth state
-  const authLoading = false; // Simulate auth loaded
-  const customUser = null; // Simulate logged out. Replace with actual user from custom auth context.
-  // const currentUserId = customUser?.id; // Get from custom auth token/context
-
+  
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: { name: '', bio: '' },
   });
 
   useEffect(() => {
-    // This effect needs to be rewritten for custom auth.
-    // It should fetch the user's profile (name, bio, email) from MongoDB.
-    // if (customUser) { // customUser from your new auth context
-    //   setCurrentUserEmail(customUser.email);
-    //   setIsLoadingProfile(true); 
-    //   // getUserProfileService(customUser.id) // Your new service
-    //   //   .then(profile => { /* form.reset */ })
-    //   //   .catch(error => { /* ... */ })
-    //   //   .finally(() => setIsLoadingProfile(false));
-    // } else {
-    //   form.reset({ name: '', bio: '' });
-    //   setCurrentUserEmail(null);
-    //   if (!authLoading) setIsLoadingProfile(false);
-    // }
-    setIsLoadingProfile(false); // Simulate loading done
-    if(customUser && (customUser as any).email) setCurrentUserEmail((customUser as any).email);
-  }, [customUser, authLoading, form, toast]);
+    if (currentUser && !authIsLoading) {
+      form.reset({
+        name: currentUser.name || '',
+        bio: currentUser.bio || '',
+      });
+      setIsLoadingForm(false);
+    } else if (!currentUser && !authIsLoading) {
+      setIsLoadingForm(false); // No user, form can be shown (with disabled state)
+    }
+  }, [currentUser, authIsLoading, form]);
 
   async function onAccountSubmit(data: AccountFormValues) {
-    // if (!currentUserId) {
-    //   toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
-    //   return;
-    // }
+    if (!currentUser || !currentUser.id) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
+      return;
+    }
     setIsSaving(true);
-    console.log("Custom account update attempt:", data);
-    toast({
-      title: 'Account Update (Custom)',
-      description: 'Account update logic with MongoDB needs to be implemented.',
-    });
-    // const profileUpdateData = { name: data.name, bio: data.bio || undefined };
-    // try {
-    //   // await updateUserProfileService(currentUserId, profileUpdateData); // Your new service
-    //   toast({ title: 'Account Info Updated', description: 'Your account information has been saved.' });
-    // } catch (error) { /* ... */ } finally { setIsSaving(false); }
-    setIsSaving(false);
+    
+    const profileUpdateData: Partial<Pick<UserProfile, 'name' | 'bio'>> = {
+        name: data.name,
+        bio: data.bio || null, // Ensure bio is null if empty, not undefined
+    };
+
+    try {
+      const updatedUser = await updateUserProfile(currentUser.id, profileUpdateData);
+      if (updatedUser) {
+        toast({ title: 'Account Info Updated', description: 'Your account information has been saved.' });
+        await validateSession(); // Refresh user data in context
+      } else {
+        throw new Error('Failed to update account information.');
+      }
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Update Failed', description: error.message || 'Could not save your account information.' });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const renderAccountForm = () => {
-    if (authLoading || isLoadingProfile) {
+    if (authIsLoading || isLoadingForm) {
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -100,7 +95,7 @@ export default function SettingsPage() {
       );
     }
 
-    if (!customUser && !authLoading) { // customUser from your new auth context
+    if (!currentUser && !authIsLoading) { 
         return (
             <div className="text-center p-4 text-muted-foreground">
                 <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
@@ -116,13 +111,13 @@ export default function SettingsPage() {
             <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Your full name" /></FormControl><FormMessage /></FormItem> )} />
             <div>
                 <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" value={currentUserEmail || ''} placeholder="your@example.com" disabled />
+                <Input id="email" type="email" value={currentUser?.email || ''} placeholder="your@example.com" disabled />
                 <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here.</p>
             </div>
             </div>
             <FormField control={form.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>Bio</FormLabel><FormControl><Textarea {...field} placeholder="A short bio about yourself (optional)" rows={3} /></FormControl><FormMessage /></FormItem> )} />
             
-            <Button type="submit" disabled={isSaving || authLoading}>
+            <Button type="submit" disabled={isSaving || authIsLoading || isLoadingForm}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save Changes
             </Button>
@@ -155,8 +150,8 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Button variant="outline" disabled={!customUser}>Change Password</Button> 
-            {!customUser && <p className="text-xs text-muted-foreground mt-1">Sign in to change password.</p>}
+            <Button variant="outline" disabled={!currentUser}>Change Password (Soon)</Button> 
+            {!currentUser && <p className="text-xs text-muted-foreground mt-1">Sign in to change password.</p>}
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="twoFactorAuth" className="flex flex-col space-y-1">
@@ -177,13 +172,13 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <Label htmlFor="matchNotifications">New Match Notifications</Label>
-            <Switch id="matchNotifications" defaultChecked disabled={!customUser}/>
+            <Switch id="matchNotifications" defaultChecked disabled={!currentUser}/>
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="messageNotifications">New Message Notifications</Label>
-            <Switch id="messageNotifications" defaultChecked disabled={!customUser}/>
+            <Switch id="messageNotifications" defaultChecked disabled={!currentUser}/>
           </div>
-           {!customUser && <p className="text-xs text-muted-foreground">Sign in to manage notifications.</p>}
+           {!currentUser && <p className="text-xs text-muted-foreground">Sign in to manage notifications.</p>}
         </CardContent>
       </Card>
       
@@ -212,8 +207,8 @@ export default function SettingsPage() {
             </div>
              <Button variant="link" className="p-0 h-auto text-primary">View Privacy Policy</Button>
              <Separator />
-             <Button variant="destructive" className="w-full sm:w-auto" disabled={!customUser}>Delete Account</Button>
-             {!customUser && <p className="text-xs text-muted-foreground mt-1">Sign in to delete your account.</p>}
+             <Button variant="destructive" className="w-full sm:w-auto" disabled={!currentUser}>Delete Account (Soon)</Button>
+             {!currentUser && <p className="text-xs text-muted-foreground mt-1">Sign in to delete your account.</p>}
         </CardContent>
       </Card>
     </div>

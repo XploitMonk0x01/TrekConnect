@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation'; // Added useRouter
 import type { Route } from 'next';
 
 import {
@@ -15,17 +15,21 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import { SiteLogo } from '@/components/SiteLogo';
-import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNIN_NAV_ITEM, NavItem } from '@/lib/constants';
+import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNIN_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, NavItem } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-// Removed useAuth, auth, signOut, useToast, LogOut, AUTH_SIGNOUT_NAV_ITEM
-import { Loader2 } from 'lucide-react'; // Kept for potential loading state for new auth
+import { useCustomAuth } from '@/contexts/CustomAuthContext'; // Use custom hook
+import { useToast } from '@/hooks/use-toast'; // For sign out toast
+import { Loader2, UserCircle, LogOut as LogOutIcon } from 'lucide-react'; 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+
 
 export function AppSidebar() {
   const pathname = usePathname();
-  // const router = useRouter(); // Kept if needed for navigation from sidebar
-  // const { toast } = useToast(); // Kept if sidebar actions need toasts
-  // const { user, loading } = useAuth(); // Removed
+  const router = useRouter(); 
+  const { toast } = useToast(); 
+  const { user, isLoading, signOut: customSignOut } = useCustomAuth(); 
 
   const isActive = (item: NavItem) => {
     if (item.href === '/') {
@@ -41,12 +45,30 @@ export function AppSidebar() {
     return pathname.startsWith(item.href);
   };
   
-  // Removed handleSignOut
+  const handleSignOut = async () => {
+    try {
+      await customSignOut();
+      toast({
+        title: 'Signed Out',
+        description: 'You have been successfully signed out.',
+      });
+      // Router push is handled by customSignOut in AuthContext
+    } catch (error) {
+      console.error('Sign out error in sidebar:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign Out Failed',
+        description: 'Could not sign you out. Please try again.',
+      });
+    }
+  };
 
-  // Placeholder for new auth loading state, default to false (not loading)
-  const loading = false; 
-  // Placeholder for new auth user state, default to null (logged out)
-  const user = null; 
+  const getAvatarFallback = (name?: string | null, email?: string | null): string => {
+    if (name) return name.charAt(0).toUpperCase();
+    if (email) return email.charAt(0).toUpperCase();
+    return 'U';
+  };
+
 
   return (
     <Sidebar side="left" variant="sidebar" collapsible="icon">
@@ -78,39 +100,73 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-2 border-t border-sidebar-border">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <Link href={SETTINGS_NAV_ITEM.href as Route} passHref>
-              <SidebarMenuButton
-                isActive={isActive(SETTINGS_NAV_ITEM)}
-                tooltip={SETTINGS_NAV_ITEM.label}
-                className={cn(
-                  'justify-start',
-                  isActive(SETTINGS_NAV_ITEM) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
-                )}
-                asChild={false}
-              >
-                <SETTINGS_NAV_ITEM.icon className="h-5 w-5" />
-                <span>{SETTINGS_NAV_ITEM.label}</span>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-          <Separator className="my-1 bg-sidebar-border" />
-           {/* Simplified auth-dependent UI */}
-           {!loading && user ? (
+          {isLoading ? (
              <SidebarMenuItem>
-                {/* This block will be unreachable with user=null, for future custom auth */}
                 <SidebarMenuButton
-                  onClick={() => { /* Implement custom sign out */ }}
-                  tooltip={"Sign Out"}
+                  tooltip="Loading..."
+                  className="justify-start w-full text-left"
+                  disabled
+                  asChild={false}
+                >
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Loading...</span>
+                </SidebarMenuButton>
+             </SidebarMenuItem>
+           ) : user ? (
+            <>
+            <SidebarMenuItem>
+                <Link href="/profile" passHref>
+                    <SidebarMenuButton
+                    isActive={isActive({href: '/profile', label: 'Profile', icon: UserCircle})}
+                    tooltip="Your Profile"
+                    className={cn(
+                        'justify-start',
+                        isActive({href: '/profile', label: 'Profile', icon: UserCircle}) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
+                    )}
+                    asChild={false}
+                    >
+                        <Avatar className="h-6 w-6">
+                             <AvatarImage 
+                                src={user.photoUrl || PLACEHOLDER_IMAGE_URL(24,24)} 
+                                alt={user.name || 'User'} 
+                                data-ai-hint={`person ${user.name?.split(' ')[0] || 'user'}`}
+                                onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(24,24); }}
+                                />
+                             <AvatarFallback className="text-xs">{getAvatarFallback(user.name, user.email)}</AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{user.name || user.email}</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <Link href={SETTINGS_NAV_ITEM.href as Route} passHref>
+                <SidebarMenuButton
+                  isActive={isActive(SETTINGS_NAV_ITEM)}
+                  tooltip={SETTINGS_NAV_ITEM.label}
+                  className={cn(
+                    'justify-start',
+                    isActive(SETTINGS_NAV_ITEM) && 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90'
+                  )}
+                  asChild={false}
+                >
+                  <SETTINGS_NAV_ITEM.icon className="h-5 w-5" />
+                  <span>{SETTINGS_NAV_ITEM.label}</span>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={handleSignOut}
+                  tooltip={AUTH_SIGNOUT_NAV_ITEM.label}
                   className="justify-start w-full text-left cursor-pointer"
                   asChild={false}
                 >
-                  {/* Replace LogOut icon if needed for custom auth */}
-                  <SETTINGS_NAV_ITEM.icon className="h-5 w-5" /> 
-                  <span>{"Sign Out"}</span>
+                  <LogOutIcon className="h-5 w-5" /> 
+                  <span>{AUTH_SIGNOUT_NAV_ITEM.label}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-           ) : !loading && !user ? (
+            </>
+           ) : (
             <SidebarMenuItem>
               <Link href={AUTH_SIGNIN_NAV_ITEM.href as Route} passHref>
                 <SidebarMenuButton
@@ -127,18 +183,6 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-           ) : (
-             <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip="Loading..."
-                  className="justify-start w-full text-left"
-                  disabled
-                  asChild={false}
-                >
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Loading...</span>
-                </SidebarMenuButton>
-             </SidebarMenuItem>
            )}
         </SidebarMenu>
       </SidebarFooter>

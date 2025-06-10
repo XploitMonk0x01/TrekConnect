@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-// Removed useAuth
+import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,13 +20,8 @@ import type { CreatePhotoInput } from '@/lib/types';
 import NextImage from 'next/image';
 
 const photoFormSchema = z.object({
-  image: z.any()
-    .refine(files => files?.length > 0, 'Image is required.')
-    .refine(files => files?.[0]?.size <= 5000000, `Max file size is 5MB.`)
-    .refine(
-      files => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(files?.[0]?.type),
-      "Only .jpg, .jpeg, .png, .webp and .gif formats are supported."
-    ).optional(),
+  image: z.any() // Keep client-side validation simple, detailed checks in handleImageChange
+    .refine(files => files?.length > 0, 'Image is required.').optional(), // Optional at schema level, required by logic
   imageDataUri: z.string().optional(),
   caption: z.string().max(500).optional(),
   destinationName: z.string().max(100).optional(),
@@ -37,11 +32,7 @@ type PhotoFormValues = z.infer<typeof photoFormSchema>;
 
 export default function UploadPhotoPage() {
   const router = useRouter();
-  // const { user: firebaseUser, loading: authLoading } = useAuth(); // Removed
-  // Simulate auth state
-  const currentUser = null; // Placeholder for user from custom auth
-  const authLoading = false; // Placeholder
-
+  const { user: currentUser, isLoading: authIsLoading } = useCustomAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -54,15 +45,15 @@ export default function UploadPhotoPage() {
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5000000) {
+      if (file.size > 5000000) { // 5MB limit
           form.setError("image", { type: "manual", message: "Max file size is 5MB." });
           setImagePreview(null); form.setValue("imageDataUri", ""); return;
       }
       if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-          form.setError("image", { type: "manual", message: "Invalid file type." });
+          form.setError("image", { type: "manual", message: "Invalid file type. Use JPG, PNG, WEBP, or GIF." });
           setImagePreview(null); form.setValue("imageDataUri", ""); return;
       }
-      form.clearErrors("image");
+      form.clearErrors("image"); // Clear previous errors on new valid file
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -75,10 +66,10 @@ export default function UploadPhotoPage() {
   };
 
   async function onSubmit(data: PhotoFormValues) {
-    // if (!currentUser) { // currentUser from custom auth
-    //   toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in.' });
-    //   return;
-    // }
+    if (!currentUser) {
+      toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to upload photos.' });
+      return;
+    }
     if (!data.imageDataUri) {
         form.setError("image", { type: "manual", message: "Please select an image."});
         toast({ variant: 'destructive', title: 'Image Required', description: 'Please select an image file.' });
@@ -86,45 +77,37 @@ export default function UploadPhotoPage() {
     }
     setIsSubmitting(true);
 
-    // const photoOwner = { // Get from custom auth context
-    //   id: currentUser.id, 
-    //   name: currentUser.name,
-    //   photoUrl: currentUser.photoUrl
-    // };
-
     const photoData: CreatePhotoInput = {
-      imageUrl: data.imageDataUri,
+      imageUrl: data.imageDataUri, 
       caption: data.caption,
       destinationName: data.destinationName || undefined,
       tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
-      // These will be provided by your custom auth user object
-      userId: "temp-user-id", // Replace with actual user ID from custom auth
-      userName: "Temp User", // Replace with actual user name from custom auth
-      userAvatarUrl: null, // Replace with actual user avatar from custom auth
+      userId: currentUser.id, 
+      userName: currentUser.name || 'Anonymous User',
+      userAvatarUrl: currentUser.photoUrl || null, 
     };
 
     try {
-      // const newPhoto = await createPhoto(photoData, photoOwner); // Pass custom user object
-      const newPhoto = await createPhoto(photoData); // createPhoto service needs to be updated
+      const newPhoto = await createPhoto(photoData);
       if (newPhoto) {
-        toast({ title: 'Photo Uploaded!', description: 'Your photo is now live.' });
+        toast({ title: 'Photo Uploaded!', description: 'Your photo is now live on the feed.' });
         router.push('/feed');
       } else {
-        throw new Error('Failed to upload photo.');
+        throw new Error('Failed to upload photo. The server did not return photo details.');
       }
     } catch (error) {
       console.error("Error uploading photo:", error);
-      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo.' });
+      toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload your photo at this time. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  if (authLoading) { // authLoading from custom auth
-    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (authIsLoading) { 
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /><span className="ml-2">Loading...</span></div>;
   }
 
-  if (!currentUser && !authLoading) { // currentUser from custom auth
+  if (!currentUser && !authIsLoading) { 
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -150,15 +133,15 @@ export default function UploadPhotoPage() {
         <CardHeader className="text-center">
           <UploadCloud className="mx-auto h-12 w-12 text-primary mb-3" />
           <CardTitle className="font-headline text-3xl text-primary">Upload Your Trek Photo</CardTitle>
-          <CardDescription>Share your moments. Max 5MB. Images stored as Data URIs.</CardDescription>
+          <CardDescription>Share your moments. Max 5MB. JPG, PNG, WEBP, GIF supported.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField control={form.control} name="image" render={({ field: { onChange, value, ...restField } }) => (
                   <FormItem>
-                    <FormLabel>Select Image</FormLabel>
-                    <FormControl><Input type="file" accept="image/*" onChange={(e) => { handleImageChange(e); onChange(e.target.files); }} {...restField} /></FormControl>
+                    <FormLabel>Select Image*</FormLabel>
+                    <FormControl><Input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => { handleImageChange(e); onChange(e.target.files); }} {...restField} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -167,12 +150,13 @@ export default function UploadPhotoPage() {
                   <div className="relative aspect-video w-full max-w-md mx-auto mt-2 rounded-md border overflow-hidden">
                     <NextImage src={imagePreview} alt="Image preview" layout="fill" objectFit="contain" />
                   </div></div> )}
-              <FormField control={form.control} name="imageDataUri" render={({ field }) => <Input type="hidden" {...field} />} />
-              <FormField control={form.control} name="caption" render={({ field }) => ( <FormItem><FormLabel>Caption</FormLabel><FormControl><Textarea placeholder="Sunrise view..." {...field} rows={3} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="destinationName" render={({ field }) => ( <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="Roopkund Lake" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="tags" render={({ field }) => ( <FormItem><FormLabel>Tags (comma-separated)</FormLabel><FormControl><Input placeholder="mountains, sunrise" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <Button type="submit" disabled={isSubmitting || authLoading} className="w-full sm:w-auto bg-accent hover:bg-accent/90">
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Upload
+              {/* imageDataUri is populated by handleImageChange, no direct user input */}
+              {/* <FormField control={form.control} name="imageDataUri" render={({ field }) => <Input type="hidden" {...field} />} /> */}
+              <FormField control={form.control} name="caption" render={({ field }) => ( <FormItem><FormLabel>Caption</FormLabel><FormControl><Textarea placeholder="Sunrise view over the peaks..." {...field} rows={3} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="destinationName" render={({ field }) => ( <FormItem><FormLabel>Destination (Optional)</FormLabel><FormControl><Input placeholder="Roopkund Lake" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <FormField control={form.control} name="tags" render={({ field }) => ( <FormItem><FormLabel>Tags (Optional, comma-separated)</FormLabel><FormControl><Input placeholder="mountains, sunrise, himalayas" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              <Button type="submit" disabled={isSubmitting || authIsLoading} className="w-full sm:w-auto bg-accent hover:bg-accent/90">
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Upload Photo
               </Button>
             </form>
           </Form>

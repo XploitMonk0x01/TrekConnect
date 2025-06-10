@@ -11,14 +11,11 @@ import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/com
 import { Heart, X, RotateCcw, Filter, Users, MessageSquare, Loader2, AlertTriangle } from 'lucide-react';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 import { getOtherUsers } from '@/services/users'; 
-// Removed useAuth
+import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ConnectSpherePage() {
-  // const { user: currentUser, loading: authLoading } = useAuth(); // Removed
-  // Simulate auth state for now
-  const currentUser = null; // Placeholder for current user from custom auth
-  const authLoading = false; // Placeholder
+  const { user: currentUser, isLoading: authIsLoading } = useCustomAuth();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
@@ -27,17 +24,14 @@ export default function ConnectSpherePage() {
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
 
   const loadProfiles = async () => {
-    // if (!currentUser) { // currentUser from custom auth
-    //   setProfiles([]);
-    //   setIsLoadingProfiles(false);
-    //   return;
-    // }
+    if (!currentUser?.id) {
+      setProfiles([]);
+      setIsLoadingProfiles(false);
+      return;
+    }
     setIsLoadingProfiles(true);
     try {
-      // Pass current user's ID from custom auth if needed by getOtherUsers
-      // const currentUserId = currentUser?.id; 
-      // const fetchedProfiles = await getOtherUsers(currentUserId || ''); 
-      const fetchedProfiles = await getOtherUsers("dummyCurrentUserId"); // Placeholder
+      const fetchedProfiles = await getOtherUsers(currentUser.id);
       setProfiles(fetchedProfiles || []);
     } catch (error) {
       console.error("Failed to load profiles:", error);
@@ -50,28 +44,25 @@ export default function ConnectSpherePage() {
   };
 
   useEffect(() => {
-    if (!authLoading && currentUser) { // currentUser from custom auth
+    if (!authIsLoading && currentUser) { 
       loadProfiles();
-    } else if (!authLoading && !currentUser) {
-      setIsLoadingProfiles(false);
+    } else if (!authIsLoading && !currentUser) {
+      setIsLoadingProfiles(false); // No user, stop profile loading
       setProfiles([]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, authLoading]);
+  }, [currentUser, authIsLoading]); // Rerun if currentUser or authIsLoading changes
 
 
   const handleSwipe = (direction: 'left' | 'right') => {
-    if (!profiles[currentIndex]) return;
-    // Custom auth: Check if user is logged in before swiping
-    // if (!currentUser) { /* show login prompt */ return; }
-
-
+    if (!currentUser || !profiles[currentIndex]) return;
+    
     const swipedProfile = profiles[currentIndex];
     setLastSwipedProfile(swipedProfile);
 
     if (direction === 'right') {
       console.log(`Matched with ${swipedProfile.name}`);
-      // TODO: Implement actual match logic (e.g., save to DB) with custom auth user ID
+      // TODO: Implement actual match logic (e.g., save to DB with currentUser.id)
       setShowMatchAnimation(true);
       setTimeout(() => {
         setShowMatchAnimation(false);
@@ -79,6 +70,8 @@ export default function ConnectSpherePage() {
             setCurrentIndex(currentIndex + 1);
         } else {
             console.log("No more profiles to swipe.");
+             setCurrentIndex(0); // Optionally loop back or show "no more profiles"
+             if (profiles.length === 0) loadProfiles(); // attempt to reload if empty
         }
       }, 2000); 
     } else {
@@ -86,12 +79,14 @@ export default function ConnectSpherePage() {
             setCurrentIndex(currentIndex + 1);
         } else {
              console.log("No more profiles to swipe.");
+             setCurrentIndex(0); // Optionally loop back
+             if (profiles.length === 0) loadProfiles(); // attempt to reload if empty
         }
     }
   };
 
   const handleUndo = () => {
-    // Custom auth: Check if user is logged in
+    if (!currentUser) return;
     if (currentIndex > 0) {
       if (showMatchAnimation) setShowMatchAnimation(false);
       setCurrentIndex(currentIndex - 1);
@@ -102,9 +97,9 @@ export default function ConnectSpherePage() {
     }
   };
   
-  const currentProfile = profiles[currentIndex];
+  const currentProfileForCard = profiles[currentIndex];
 
-  if (authLoading) { // authLoading from custom auth
+  if (authIsLoading) { 
     return (
       <div className="flex flex-col items-center space-y-6 p-4 h-full">
         <Skeleton className="h-32 w-full max-w-md" />
@@ -118,7 +113,7 @@ export default function ConnectSpherePage() {
     );
   }
 
-  if (!currentUser && !authLoading) { // currentUser from custom auth
+  if (!currentUser && !authIsLoading) { 
     return (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
             <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -131,12 +126,13 @@ export default function ConnectSpherePage() {
     );
   }
   
-  if (isLoadingProfiles && currentUser) { // Show loader only if user is "logged in"
+  if (isLoadingProfiles && currentUser) { 
      return (
       <div className="flex flex-col items-center space-y-6 p-4 h-full">
         <Skeleton className="h-32 w-full max-w-md" />
         <div className="relative w-full max-w-sm h-[calc(100vh-20rem)] min-h-[480px] flex items-center justify-center">
           <Loader2 className="h-16 w-16 animate-spin text-primary" />
+          <p className="mt-2 text-muted-foreground">Finding trekkers...</p>
         </div>
         <div className="flex space-x-4 items-center">
           <Skeleton className="h-16 w-16 rounded-full" /><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-16 w-16 rounded-full" />
@@ -147,7 +143,7 @@ export default function ConnectSpherePage() {
 
 
   if (showMatchAnimation && lastSwipedProfile) {
-    const currentUserPhoto = currentUser && (currentUser as any).photoUrl ? (currentUser as any).photoUrl : PLACEHOLDER_IMAGE_URL(100,100);
+    const currentUserPhoto = currentUser?.photoUrl || PLACEHOLDER_IMAGE_URL(100,100);
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center p-4 bg-background">
         <Heart className="w-24 h-24 text-pink-500 animate-ping mb-4" />
@@ -174,7 +170,11 @@ export default function ConnectSpherePage() {
         </Button>
          <Button variant="link" className="mt-2 text-primary" onClick={() => { 
             setShowMatchAnimation(false); 
-            if (currentIndex < profiles.length -1 ) { /* Handled by swipe logic */ }
+            if (currentIndex < profiles.length -1 ) { 
+              // Already handled by timeout in handleSwipe
+            } else {
+               setCurrentIndex(0); // Or show no more profiles
+            }
          }}>
           Continue Swiping
         </Button>
@@ -197,26 +197,26 @@ export default function ConnectSpherePage() {
       </Card>
 
       <div className="relative w-full max-w-sm h-[calc(100vh-22rem)] min-h-[480px] flex items-center justify-center">
-        {currentProfile ? (
-            <UserProfileCard user={currentProfile} />
+        {currentProfileForCard ? (
+            <UserProfileCard user={currentProfileForCard} />
         ) : (
           <div className="text-center p-8 bg-card rounded-xl shadow-lg">
             <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-headline text-xl">No More Profiles</h3>
             <p className="text-muted-foreground">Check back later or adjust your filters!</p>
-             <Button onClick={loadProfiles} className="mt-4" disabled={isLoadingProfiles}>
+             <Button onClick={loadProfiles} className="mt-4" disabled={isLoadingProfiles || authIsLoading}>
                 {isLoadingProfiles ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Reload Profiles"}
             </Button>
           </div>
         )}
       </div>
 
-      {currentProfile && (
+      {currentProfileForCard && (
         <div className="flex space-x-4 items-center">
           <Button variant="outline" size="lg" className="rounded-full p-4 border-destructive text-destructive hover:bg-destructive/10" onClick={() => handleSwipe('left')} aria-label="Pass">
             <X className="h-8 w-8" />
           </Button>
-          <Button variant="outline" size="icon" className="rounded-full p-2 border-muted-foreground text-muted-foreground hover:bg-muted-foreground/10" onClick={handleUndo} aria-label="Undo" disabled={currentIndex === 0}>
+          <Button variant="outline" size="icon" className="rounded-full p-2 border-muted-foreground text-muted-foreground hover:bg-muted-foreground/10" onClick={handleUndo} aria-label="Undo" disabled={currentIndex === 0 && !lastSwipedProfile}>
             <RotateCcw className="h-5 w-5" />
           </Button>
           <Button variant="outline" size="lg" className="rounded-full p-4 border-green-500 text-green-500 hover:bg-green-500/10" onClick={() => handleSwipe('right')} aria-label="Connect">

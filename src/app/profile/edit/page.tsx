@@ -23,14 +23,14 @@ import type { UserProfile } from '@/lib/types';
 const profileFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
   age: z.coerce.number().positive('Age must be a positive number.').optional().or(z.literal('')),
-  gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say', '']).optional(),
+  gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
   bio: z.string().max(500, 'Bio cannot exceed 500 characters.').optional(),
-  profileImageDataUri: z.string().optional(), // For new image upload
-  travelPreferences_soloOrGroup: z.enum(['Solo', 'Group', 'Flexible', '']).optional(),
-  travelPreferences_budget: z.enum(['Budget', 'Mid-range', 'Luxury', 'Flexible', '']).optional(),
+  profileImageDataUri: z.string().optional(), 
+  travelPreferences_soloOrGroup: z.enum(['Solo', 'Group', 'Flexible']).optional(),
+  travelPreferences_budget: z.enum(['Budget', 'Mid-range', 'Luxury', 'Flexible']).optional(),
   travelPreferences_style: z.string().max(100).optional(),
-  languagesSpoken: z.string().optional(), // Comma-separated
-  trekkingExperience: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Expert', '']).optional(),
+  languagesSpoken: z.string().optional(), 
+  trekkingExperience: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Expert']).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -38,9 +38,9 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function EditProfilePage() {
   const { toast } = useToast()
   const { user: currentUser, isLoading: authIsLoading, validateSession } = useCustomAuth();
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true) // For initial form population
   const [isSaving, setIsSaving] = useState(false)
-  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
+  const [currentPhotoUrlForPreview, setCurrentPhotoUrlForPreview] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   const form = useForm<ProfileFormValues>({
@@ -48,37 +48,36 @@ export default function EditProfilePage() {
     defaultValues: {
       name: '',
       age: '',
-      gender: '',
+      gender: undefined,
       bio: '',
       profileImageDataUri: '',
-      travelPreferences_soloOrGroup: '',
-      travelPreferences_budget: '',
+      travelPreferences_soloOrGroup: undefined,
+      travelPreferences_budget: undefined,
       travelPreferences_style: '',
       languagesSpoken: '',
-      trekkingExperience: '',
+      trekkingExperience: undefined,
     },
   });
 
   useEffect(() => {
     if (!authIsLoading && currentUser) {
       setIsLoadingProfile(true);
-      console.log("[TrekConnect Debug Client] EditProfilePage - Populating form with currentUser:", currentUser);
       form.reset({
         name: currentUser.name || '',
         age: currentUser.age || '',
-        gender: currentUser.gender || '',
+        gender: currentUser.gender as ProfileFormValues['gender'] || undefined,
         bio: currentUser.bio || '',
         profileImageDataUri: '', 
-        travelPreferences_soloOrGroup: currentUser.travelPreferences?.soloOrGroup || '',
-        travelPreferences_budget: currentUser.travelPreferences?.budget || '',
+        travelPreferences_soloOrGroup: currentUser.travelPreferences?.soloOrGroup as ProfileFormValues['travelPreferences_soloOrGroup'] || undefined,
+        travelPreferences_budget: currentUser.travelPreferences?.budget as ProfileFormValues['travelPreferences_budget'] || undefined,
         travelPreferences_style: currentUser.travelPreferences?.style || '',
         languagesSpoken: currentUser.languagesSpoken?.join(', ') || '',
-        trekkingExperience: currentUser.trekkingExperience || '',
+        trekkingExperience: currentUser.trekkingExperience as ProfileFormValues['trekkingExperience'] || undefined,
       });
-      setCurrentPhotoUrl(currentUser.photoUrl);
+      setCurrentPhotoUrlForPreview(currentUser.photoUrl);
       setIsLoadingProfile(false);
     } else if (!authIsLoading && !currentUser) {
-      setIsLoadingProfile(false);
+      setIsLoadingProfile(false); // Not logged in, no profile to load
     }
   }, [currentUser, authIsLoading, form]);
 
@@ -119,34 +118,33 @@ export default function EditProfilePage() {
     const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'lastLoginAt' | 'password'>> = {
         name: data.name,
         age: data.age ? Number(data.age) : undefined,
-        gender: data.gender as UserProfile['gender'] || undefined,
+        gender: data.gender || undefined,
         bio: data.bio || null,
-        // photoUrl handled below
         travelPreferences: {
-            soloOrGroup: data.travelPreferences_soloOrGroup as UserProfile['travelPreferences']['soloOrGroup'] || undefined,
-            budget: data.travelPreferences_budget as UserProfile['travelPreferences']['budget'] || undefined,
+            soloOrGroup: data.travelPreferences_soloOrGroup || undefined,
+            budget: data.travelPreferences_budget || undefined,
             style: data.travelPreferences_style || undefined,
         },
         languagesSpoken: data.languagesSpoken ? data.languagesSpoken.split(',').map(s => s.trim()).filter(s => s) : [],
-        trekkingExperience: data.trekkingExperience as UserProfile['trekkingExperience'] || undefined,
+        trekkingExperience: data.trekkingExperience || undefined,
     };
 
     if (data.profileImageDataUri) {
         profileUpdateData.photoUrl = data.profileImageDataUri;
     } else {
-        profileUpdateData.photoUrl = currentPhotoUrl; 
+        profileUpdateData.photoUrl = currentPhotoUrlForPreview; 
     }
     
-    console.log(`[TrekConnect Debug Client] Calling updateUserProfile from edit/page.tsx with UID: ${currentUser.id} and data:`, JSON.stringify(profileUpdateData));
-
     try {
+      console.log(`[TrekConnect Debug Client] Calling updateUserProfile from edit/page.tsx with UID: ${currentUser.id} and data:`, JSON.stringify(profileUpdateData));
       const updatedMongoDBProfile = await updateUserProfile(currentUser.id, profileUpdateData);
       
       if (updatedMongoDBProfile) {
         toast({ title: 'Profile Updated', description: 'Your profile has been successfully saved.'});
-        await validateSession(); 
-        setCurrentPhotoUrl(updatedMongoDBProfile.photoUrl); 
-        setProfileImagePreview(null); 
+        await validateSession(); // Refresh context user data
+        setCurrentPhotoUrlForPreview(updatedMongoDBProfile.photoUrl); 
+        setProfileImagePreview(null); // Clear file input preview
+        form.setValue('profileImageDataUri', ''); // Clear DataURI from form
       } else {
         throw new Error('Failed to update profile in database.');
       }
@@ -195,7 +193,7 @@ export default function EditProfilePage() {
           <Label>Profile Picture</Label>
           <div className="flex items-center gap-4">
             <NextImage 
-              src={profileImagePreview || currentPhotoUrl || PLACEHOLDER_IMAGE_URL(80,80)} 
+              src={profileImagePreview || currentPhotoUrlForPreview || PLACEHOLDER_IMAGE_URL(80,80)} 
               alt="Profile" 
               width={80} 
               height={80} 
@@ -209,9 +207,10 @@ export default function EditProfilePage() {
               accept="image/jpeg,image/png,image/gif,image/webp"
               onChange={handleProfileImageChange}
               className="hidden"
+              disabled={isSaving}
             />
-            <Button type="button" variant="outline" onClick={() => document.getElementById('profile-image-upload')?.click()}>
-              <ImageUp className="mr-2 h-4 w-4" /> {currentPhotoUrl || profileImagePreview ? "Change Image" : "Upload Image"}
+            <Button type="button" variant="outline" onClick={() => document.getElementById('profile-image-upload')?.click()} disabled={isSaving}>
+              <ImageUp className="mr-2 h-4 w-4" /> {currentPhotoUrlForPreview || profileImagePreview ? "Change Image" : "Upload Image"}
             </Button>
           </div>
            {form.formState.errors.profileImageDataUri && <p className="text-sm text-destructive mt-1">{form.formState.errors.profileImageDataUri.message}</p>}
@@ -236,7 +235,7 @@ export default function EditProfilePage() {
           </div>
           <div>
             <Label htmlFor="gender">Gender (Optional)</Label>
-            <Select onValueChange={(value) => form.setValue('gender', value as ProfileFormValues['gender'])} defaultValue={form.getValues('gender')} disabled={isSaving}>
+            <Select onValueChange={(value) => form.setValue('gender', value as ProfileFormValues['gender'])} value={form.getValues('gender')} disabled={isSaving}>
               <SelectTrigger id="gender"><SelectValue placeholder="Select gender" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Male">Male</SelectItem>
@@ -254,7 +253,7 @@ export default function EditProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <div>
               <Label htmlFor="travelPreferences_soloOrGroup">Travel Style</Label>
-              <Select onValueChange={(value) => form.setValue('travelPreferences_soloOrGroup', value as ProfileFormValues['travelPreferences_soloOrGroup'])} defaultValue={form.getValues('travelPreferences_soloOrGroup')} disabled={isSaving}>
+              <Select onValueChange={(value) => form.setValue('travelPreferences_soloOrGroup', value as ProfileFormValues['travelPreferences_soloOrGroup'])} value={form.getValues('travelPreferences_soloOrGroup')} disabled={isSaving}>
                 <SelectTrigger id="travelPreferences_soloOrGroup"><SelectValue placeholder="Solo or Group?" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Solo">Solo</SelectItem>
@@ -265,7 +264,7 @@ export default function EditProfilePage() {
             </div>
             <div>
               <Label htmlFor="travelPreferences_budget">Budget Level</Label>
-              <Select onValueChange={(value) => form.setValue('travelPreferences_budget', value as ProfileFormValues['travelPreferences_budget'])} defaultValue={form.getValues('travelPreferences_budget')} disabled={isSaving}>
+              <Select onValueChange={(value) => form.setValue('travelPreferences_budget', value as ProfileFormValues['travelPreferences_budget'])} value={form.getValues('travelPreferences_budget')} disabled={isSaving}>
                 <SelectTrigger id="travelPreferences_budget"><SelectValue placeholder="Budget level" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Budget">Budget</SelectItem>
@@ -288,7 +287,7 @@ export default function EditProfilePage() {
         </div>
         <div>
           <Label htmlFor="trekkingExperience">Trekking Experience (Optional)</Label>
-          <Select onValueChange={(value) => form.setValue('trekkingExperience', value as ProfileFormValues['trekkingExperience'])} defaultValue={form.getValues('trekkingExperience')} disabled={isSaving}>
+          <Select onValueChange={(value) => form.setValue('trekkingExperience', value as ProfileFormValues['trekkingExperience'])} value={form.getValues('trekkingExperience')} disabled={isSaving}>
             <SelectTrigger id="trekkingExperience"><SelectValue placeholder="Select experience level" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Beginner">Beginner</SelectItem>
@@ -307,7 +306,3 @@ export default function EditProfilePage() {
     </div>
   );
 }
-
-    
-
-    
