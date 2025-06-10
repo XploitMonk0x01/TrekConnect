@@ -14,16 +14,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, BookOpen, Loader2, Save, ImagePlus, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, BookOpen, Loader2, Save, ImagePlus, AlertTriangle, Sparkles } from 'lucide-react'; // Added Sparkles
 import { createStory } from '@/services/stories';
 import type { CreateStoryInput } from '@/lib/types'; 
 import NextImage from 'next/image'; // For preview
+import { suggestStoryTags } from '@/ai/flows/suggest-story-tags-flow'; // Import the new AI flow
 
 const storyFormSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
   content: z.string().min(50, "Story content must be at least 50 characters.").max(10000, "Story content is too long."),
-  coverImageFile: z.any().optional(), // For client-side file handling
-  imageUrl: z.string().url("Please enter a valid URL for the image.").or(z.literal('')).optional(), // For Data URI or external URL
+  coverImageFile: z.any().optional(), 
+  imageUrl: z.string().url("Please enter a valid URL for the image.").or(z.literal('')).optional(), 
   destinationName: z.string().max(100).optional(),
   tags: z.string().max(200).optional(),
 });
@@ -36,6 +37,7 @@ export default function NewStoryPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [isSuggestingTags, setIsSuggestingTags] = useState(false); // State for AI tag suggestion
 
   const form = useForm<StoryFormValues>({
     resolver: zodResolver(storyFormSchema),
@@ -58,17 +60,46 @@ export default function NewStoryPage() {
       reader.onloadend = () => {
         const result = reader.result as string;
         setCoverImagePreview(result);
-        form.setValue('imageUrl', result, { shouldValidate: true }); // Store Data URI in imageUrl
+        form.setValue('imageUrl', result, { shouldValidate: true }); 
       };
       reader.readAsDataURL(file);
     } else {
       setCoverImagePreview(null); 
-      // If user deselects, clear existing URL if it was from a file, or leave if it was typed
       if(form.getValues('imageUrl')?.startsWith('data:image')) {
         form.setValue('imageUrl', '');
       }
     }
   };
+
+  const handleSuggestTags = async () => {
+    const title = form.getValues('title');
+    const content = form.getValues('content');
+
+    if (!title || title.length < 5 || !content || content.length < 20) {
+      toast({
+        variant: 'destructive',
+        title: 'Content Required',
+        description: 'Please provide a title (min 5 chars) and some content (min 20 chars) to suggest tags.',
+      });
+      return;
+    }
+    setIsSuggestingTags(true);
+    try {
+      const result = await suggestStoryTags({ title, contentPreview: content.substring(0, 500) });
+      if (result.suggestedTags && result.suggestedTags.length > 0) {
+        form.setValue('tags', result.suggestedTags.join(', '));
+        toast({ title: 'AI Tags Suggested!', description: 'Review and adjust the tags as needed.' });
+      } else {
+        toast({ title: 'No Tags Suggested', description: 'The AI couldn\'t suggest tags for this content. Please add them manually.' });
+      }
+    } catch (error) {
+      console.error("Error suggesting tags:", error);
+      toast({ variant: 'destructive', title: 'Tag Suggestion Failed', description: 'Could not suggest tags at this time.' });
+    } finally {
+      setIsSuggestingTags(false);
+    }
+  };
+
 
   async function onSubmit(data: StoryFormValues) {
     if (!currentUser) {
@@ -80,7 +111,7 @@ export default function NewStoryPage() {
     const storyInputData: CreateStoryInput = {
       title: data.title,
       content: data.content,
-      imageUrl: data.imageUrl || null, // Use the Data URI from form.imageUrl or the typed URL
+      imageUrl: data.imageUrl || null, 
       destinationName: data.destinationName || undefined,
       tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
       userId: currentUser.id, 
@@ -151,7 +182,7 @@ export default function NewStoryPage() {
                       accept="image/jpeg,image/png,image/webp,image/gif" 
                       onChange={(e) => {
                         handleCoverImageChange(e); 
-                        onChange(e.target.files); // For react-hook-form to track the file input if needed
+                        onChange(e.target.files); 
                       }} 
                       className="hidden" 
                       {...rest}
@@ -169,7 +200,7 @@ export default function NewStoryPage() {
                       <FormControl><Input type="url" placeholder="https://example.com/image.jpg" {...field} 
                         onChange={(e) => {
                             field.onChange(e);
-                            if(!e.target.value.startsWith('data:image')) { // If user types URL, clear file preview
+                            if(!e.target.value.startsWith('data:image')) { 
                                 setCoverImagePreview(null);
                             }
                         }}
@@ -179,7 +210,14 @@ export default function NewStoryPage() {
               )} />
 
               <FormField control={form.control} name="destinationName" render={({ field }) => ( <FormItem><FormLabel>Destination (Optional)</FormLabel><FormControl><Input placeholder="Hampta Pass, Himachal Pradesh" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              <FormField control={form.control} name="tags" render={({ field }) => ( <FormItem><FormLabel>Tags (Optional, comma-separated)</FormLabel><FormControl><Input placeholder="himalayas, adventure, solo travel" {...field} /></FormControl><FormMessage /></FormItem> )} />
+              
+              <div className="space-y-2">
+                <FormField control={form.control} name="tags" render={({ field }) => ( <FormItem><FormLabel>Tags (Optional, comma-separated)</FormLabel><FormControl><Input placeholder="himalayas, adventure, solo travel" {...field} /></FormControl><FormMessage /></FormItem> )} />
+                <Button type="button" variant="outline" size="sm" onClick={handleSuggestTags} disabled={isSuggestingTags || authIsLoading || !form.watch('title') || !form.watch('content')}>
+                  {isSuggestingTags ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  Suggest Tags with AI
+                </Button>
+              </div>
               
               <Button type="submit" disabled={isSubmitting || authIsLoading} className="w-full sm:w-auto bg-accent hover:bg-accent/90">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Publish Story
