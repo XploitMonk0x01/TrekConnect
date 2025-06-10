@@ -4,18 +4,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Import useRouter
 import { UserProfileCard } from '@/components/UserProfileCard';
 import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Heart, X, RotateCcw, Filter, Users, MessageSquare, Loader2, AlertTriangle } from 'lucide-react';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-import { getOtherUsers } from '@/services/users'; 
+import { getOtherUsers } from '@/services/users';
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ConnectSpherePage() {
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth();
+  const router = useRouter(); // Initialize useRouter
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
@@ -37,13 +39,14 @@ export default function ConnectSpherePage() {
     if (!currentUser?.id) {
       setProfiles([]);
       setIsLoadingProfiles(false);
+      setCurrentIndex(0);
       return;
     }
     setIsLoadingProfiles(true);
     try {
       const fetchedProfiles = await getOtherUsers(currentUser.id);
       setProfiles(fetchedProfiles || []);
-      setCurrentIndex(0); // Reset index on new profiles load
+      setCurrentIndex(0);
     } catch (error) {
       console.error("Failed to load profiles:", error);
       setProfiles([]);
@@ -52,52 +55,45 @@ export default function ConnectSpherePage() {
     }
   }, [currentUser?.id]);
 
-  // Initial profile load
   useEffect(() => {
     if (!authIsLoading && currentUser?.id) {
       loadProfiles();
     } else if (!authIsLoading && !currentUser) {
-      // No user, clear profiles and stop loading
       setIsLoadingProfiles(false);
       setProfiles([]);
       setCurrentIndex(0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id, authIsLoading, loadProfiles]); // loadProfiles is memoized
+  }, [currentUser?.id, authIsLoading, loadProfiles]);
 
-  // Effect for reloading profiles when the end is reached or flag is set
   useEffect(() => {
     if (shouldReloadProfiles) {
       loadProfiles();
-      setShouldReloadProfiles(false); // Reset the flag
+      setShouldReloadProfiles(false);
     }
   }, [shouldReloadProfiles, loadProfiles]);
 
-  // Effect to keep currentIndex in bounds
   useEffect(() => {
     if (profiles.length > 0 && currentIndex >= profiles.length) {
-      // This case should ideally trigger a reload via shouldReloadProfiles flag
-      // For now, setting to last valid index or 0 if list is empty
-      setCurrentIndex(profiles.length - 1); 
+      setCurrentIndex(profiles.length > 0 ? profiles.length - 1 : 0);
     } else if (profiles.length === 0 && currentIndex !== 0) {
-      setCurrentIndex(0); 
+      setCurrentIndex(0);
     }
   }, [profiles, currentIndex]);
 
 
   const advanceToNextProfile = () => {
-    setLastSwipedProfile(null); 
+    setLastSwipedProfile(null);
     if (showMatchAnimation && matchAnimationTimeoutId) {
       clearTimeout(matchAnimationTimeoutId);
       setMatchAnimationTimeoutId(null);
       setShowMatchAnimation(false);
     }
-    
+
     setCurrentIndex(prevIndex => {
       const newIndex = prevIndex + 1;
       if (newIndex >= profiles.length) {
-        setShouldReloadProfiles(true); // Flag to reload
-        return 0; // Reset to 0, reload will repopulate
+        setShouldReloadProfiles(true);
+        return 0;
       }
       return newIndex;
     });
@@ -105,7 +101,7 @@ export default function ConnectSpherePage() {
 
   const handleSwipe = (direction: 'left' | 'right') => {
     if (!currentUser || profiles.length === 0 || !profiles[currentIndex]) return;
-    
+
     if (matchAnimationTimeoutId) {
         clearTimeout(matchAnimationTimeoutId);
         setMatchAnimationTimeoutId(null);
@@ -119,8 +115,8 @@ export default function ConnectSpherePage() {
       const timeoutId = setTimeout(() => {
         setShowMatchAnimation(false);
         advanceToNextProfile();
-        setMatchAnimationTimeoutId(null); 
-      }, 2500); // Slightly longer for animation viewing
+        setMatchAnimationTimeoutId(null);
+      }, 3500); // Extended to allow clicking chat button
       setMatchAnimationTimeoutId(timeoutId);
     } else {
         advanceToNextProfile();
@@ -129,7 +125,7 @@ export default function ConnectSpherePage() {
 
   const handleUndo = () => {
     if (!currentUser) return;
-    if (showMatchAnimation && matchAnimationTimeoutId) { 
+    if (showMatchAnimation && matchAnimationTimeoutId) {
         clearTimeout(matchAnimationTimeoutId);
         setMatchAnimationTimeoutId(null);
         setShowMatchAnimation(false);
@@ -137,15 +133,25 @@ export default function ConnectSpherePage() {
 
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
-      setLastSwipedProfile(null); 
-    } else {
-      // Optionally, toast "Nothing to undo"
+      setLastSwipedProfile(null);
     }
   };
-  
+
+  const handleStartChat = (matchProfileId: string) => {
+    // Navigate to a placeholder chat page
+    // In a real app, you'd create or navigate to a specific chat room ID
+    if (matchAnimationTimeoutId) {
+        clearTimeout(matchAnimationTimeoutId); // Clear the auto-advance timeout
+        setMatchAnimationTimeoutId(null);
+    }
+    setShowMatchAnimation(false); // Hide match animation
+    router.push(`/chat/${matchProfileId}`);
+    // advanceToNextProfile(); // Advance after navigating or let user click "continue swiping"
+  };
+
   const currentProfileForCard = profiles.length > 0 ? profiles[currentIndex] : null;
 
-  if (authIsLoading) { 
+  if (authIsLoading) {
     return (
       <div className="flex flex-col items-center space-y-6 p-4 h-full">
         <Skeleton className="h-32 w-full max-w-md" />
@@ -159,7 +165,7 @@ export default function ConnectSpherePage() {
     );
   }
 
-  if (!currentUser && !authIsLoading) { 
+  if (!currentUser && !authIsLoading) {
     return (
          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
             <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -171,8 +177,8 @@ export default function ConnectSpherePage() {
         </div>
     );
   }
-  
-  if (isLoadingProfiles && currentUser) { 
+
+  if (isLoadingProfiles && currentUser) {
      return (
       <div className="flex flex-col items-center space-y-6 p-4 h-full">
         <Skeleton className="h-32 w-full max-w-md" />
@@ -198,30 +204,30 @@ export default function ConnectSpherePage() {
         <h2 className="text-3xl font-headline text-primary">It's a Match!</h2>
         <p className="text-xl text-muted-foreground mt-2">You and {lastSwipedProfile.name || 'your match'} are interested in connecting!</p>
         <div className="flex gap-4 mt-8">
-          <Image 
-            src={currentUserPhoto} 
-            alt="Your profile" width={100} height={100} 
-            className="rounded-full border-4 border-primary object-cover" 
+          <Image
+            src={currentUserPhoto}
+            alt="Your profile" width={100} height={100}
+            className="rounded-full border-4 border-primary object-cover"
             data-ai-hint="person user"
             onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(100,100); }}
           />
-          <Image 
-            src={lastSwipedProfile.photoUrl || PLACEHOLDER_IMAGE_URL(100,100)} 
-            alt={lastSwipedProfile.name || 'Match'} width={100} height={100} 
-            className="rounded-full border-4 border-pink-500 object-cover" 
+          <Image
+            src={lastSwipedProfile.photoUrl || PLACEHOLDER_IMAGE_URL(100,100)}
+            alt={lastSwipedProfile.name || 'Match'} width={100} height={100}
+            className="rounded-full border-4 border-pink-500 object-cover"
             data-ai-hint={`person ${lastSwipedProfile.name?.split(' ')[0] || 'match'}`}
             onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(100,100); }}
             />
         </div>
-        <Button className="mt-8 bg-accent hover:bg-accent/90" disabled>
-          <MessageSquare className="mr-2 h-5 w-5" /> Start Chatting (Soon!)
+        <Button className="mt-8 bg-accent hover:bg-accent/90" onClick={() => handleStartChat(lastSwipedProfile.id)}>
+          <MessageSquare className="mr-2 h-5 w-5" /> Start Chatting
         </Button>
-         <Button variant="link" className="mt-2 text-primary" onClick={() => { 
+         <Button variant="link" className="mt-2 text-primary" onClick={() => {
             if (matchAnimationTimeoutId) {
                 clearTimeout(matchAnimationTimeoutId);
                 setMatchAnimationTimeoutId(null);
             }
-            setShowMatchAnimation(false); 
+            setShowMatchAnimation(false);
             advanceToNextProfile();
          }}>
           Continue Swiping
@@ -245,7 +251,7 @@ export default function ConnectSpherePage() {
       </Card>
 
       <div className="relative w-full max-w-sm h-[calc(100vh-22rem)] min-h-[480px] flex items-center justify-center">
-        {(!isLoadingProfiles && profiles.length === 0 && !shouldReloadProfiles) ? ( // Check shouldReload to avoid brief flash
+        {(!isLoadingProfiles && profiles.length === 0 && !shouldReloadProfiles) ? (
            <div className="text-center p-8 bg-card rounded-xl shadow-lg">
             <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-headline text-xl">No More Profiles</h3>
@@ -258,7 +264,7 @@ export default function ConnectSpherePage() {
             <UserProfileCard user={currentProfileForCard} />
         ) : (
           <div className="text-center p-8 bg-card rounded-xl shadow-lg">
-            {isLoadingProfiles || authIsLoading || shouldReloadProfiles ? ( // Show loader if actively loading
+            {isLoadingProfiles || authIsLoading || shouldReloadProfiles ? (
                 <>
                 <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
                 <p className="mt-2 text-muted-foreground">Finding trekkers...</p>
@@ -269,7 +275,7 @@ export default function ConnectSpherePage() {
                 <h3 className="font-headline text-xl">No Profiles Found</h3>
                 <p className="text-muted-foreground">Try reloading or check back later.</p>
                 <Button onClick={() => setShouldReloadProfiles(true)} className="mt-4" disabled={isLoadingProfiles || authIsLoading}>
-                    "Reload Profiles"
+                    Reload Profiles
                 </Button>
                 </>
             )}
@@ -293,4 +299,5 @@ export default function ConnectSpherePage() {
     </div>
   );
 }
+
     
