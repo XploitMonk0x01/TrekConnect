@@ -4,17 +4,19 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, MapPin, Star, Sun, CloudSun, CloudRain, CalendarDays, ExternalLink, Share2, ShieldCheck, Edit, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Star, Sun, CloudSun, CloudRain, CalendarDays, ExternalLink, Share2, ShieldCheck, Edit, Sparkles, Loader2, Heart as HeartIcon } from "lucide-react";
+import { useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { Destination, WeatherInfo } from "@/lib/types";
-// Badge component is not used here, can be removed if not planned for future use
+import type { Destination, WeatherInfo, UserProfile } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { generateTrekImage } from '@/ai/flows/generate-trek-image-flow';
 import { useToast } from "@/hooks/use-toast";
 import { searchPexelsImage } from '@/services/pexels';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCustomAuth } from '@/contexts/CustomAuthContext';
+import { updateUserProfile } from '@/services/users';
 
 interface DestinationDetailClientContentProps {
   initialDestination: Destination;
@@ -33,6 +35,9 @@ export default function DestinationDetailClientContent({
   initialDestination,
   mockWeather
 }: DestinationDetailClientContentProps) {
+  const { user: currentUser, isLoading: authIsLoading, updateUserInContext } = useCustomAuth();
+  const { toast } = useToast();
+  const router = useRouter();
 
   const [destination, setDestination] = useState<Destination>(initialDestination);
   const [mainImage, setMainImage] = useState(initialDestination.imageUrl || PLACEHOLDER_IMAGE_URL(1200, 600));
@@ -42,15 +47,14 @@ export default function DestinationDetailClientContent({
 
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const { toast } = useToast();
+  const [isWishlistProcessing, setIsWishlistProcessing] = useState(false);
 
   useEffect(() => {
-    setDestination(initialDestination); // Keep local state in sync
+    setDestination(initialDestination);
     setIsMainImageLoading(true);
     setAreTravelerPhotosLoading(true);
 
     const fetchDynamicImages = async () => {
-      // Fetch Main Image
       const mainImageQuery = initialDestination.aiHint || initialDestination.name;
       try {
         const pexelsImageUrl = await searchPexelsImage(mainImageQuery, 1200, 600);
@@ -62,23 +66,18 @@ export default function DestinationDetailClientContent({
         setIsMainImageLoading(false);
       }
 
-      // Fetch Traveler Photos
       const photoQueryBase = initialDestination.aiHint || initialDestination.name;
       const queries = [
-        `${photoQueryBase} trek photo`,
-        `${photoQueryBase} scenery`,
-        `${photoQueryBase} mountain view`,
-        `${photoQueryBase} trail path`,
-        `${photoQueryBase} travel spot`
+        `${photoQueryBase} trek photo`, `${photoQueryBase} scenery`, `${photoQueryBase} mountain view`,
+        `${photoQueryBase} trail path`, `${photoQueryBase} travel spot`
       ];
       try {
         const photoPromises = queries.slice(0,5).map(q => searchPexelsImage(q, 300, 300));
         const photos = await Promise.all(photoPromises);
-        // Filter out placeholders if Pexels didn't return a valid image
         setTravelerPhotos(photos.filter(p => p && !p.includes('placehold.co')));
       } catch (error) {
         console.error("Failed to load traveler photos:", error);
-        setTravelerPhotos([...Array(5)].map(() => PLACEHOLDER_IMAGE_URL(300,300))); // Fallback to 5 placeholders
+        setTravelerPhotos([...Array(5)].map(() => PLACEHOLDER_IMAGE_URL(300,300)));
       } finally {
         setAreTravelerPhotosLoading(false);
       }
@@ -88,7 +87,6 @@ export default function DestinationDetailClientContent({
       fetchDynamicImages();
     }
   }, [initialDestination]);
-
 
   const handleGenerateImage = async () => {
     if (!destination) return;
@@ -101,24 +99,82 @@ export default function DestinationDetailClientContent({
       });
       if (result.imageDataUri) {
         setGeneratedImageUrl(result.imageDataUri);
-        toast({
-          title: "AI Image Generated!",
-          description: `An AI's vision of ${destination.name} is ready.`,
-        });
+        toast({ title: "AI Image Generated!", description: `An AI's vision of ${destination.name} is ready.` });
       } else {
         throw new Error("Image data URI is missing in the response.");
       }
     } catch (error) {
       console.error("Error generating AI image:", error);
-      toast({
-        variant: "destructive",
-        title: "AI Image Generation Failed",
-        description: "Could not generate an image at this time. Please try again later.",
-      });
+      toast({ variant: "destructive", title: "AI Image Generation Failed", description: "Could not generate an image at this time." });
     } finally {
       setIsGeneratingImage(false);
     }
   };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: destination.name,
+          text: `Check out this amazing trek: ${destination.name}\n${destination.description.substring(0, 100)}...`,
+          url: window.location.href,
+        });
+        toast({ title: "Shared Successfully!" });
+      } catch (error) {
+        console.error('Error sharing:', error);
+        toast({ variant: "destructive", title: "Share Failed", description: "Could not share at this moment." });
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ title: "Link Copied!", description: "Destination link copied to clipboard." });
+      } catch (error) {
+        toast({ variant: "destructive", title: "Copy Failed", description: "Could not copy link." });
+      }
+    }
+  };
+
+  const handleToggleWishlist = async () => {
+    if (!currentUser) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to manage your wishlist.",
+        action: <Button onClick={() => router.push(`/auth/signin?redirect=/explore/${destination.id}`)}>Sign In</Button>,
+      });
+      return;
+    }
+    setIsWishlistProcessing(true);
+
+    const currentWishlist = currentUser.wishlistDestinations || [];
+    const isWishlisted = currentWishlist.includes(destination.name);
+    const newWishlist = isWishlisted
+      ? currentWishlist.filter(name => name !== destination.name)
+      : [...currentWishlist, destination.name];
+
+    try {
+      const updatedUser = await updateUserProfile(currentUser.id, { wishlistDestinations: newWishlist });
+      if (updatedUser) {
+        updateUserInContext(updatedUser as UserProfile);
+        toast({
+          title: isWishlisted ? "Removed from Wishlist" : "Added to Wishlist",
+          description: `${destination.name} has been ${isWishlisted ? 'removed from' : 'added to'} your wishlist.`,
+        });
+      } else {
+        throw new Error("Failed to update wishlist on server.");
+      }
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      toast({ variant: "destructive", title: "Wishlist Update Failed", description: "Could not update wishlist." });
+    } finally {
+      setIsWishlistProcessing(false);
+    }
+  };
+
+  const isDestinationInWishlist = (): boolean => {
+    if (!currentUser || !currentUser.wishlistDestinations) return false;
+    return currentUser.wishlistDestinations.includes(destination.name);
+  };
+
 
   const AITag = destination.aiHint || destination.name.toLowerCase().split(' ').slice(0,2).join(' ') || "trekking india";
   const mapEmbedUrl = destination.coordinates
@@ -134,11 +190,20 @@ export default function DestinationDetailClientContent({
           </Link>
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon" aria-label="Share Destination">
+          <Button variant="outline" size="icon" aria-label="Share Destination" onClick={handleShare}>
             <Share2 className="h-5 w-5" />
           </Button>
-          <Button variant="outline" size="icon" aria-label="Add to Wishlist">
-            <Star className="h-5 w-5" />
+          <Button 
+            variant="outline" 
+            size="icon" 
+            aria-label={isDestinationInWishlist() ? "Remove from Wishlist" : "Add to Wishlist"}
+            onClick={handleToggleWishlist}
+            disabled={isWishlistProcessing || authIsLoading}
+            className={isDestinationInWishlist() ? "text-pink-500 border-pink-500 hover:bg-pink-500/10" : ""}
+          >
+            {isWishlistProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : 
+            <HeartIcon className={`h-5 w-5 ${isDestinationInWishlist() ? 'fill-pink-500' : ''}`} />
+            }
           </Button>
         </div>
       </div>
@@ -194,8 +259,8 @@ export default function DestinationDetailClientContent({
 
             <div>
               <h3 className="font-headline text-xl mb-2">Route Planning</h3>
-              <Button variant="outline" className="border-accent text-accent hover:bg-accent/5">
-                <Edit className="mr-2 h-4 w-4" /> Create Custom Route (Coming Soon)
+              <Button variant="outline" className="border-accent text-accent hover:bg-accent/5" disabled>
+                <Edit className="mr-2 h-4 w-4" /> Create Custom Route (Soon)
               </Button>
             </div>
           </div>
@@ -223,7 +288,7 @@ export default function DestinationDetailClientContent({
                     </li>
                   ))}
                 </ul>
-                 <Button variant="link" size="sm" className="p-0 h-auto mt-2 text-primary">
+                 <Button variant="link" size="sm" className="p-0 h-auto mt-2 text-primary" disabled>
                     View Full Forecast <ExternalLink className="ml-1 h-3 w-3" />
                 </Button>
               </CardContent>
@@ -270,7 +335,7 @@ export default function DestinationDetailClientContent({
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">Emergency: 100 (Police), 108 (Ambulance)</p>
-                <Button variant="link" size="sm" className="p-0 h-auto mt-1 text-primary">
+                <Button variant="link" size="sm" className="p-0 h-auto mt-1 text-primary" disabled>
                     View More Safety Details <ExternalLink className="ml-1 h-3 w-3" />
                 </Button>
               </CardContent>
@@ -333,7 +398,7 @@ export default function DestinationDetailClientContent({
                 />
               </div>
             )) : (
-              [...Array(5)].map((_, i) => ( // Fallback to placeholders if Pexels fetch yields no usable images
+              [...Array(5)].map((_, i) => ( 
                 <div key={`fallback-${i}`} className="aspect-square bg-muted rounded-lg overflow-hidden relative">
                   <Image
                     src={PLACEHOLDER_IMAGE_URL(300,300)}
@@ -346,7 +411,7 @@ export default function DestinationDetailClientContent({
               ))
             )
           )}
-           <Button variant="outline" className="aspect-square flex flex-col items-center justify-center text-muted-foreground hover:bg-primary/5 hover:text-primary border-primary">
+           <Button variant="outline" className="aspect-square flex flex-col items-center justify-center text-muted-foreground hover:bg-primary/5 hover:text-primary border-primary" disabled>
               <ExternalLink className="h-6 w-6 mb-1"/>
               View All Photos
             </Button>
@@ -355,3 +420,4 @@ export default function DestinationDetailClientContent({
     </div>
   );
 }
+    

@@ -26,11 +26,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
-// import type { Destination } from '@/lib/types'; // Not used directly here
-// import Image from 'next/image'; // Not used directly here
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
-
-// Wishlist and History AITags are removed as we display names directly
 
 function DestinationNameCard({ name }: { name: string }) {
   return (
@@ -38,7 +34,6 @@ function DestinationNameCard({ name }: { name: string }) {
       <div className="flex items-center">
         <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
         <p className="text-sm font-medium truncate hover:text-primary">
-          {/* In a future step, this could link to an /explore/search?name={name} or similar */}
           {name}
         </p>
       </div>
@@ -90,7 +85,7 @@ export default function ProfilePage() {
   if (currentUser.travelPreferences?.style) {
     travelPreferencesParts.push(currentUser.travelPreferences.style);
   }
-  const travelPreferencesText = travelPreferencesParts.length > 0 ? travelPreferencesParts.join(', ') : 'N/A';
+  const travelPreferencesText = travelPreferencesParts.length > 0 ? travelPreferencesParts.join(', ') : 'Not specified';
 
 
   return (
@@ -102,6 +97,7 @@ export default function ProfilePage() {
               src={currentUser.photoUrl || PLACEHOLDER_IMAGE_URL(128, 128)}
               alt={currentUser.name || 'User'}
               data-ai-hint={`person portrait ${currentUser.name?.split(' ')[0] || 'user'}`}
+              className="object-cover"
               onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(128,128); }}
             />
             <AvatarFallback className="text-4xl">
@@ -222,4 +218,4 @@ export default function ProfilePage() {
     </div>
   );
 }
-
+    

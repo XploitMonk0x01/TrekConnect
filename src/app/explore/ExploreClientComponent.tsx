@@ -6,12 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Search, Star, Filter, Globe } from "lucide-react";
-import type { Destination } from "@/lib/types";
+import { MapPin, Search, Star, Filter, Globe, Heart, Loader2, AlertTriangle } from "lucide-react";
+import type { Destination, UserProfile } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { searchPexelsImage } from "@/services/pexels";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCustomAuth } from "@/contexts/CustomAuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { updateUserProfile } from "@/services/users";
+import { useRouter } from "next/navigation";
+
 
 interface ExploreClientComponentProps {
   initialDestinations: Destination[];
@@ -20,10 +25,16 @@ interface ExploreClientComponentProps {
 type DestinationWithLoading = Destination & { isLoadingImage?: boolean; fetchedImageUrl?: string };
 
 export default function ExploreClientComponent({ initialDestinations }: ExploreClientComponentProps) {
+  const { user: currentUser, isLoading: authIsLoading, updateUserInContext } = useCustomAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+
   const [destinations, setDestinations] = useState<DestinationWithLoading[]>(
     initialDestinations.map(d => ({ ...d, isLoadingImage: true, fetchedImageUrl: d.imageUrl }))
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const [wishlistProcessing, setWishlistProcessing] = useState<Record<string, boolean>>({});
+
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -35,7 +46,6 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
             return { ...dest, fetchedImageUrl: pexelsImageUrl, isLoadingImage: false };
           } catch (error) {
             console.error(`Failed to load image for ${dest.name}:`, error);
-            // Fallback to original imageUrl from DB (which might be a placeholder)
             return { ...dest, fetchedImageUrl: dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400), isLoadingImage: false };
           }
         })
@@ -57,6 +67,52 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     destination.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleToggleWishlist = async (destinationId: string, destinationName: string) => {
+    if (!currentUser) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to add items to your wishlist.",
+        action: <Button onClick={() => router.push('/auth/signin?redirect=/explore')}>Sign In</Button>,
+      });
+      return;
+    }
+    setWishlistProcessing(prev => ({ ...prev, [destinationId]: true }));
+
+    const currentWishlist = currentUser.wishlistDestinations || [];
+    const isWishlisted = currentWishlist.includes(destinationName);
+    const newWishlist = isWishlisted
+      ? currentWishlist.filter(name => name !== destinationName)
+      : [...currentWishlist, destinationName];
+
+    try {
+      const updatedUser = await updateUserProfile(currentUser.id, { wishlistDestinations: newWishlist });
+      if (updatedUser) {
+        updateUserInContext(updatedUser as UserProfile); // Ensure type assertion if UserProfile from service can be partial
+        toast({
+          title: isWishlisted ? "Removed from Wishlist" : "Added to Wishlist",
+          description: `${destinationName} has been ${isWishlisted ? 'removed from' : 'added to'} your wishlist.`,
+        });
+      } else {
+        throw new Error("Failed to update wishlist on server.");
+      }
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      toast({
+        variant: "destructive",
+        title: "Wishlist Update Failed",
+        description: "Could not update your wishlist at this time. Please try again.",
+      });
+    } finally {
+      setWishlistProcessing(prev => ({ ...prev, [destinationId]: false }));
+    }
+  };
+
+  const isDestinationInWishlist = (destinationName: string): boolean => {
+    if (!currentUser || !currentUser.wishlistDestinations) return false;
+    return currentUser.wishlistDestinations.includes(destinationName);
+  };
+
+
   return (
     <div className="space-y-8">
       <Card className="shadow-lg">
@@ -76,8 +132,8 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" /> Filters
+            <Button variant="outline" disabled>
+              <Filter className="mr-2 h-4 w-4" /> Filters (Soon!)
             </Button>
           </div>
         </CardContent>
@@ -96,7 +152,14 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
         </CardContent>
       </Card>
 
-      {filteredDestinations.length === 0 && !destinations.some(d => d.isLoadingImage) && (
+      {authIsLoading && ( // Show overall loading indicator if auth state is still resolving
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading destinations...</span>
+        </div>
+      )}
+
+      {!authIsLoading && filteredDestinations.length === 0 && !destinations.some(d => d.isLoadingImage) && (
          <Card>
             <CardContent className="p-6 text-center">
                 <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -111,7 +174,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {destinations.map((destination) => (
           destination.isLoadingImage ? (
-            <Card key={destination.id || Math.random()} className="overflow-hidden flex flex-col">
+            <Card key={destination.id || Math.random().toString()} className="overflow-hidden flex flex-col">
               <Skeleton className="h-48 w-full" />
               <CardContent className="p-4 flex-grow">
                 <Skeleton className="h-6 w-3/4 mb-2" />
@@ -139,6 +202,18 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                     (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(600,400);
                   }}
                 />
+                 <Button
+                    size="icon"
+                    variant="ghost"
+                    className="absolute top-2 right-2 bg-black/30 hover:bg-black/50 text-white hover:text-pink-400 rounded-full"
+                    onClick={() => handleToggleWishlist(destination.id, destination.name)}
+                    disabled={wishlistProcessing[destination.id] || authIsLoading}
+                    aria-label={isDestinationInWishlist(destination.name) ? "Remove from wishlist" : "Add to wishlist"}
+                  >
+                    {wishlistProcessing[destination.id] ? <Loader2 className="h-5 w-5 animate-spin" /> :
+                     <Heart className={`h-5 w-5 ${isDestinationInWishlist(destination.name) ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
+                    }
+                  </Button>
               </CardHeader>
               <CardContent className="p-4 flex-grow">
                 <CardTitle className="font-headline text-lg mb-1">{destination.name}</CardTitle>
@@ -160,9 +235,8 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
             </Card>
           )
         ))}
-        {/* Render skeletons for items still loading but not yet in filteredDestinations if searchQuery is active */}
         {searchQuery && destinations.filter(d => d.isLoadingImage).map(destination => (
-            <Card key={destination.id || Math.random()} className="overflow-hidden flex flex-col">
+            <Card key={destination.id || Math.random().toString()} className="overflow-hidden flex flex-col">
               <Skeleton className="h-48 w-full" />
               <CardContent className="p-4 flex-grow">
                 <Skeleton className="h-6 w-3/4 mb-2" />
@@ -181,3 +255,4 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     </div>
   );
 }
+    
