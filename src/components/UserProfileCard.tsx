@@ -24,50 +24,66 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
     photoAiHint = `person ${user.name.split(' ')[0]}`;
   }
 
+  const displayNameAge = `${user.name || 'Trekker'}${user.age ? `, ${user.age}` : ''}`;
+  const bioText = user.bio || 'No bio available.';
+  const genderText = user.gender || 'Not specified';
+  const plannedTripText = user.plannedTrips?.[0]?.destinationName || 'Not specified';
+  
+  const prefParts: string[] = [];
+  if (user.travelPreferences?.soloOrGroup) prefParts.push(user.travelPreferences.soloOrGroup);
+  if (user.travelPreferences?.budget) prefParts.push(user.travelPreferences.budget);
+  if (user.travelPreferences?.style) prefParts.push(user.travelPreferences.style);
+  const travelStyleText = prefParts.length > 0 ? prefParts.join(', ') : 'Not specified';
+
+  const trekkingExperienceText = user.trekkingExperience || 'Not specified';
+  const languagesSpokenText = user.languagesSpoken && user.languagesSpoken.length > 0 
+    ? `Speaks: ${user.languagesSpoken.join(', ')}` 
+    : 'Languages: Not specified';
 
   return (
     <Card className="w-full max-w-sm rounded-xl overflow-hidden shadow-xl transform transition-all duration-300 hover:scale-105 bg-card">
       <div className="relative h-72">
         <Image
           src={photoUrl}
-          alt={user.name}
+          alt={user.name || 'User profile'}
           layout="fill"
           objectFit="cover"
           className="rounded-t-xl"
           data-ai-hint={photoAiHint}
+          onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(400,400); }}
         />
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-          <CardTitle className="font-headline text-2xl text-primary-foreground">{user.name}, {user.age}</CardTitle>
-          {user.bio && <CardDescription className="text-sm text-primary-foreground/80 line-clamp-2">{user.bio}</CardDescription>}
+          <CardTitle className="font-headline text-2xl text-primary-foreground">{displayNameAge}</CardTitle>
+          <CardDescription className="text-sm text-primary-foreground/80 line-clamp-2">{bioText}</CardDescription>
         </div>
       </div>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center text-sm text-muted-foreground">
           <User className="h-4 w-4 mr-2 text-primary" />
-          <span>{user.gender}</span>
+          <span>{genderText}</span>
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
           <MapPin className="h-4 w-4 mr-2 text-primary" />
-          <span>Planning trip to: {user.plannedTrips?.[0]?.destinationName || 'Not specified'}</span>
+          <span>Planning trip to: {plannedTripText}</span>
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
           <Briefcase className="h-4 w-4 mr-2 text-primary" />
-          <span>Travel Style: {user.travelPreferences.soloOrGroup}, {user.travelPreferences.budget}</span>
+          <span>Travel Style: {travelStyleText}</span>
         </div>
         <div className="flex items-center text-sm text-muted-foreground">
           <Mountain className="h-4 w-4 mr-2 text-primary" />
-          <span>Trekking: {user.trekkingExperience}</span>
+          <span>Trekking: {trekkingExperienceText}</span>
         </div>
-        {user.languagesSpoken && user.languagesSpoken.length > 0 && (
+        {(user.languagesSpoken && user.languagesSpoken.length > 0) && (
           <div className="flex items-center text-sm text-muted-foreground">
             <Languages className="h-4 w-4 mr-2 text-primary" />
-            <span>Speaks: {user.languagesSpoken.join(', ')}</span>
+            <span>{languagesSpokenText}</span>
           </div>
         )}
         {user.badges && user.badges.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-2">
-                {user.badges.slice(0,3).map((badge) => (
-                    <Badge key={badge.id} variant="secondary" className="text-xs">{badge.name}</Badge>
+                {user.badges.slice(0,3).map((badge) => ( // Ensure badge has a unique key if 'id' is available
+                    <Badge key={badge.id || badge.name} variant="secondary" className="text-xs">{badge.name}</Badge>
                 ))}
             </div>
         )}

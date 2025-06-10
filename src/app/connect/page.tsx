@@ -22,6 +22,16 @@ export default function ConnectSpherePage() {
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(true);
   const [lastSwipedProfile, setLastSwipedProfile] = useState<UserProfile | null>(null);
   const [showMatchAnimation, setShowMatchAnimation] = useState(false);
+  const [matchAnimationTimeoutId, setMatchAnimationTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Cleanup timeout if component unmounts or showMatchAnimation becomes false
+    return () => {
+      if (matchAnimationTimeoutId) {
+        clearTimeout(matchAnimationTimeoutId);
+      }
+    };
+  }, [matchAnimationTimeoutId]);
 
   const loadProfiles = async () => {
     if (!currentUser?.id) {
@@ -39,24 +49,42 @@ export default function ConnectSpherePage() {
     } finally {
       setIsLoadingProfiles(false);
       setCurrentIndex(0); 
-      setLastSwipedProfile(null);
     }
   };
 
   useEffect(() => {
-    if (!authIsLoading && currentUser) { 
+    if (!authIsLoading && currentUser?.id) { 
       loadProfiles();
     } else if (!authIsLoading && !currentUser) {
-      setIsLoadingProfiles(false); // No user, stop profile loading
+      setIsLoadingProfiles(false);
       setProfiles([]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, authIsLoading]); // Rerun if currentUser or authIsLoading changes
+  }, [currentUser, authIsLoading]);
 
+
+  const advanceToNextProfile = () => {
+    setLastSwipedProfile(null); // Clear for next potential swipe
+    setCurrentIndex(prevIndex => {
+        const newIndex = prevIndex + 1;
+        if (newIndex < profiles.length) {
+            return newIndex;
+        } else {
+            console.log("ConnectSphere: Reached end of profiles or list empty. Attempting reload.");
+            loadProfiles(); 
+            return 0; 
+        }
+    });
+  };
 
   const handleSwipe = (direction: 'left' | 'right') => {
     if (!currentUser || !profiles[currentIndex]) return;
     
+    if (matchAnimationTimeoutId) {
+        clearTimeout(matchAnimationTimeoutId);
+        setMatchAnimationTimeoutId(null);
+    }
+
     const swipedProfile = profiles[currentIndex];
     setLastSwipedProfile(swipedProfile);
 
@@ -64,34 +92,35 @@ export default function ConnectSpherePage() {
       console.log(`Matched with ${swipedProfile.name}`);
       // TODO: Implement actual match logic (e.g., save to DB with currentUser.id)
       setShowMatchAnimation(true);
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         setShowMatchAnimation(false);
-        if (currentIndex < profiles.length - 1) {
-            setCurrentIndex(currentIndex + 1);
-        } else {
-            console.log("No more profiles to swipe.");
-             setCurrentIndex(0); // Optionally loop back or show "no more profiles"
-             if (profiles.length === 0) loadProfiles(); // attempt to reload if empty
-        }
+        advanceToNextProfile();
+        setMatchAnimationTimeoutId(null); 
       }, 2000); 
+      setMatchAnimationTimeoutId(timeoutId);
     } else {
-        if (currentIndex < profiles.length - 1) {
-            setCurrentIndex(currentIndex + 1);
-        } else {
-             console.log("No more profiles to swipe.");
-             setCurrentIndex(0); // Optionally loop back
-             if (profiles.length === 0) loadProfiles(); // attempt to reload if empty
-        }
+        advanceToNextProfile();
     }
   };
 
   const handleUndo = () => {
     if (!currentUser) return;
+    if (showMatchAnimation) setShowMatchAnimation(false); // Hide match animation if undoing from it
+    if (matchAnimationTimeoutId) { // Clear any pending auto-advance from a match
+        clearTimeout(matchAnimationTimeoutId);
+        setMatchAnimationTimeoutId(null);
+    }
+
     if (currentIndex > 0) {
-      if (showMatchAnimation) setShowMatchAnimation(false);
       setCurrentIndex(currentIndex - 1);
       console.log("Undo last swipe to show profile:", profiles[currentIndex - 1]?.name);
-      setLastSwipedProfile(null);
+      setLastSwipedProfile(null); // Clear last swiped as we are undoing
+    } else if (lastSwipedProfile && currentIndex === 0) {
+      // This case is tricky: if at index 0 and lastSwipedProfile exists,
+      // it means we swiped the first profile. "Undo" should bring it back.
+      // However, our simple currentIndex decrement won't work.
+      // For now, we'll just log. A more complex history might be needed for full undo.
+      console.log("Undo: At the beginning, cannot go further back with current logic.");
     } else {
       console.log("Nothing to undo or already at the beginning.");
     }
@@ -148,7 +177,7 @@ export default function ConnectSpherePage() {
       <div className="flex flex-col items-center justify-center h-screen text-center p-4 bg-background">
         <Heart className="w-24 h-24 text-pink-500 animate-ping mb-4" />
         <h2 className="text-3xl font-headline text-primary">It's a Match!</h2>
-        <p className="text-xl text-muted-foreground mt-2">You and {lastSwipedProfile.name} are interested in connecting!</p>
+        <p className="text-xl text-muted-foreground mt-2">You and {lastSwipedProfile.name || 'your match'} are interested in connecting!</p>
         <div className="flex gap-4 mt-8">
           <Image 
             src={currentUserPhoto} 
@@ -165,16 +194,16 @@ export default function ConnectSpherePage() {
             onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(100,100); }}
             />
         </div>
-        <Button className="mt-8 bg-accent hover:bg-accent/90" onClick={() => setShowMatchAnimation(false)} disabled>
+        <Button className="mt-8 bg-accent hover:bg-accent/90" disabled>
           <MessageSquare className="mr-2 h-5 w-5" /> Start Chatting (Soon!)
         </Button>
          <Button variant="link" className="mt-2 text-primary" onClick={() => { 
-            setShowMatchAnimation(false); 
-            if (currentIndex < profiles.length -1 ) { 
-              // Already handled by timeout in handleSwipe
-            } else {
-               setCurrentIndex(0); // Or show no more profiles
+            if (matchAnimationTimeoutId) {
+                clearTimeout(matchAnimationTimeoutId);
+                setMatchAnimationTimeoutId(null);
             }
+            setShowMatchAnimation(false); 
+            advanceToNextProfile();
          }}>
           Continue Swiping
         </Button>
