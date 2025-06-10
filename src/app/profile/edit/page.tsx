@@ -3,7 +3,7 @@
 
 import { useState, useEffect, ChangeEvent } from 'react'
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast'; // Corrected path
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -239,7 +239,6 @@ export default function EditProfilePage() {
             <Select onValueChange={(value) => form.setValue('gender', value as ProfileFormValues['gender'])} defaultValue={form.getValues('gender')} disabled={isSaving}>
               <SelectTrigger id="gender"><SelectValue placeholder="Select gender" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Select gender</SelectItem>
                 <SelectItem value="Male">Male</SelectItem>
                 <SelectItem value="Female">Female</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
@@ -258,7 +257,6 @@ export default function EditProfilePage() {
               <Select onValueChange={(value) => form.setValue('travelPreferences_soloOrGroup', value as ProfileFormValues['travelPreferences_soloOrGroup'])} defaultValue={form.getValues('travelPreferences_soloOrGroup')} disabled={isSaving}>
                 <SelectTrigger id="travelPreferences_soloOrGroup"><SelectValue placeholder="Solo or Group?" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Select preference</SelectItem>
                   <SelectItem value="Solo">Solo</SelectItem>
                   <SelectItem value="Group">Group</SelectItem>
                   <SelectItem value="Flexible">Flexible</SelectItem>
@@ -270,7 +268,6 @@ export default function EditProfilePage() {
               <Select onValueChange={(value) => form.setValue('travelPreferences_budget', value as ProfileFormValues['travelPreferences_budget'])} defaultValue={form.getValues('travelPreferences_budget')} disabled={isSaving}>
                 <SelectTrigger id="travelPreferences_budget"><SelectValue placeholder="Budget level" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Select budget</SelectItem>
                   <SelectItem value="Budget">Budget</SelectItem>
                   <SelectItem value="Mid-range">Mid-range</SelectItem>
                   <SelectItem value="Luxury">Luxury</SelectItem>
@@ -294,7 +291,6 @@ export default function EditProfilePage() {
           <Select onValueChange={(value) => form.setValue('trekkingExperience', value as ProfileFormValues['trekkingExperience'])} defaultValue={form.getValues('trekkingExperience')} disabled={isSaving}>
             <SelectTrigger id="trekkingExperience"><SelectValue placeholder="Select experience level" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Select experience</SelectItem>
               <SelectItem value="Beginner">Beginner</SelectItem>
               <SelectItem value="Intermediate">Intermediate</SelectItem>
               <SelectItem value="Advanced">Advanced</SelectItem>
@@ -311,5 +307,7 @@ export default function EditProfilePage() {
     </div>
   );
 }
+
+    
 
     
