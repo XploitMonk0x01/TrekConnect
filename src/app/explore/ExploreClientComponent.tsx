@@ -34,6 +34,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [wishlistProcessing, setWishlistProcessing] = useState<Record<string, boolean>>({});
+  const [mapUrl, setMapUrl] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -55,8 +56,21 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
 
     if (initialDestinations.length > 0) {
       fetchImages();
+      // Setup map URL
+      const firstDestinationWithCoords = initialDestinations.find(d => d.coordinates?.lat && d.coordinates?.lng);
+      if (firstDestinationWithCoords && firstDestinationWithCoords.coordinates) {
+        const { lat, lng } = firstDestinationWithCoords.coordinates;
+        // More zoomed out view for the explore page, showing one marker
+        const zoomLevel = 0.5; // Bbox size, smaller is more zoomed in
+        setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng - zoomLevel}%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${lat + zoomLevel}&layer=mapnik&marker=${lat}%2C${lng}`);
+      } else {
+        // Default view of Himalayas if no specific coordinates
+        setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`);
+      }
     } else {
       setDestinations([]);
+      // Default view if no destinations
+      setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialDestinations]);
@@ -87,7 +101,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     try {
       const updatedUser = await updateUserProfile(currentUser.id, { wishlistDestinations: newWishlist });
       if (updatedUser) {
-        updateUserInContext(updatedUser as UserProfile); // Ensure type assertion if UserProfile from service can be partial
+        updateUserInContext(updatedUser as UserProfile); 
         toast({
           title: isWishlisted ? "Removed from Wishlist" : "Added to Wishlist",
           description: `${destinationName} has been ${isWishlisted ? 'removed from' : 'added to'} your wishlist.`,
@@ -142,17 +156,32 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-xl">Interactive Map of Indian Treks</CardTitle>
-          <CardDescription>Visualize trek routes and plan your journey. (Map integration coming soon!)</CardDescription>
+          <CardDescription>Visualize trek routes and plan your journey. (Powered by OpenStreetMap)</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-64 w-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-            <Globe className="h-16 w-16" />
-            <p className="ml-4 text-lg">Map will be displayed here.</p>
-          </div>
+          {mapUrl ? (
+            <iframe
+              width="100%"
+              height="400"
+              frameBorder="0"
+              scrolling="no"
+              marginHeight={0}
+              marginWidth={0}
+              src={mapUrl}
+              className="rounded-lg border"
+              title="Interactive Map of Treks"
+              loading="lazy"
+            ></iframe>
+          ) : (
+            <div className="h-96 w-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mr-2" />
+              Loading map...
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {authIsLoading && ( // Show overall loading indicator if auth state is still resolving
+      {authIsLoading && ( 
         <div className="flex justify-center items-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <span className="ml-2">Loading destinations...</span>
@@ -189,7 +218,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
               </CardFooter>
             </Card>
           ) : (
-            filteredDestinations.find(fd => fd.id === destination.id) && // Only render if it's in filtered list
+            filteredDestinations.find(fd => fd.id === destination.id) && 
             <Card key={destination.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="p-0 relative h-48">
                 <Image
@@ -255,4 +284,3 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     </div>
   );
 }
-    
