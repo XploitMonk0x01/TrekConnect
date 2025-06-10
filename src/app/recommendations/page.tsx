@@ -1,7 +1,8 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -13,11 +14,12 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { getSmartMatchRecommendations, SmartMatchRecommendationsInput, SmartMatchRecommendationsOutput } from "@/ai/flows/smart-match-recommendations";
 import { suggestTravelDestinations, SuggestTravelDestinationsInput, SuggestTravelDestinationsOutput } from "@/ai/flows/suggest-travel-destinations";
-import { Loader2, User, MapPin, Wand2, ThumbsUp, ThumbsDown } from "lucide-react";
-import Image from 'next/image';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { Loader2, User, MapPin, Wand2, ExternalLink } from "lucide-react";
 import { UserProfileCard } from '@/components/UserProfileCard';
-import type { UserProfile as AppUserProfile } from '@/lib/types'; 
+import type { UserProfile as AppUserProfile, Destination } from '@/lib/types'; 
+import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { getAllDestinations } from '@/services/destinations'; // Import service to get all destinations
+import { useToast } from '@/hooks/use-toast';
 
 const smartMatchSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -38,10 +40,14 @@ const suggestDestinationsSchema = z.object({
 });
 
 export default function RecommendationsPage() {
+  const { toast } = useToast();
   const [matchResults, setMatchResults] = useState<SmartMatchRecommendationsOutput | null>(null);
   const [destinationResults, setDestinationResults] = useState<SuggestTravelDestinationsOutput | null>(null);
   const [isMatchLoading, setIsMatchLoading] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
+
+  const [allDestinationsMap, setAllDestinationsMap] = useState<Map<string, Destination>>(new Map());
+  const [isLoadingDestinationsMap, setIsLoadingDestinationsMap] = useState(false);
 
   const matchForm = useForm<z.infer<typeof smartMatchSchema>>({
     resolver: zodResolver(smartMatchSchema),
@@ -67,6 +73,28 @@ export default function RecommendationsPage() {
     },
   });
 
+  useEffect(() => {
+    const fetchAndMapDestinations = async () => {
+      if (matchResults?.recommendedDestinations && matchResults.recommendedDestinations.length > 0 && allDestinationsMap.size === 0) {
+        setIsLoadingDestinationsMap(true);
+        try {
+          const destinations = await getAllDestinations();
+          const destMap = new Map<string, Destination>();
+          destinations.forEach(dest => destMap.set(dest.name, dest));
+          setAllDestinationsMap(destMap);
+        } catch (error) {
+          console.error("Error fetching all destinations for recommendations:", error);
+          toast({ variant: "destructive", title: "Error", description: "Could not load destination details for AI recommendations." });
+        } finally {
+          setIsLoadingDestinationsMap(false);
+        }
+      }
+    };
+
+    fetchAndMapDestinations();
+  }, [matchResults, allDestinationsMap.size, toast]);
+
+
   async function onMatchSubmit(values: z.infer<typeof smartMatchSchema>) {
     setIsMatchLoading(true);
     setMatchResults(null);
@@ -91,7 +119,7 @@ export default function RecommendationsPage() {
       setMatchResults(result);
     } catch (error) {
       console.error("Error getting smart match recommendations:", error);
-      // Add toast notification here
+      toast({ variant: "destructive", title: "Recommendation Error", description: "Could not fetch companion recommendations." });
     } finally {
       setIsMatchLoading(false);
     }
@@ -109,7 +137,7 @@ export default function RecommendationsPage() {
       setDestinationResults(result);
     } catch (error) {
       console.error("Error suggesting travel destinations:", error);
-      // Add toast notification here
+      toast({ variant: "destructive", title: "Suggestion Error", description: "Could not fetch trek suggestions." });
     } finally {
       setIsDestinationLoading(false);
     }
@@ -120,7 +148,7 @@ export default function RecommendationsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-3xl text-primary flex items-center">
-            <Wand2 className="mr-3 h-8 w-8" /> Smart Recommendations
+            <Wand2 className="mr-3 h-8 w-8" /> Smart Picks
           </CardTitle>
           <CardDescription>Let our AI help you find compatible travel partners and exciting new Indian treks.</CardDescription>
         </CardHeader>
@@ -156,31 +184,55 @@ export default function RecommendationsPage() {
         {matchResults && (
           <CardFooter className="flex-col items-start gap-4 mt-6 border-t pt-6">
             <h3 className="font-headline text-lg">Companion Recommendations:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-            {matchResults.recommendedMatches.map((match, index) => {
-                const userProfileForCard: AppUserProfile = {
-                    id: `match-${index}`,
-                    name: match.name,
-                    age: match.age,
-                    gender: match.gender,
-                    photoUrl: `${PLACEHOLDER_IMAGE_URL(400,400)}?ai_hint=person ${match.name.charAt(0)}`,
-                    bio: match.reason,
-                    travelPreferences: {
-                        soloOrGroup: match.travelPreferences.soloOrGroup as any, 
-                        budget: match.travelPreferences.budget as any,
-                    },
-                    languagesSpoken: match.languagesSpoken,
-                    trekkingExperience: match.trekkingExperience as any,
-                };
-                return <UserProfileCard key={index} user={userProfileForCard} />;
-            })}
-            </div>
-             {matchResults.recommendedDestinations.length > 0 && (
+            {matchResults.recommendedMatches.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                {matchResults.recommendedMatches.map((match, index) => {
+                    const userProfileForCard: AppUserProfile = {
+                        id: `match-${index}`, // This is a mock ID for card rendering
+                        name: match.name,
+                        age: match.age,
+                        gender: match.gender as AppUserProfile['gender'],
+                        photoUrl: `${PLACEHOLDER_IMAGE_URL(400,400)}?ai_hint=person ${match.name.split(' ')[0] || 'trekker'}`,
+                        bio: match.reason,
+                        travelPreferences: {
+                            soloOrGroup: match.travelPreferences.soloOrGroup as AppUserProfile['travelPreferences']['soloOrGroup'], 
+                            budget: match.travelPreferences.budget as AppUserProfile['travelPreferences']['budget'],
+                        },
+                        languagesSpoken: match.languagesSpoken,
+                        trekkingExperience: match.trekkingExperience as AppUserProfile['trekkingExperience'],
+                        // Fill in other UserProfile fields with defaults if needed by UserProfileCard
+                        wishlistDestinations: [], travelHistory: [], plannedTrips: [], badges: [],
+                    };
+                    return <UserProfileCard key={index} user={userProfileForCard} />;
+                })}
+                </div>
+            ) : <p className="text-muted-foreground">No specific companions found based on your criteria. Try broadening your search!</p>}
+
+            {isLoadingDestinationsMap && (
+              <div className="flex items-center mt-4">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Loading destination details...</span>
+              </div>
+            )}
+
+            {!isLoadingDestinationsMap && matchResults.recommendedDestinations.length > 0 && (
                 <>
                     <h3 className="font-headline text-lg mt-4">Suggested Indian Treks For You:</h3>
-                    <ul className="list-disc list-inside">
-                        {matchResults.recommendedDestinations.map((dest, i) => <li key={i}>{dest}</li>)}
-                    </ul>
+                    <div className="flex flex-wrap gap-2">
+                        {matchResults.recommendedDestinations.map((destName, i) => {
+                            const destInfo = allDestinationsMap.get(destName);
+                            if (destInfo && destInfo.id) {
+                                return (
+                                    <Button key={i} asChild variant="outline" size="sm">
+                                        <Link href={`/explore/${destInfo.id}`}>
+                                            {destName} <ExternalLink className="ml-2 h-3 w-3"/>
+                                        </Link>
+                                    </Button>
+                                );
+                            }
+                            return <span key={i} className="p-2 text-sm bg-muted rounded-md">{destName}</span>;
+                        })}
+                    </div>
                 </>
             )}
           </CardFooter>
@@ -207,7 +259,7 @@ export default function RecommendationsPage() {
         {destinationResults && (
           <CardFooter className="flex-col items-start gap-2 mt-6 border-t pt-6">
             <h3 className="font-headline text-lg">Trek Suggestions:</h3>
-            <p>{destinationResults.suggestedDestinations}</p>
+            <p className="text-foreground/90">{destinationResults.suggestedDestinations}</p>
           </CardFooter>
         )}
       </Card>
