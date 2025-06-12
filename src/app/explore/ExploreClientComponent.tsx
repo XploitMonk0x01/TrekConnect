@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +8,8 @@ import Image from "next/image";
 import { MapPin, Search, Star, Filter, Globe, Heart, Loader2, AlertTriangle, Route as RouteIcon, PlayCircle } from "lucide-react";
 import type { Destination, UserProfile } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
-import { searchPexelsImage } from "@/services/pexels"; // Pexels for images only now
+import { searchPexelsImage } from "@/services/pexels";
+import { searchYouTubeVideoId } from "@/services/youtube"; // Import new YouTube service
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomAuth } from "@/contexts/CustomAuthContext";
@@ -25,8 +25,8 @@ interface ExploreClientComponentProps {
 type DestinationWithMedia = Destination & {
   isLoadingImage?: boolean;
   fetchedImageUrl?: string;
-  isLoadingYouTubeUrl?: boolean; // New state for YouTube
-  youtubeEmbedUrl?: string | null; // Store YouTube embed URL
+  isLoadingYouTubeVideoId?: boolean; // Renamed for clarity
+  youtubeVideoId?: string | null; // Store YouTube video ID
 };
 
 export default function ExploreClientComponent({ initialDestinations }: ExploreClientComponentProps) {
@@ -39,14 +39,14 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       ...d,
       isLoadingImage: true,
       fetchedImageUrl: d.imageUrl,
-      isLoadingYouTubeUrl: true, // Initialize YouTube loading state
-      youtubeEmbedUrl: null,
+      isLoadingYouTubeVideoId: true, 
+      youtubeVideoId: null,
     }))
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [wishlistProcessing, setWishlistProcessing] = useState<Record<string, boolean>>({});
   const [mapUrl, setMapUrl] = useState<string | null>(null);
-  const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null); // For YouTube modal
+  const [selectedYouTubeVideoId, setSelectedYouTubeVideoId] = useState<string | null>(null); // Store ID for modal
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -57,22 +57,27 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
           const imageQuery = dest.aiHint || dest.name;
           try {
             pexelsImageUrl = await searchPexelsImage(imageQuery, 600, 400);
-            isLoadingImg = false;
           } catch (error) {
             console.error(`Failed to load image for ${dest.name}:`, error);
-            isLoadingImg = false; // Still set to false on error to stop skeleton
           }
+          isLoadingImg = false;
 
-          // Construct YouTube search embed URL
-          const youtubeQuery = `${dest.name} ${dest.region || dest.country || ''} travel guide`;
-          const constructedYoutubeEmbedUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(youtubeQuery)}`;
+          let fetchedYoutubeVideoId: string | null = null;
+          let isLoadingYTVideoId = true;
+          try {
+            const youtubeQuery = `${dest.name} ${dest.region || dest.country || ''}`;
+            fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery);
+          } catch (error) {
+            console.error(`Failed to load YouTube video ID for ${dest.name}:`, error);
+          }
+          isLoadingYTVideoId = false;
 
           return {
             ...dest,
             fetchedImageUrl: pexelsImageUrl,
             isLoadingImage: isLoadingImg,
-            youtubeEmbedUrl: constructedYoutubeEmbedUrl, // Store the constructed URL
-            isLoadingYouTubeUrl: false, // Set to false as we're constructing, not fetching API
+            youtubeVideoId: fetchedYoutubeVideoId,
+            isLoadingYouTubeVideoId: isLoadingYTVideoId,
           };
         })
       );
@@ -84,7 +89,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       const firstDestinationWithCoords = initialDestinations.find(d => d.coordinates?.lat && d.coordinates?.lng);
       if (firstDestinationWithCoords && firstDestinationWithCoords.coordinates) {
         const { lat, lng } = firstDestinationWithCoords.coordinates;
-        const zoomLevel = 0.5;
+        const zoomLevel = 0.5; 
         setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng - zoomLevel}%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${lat + zoomLevel}&layer=mapnik&marker=${lat}%2C${lng}`);
       } else {
         setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`);
@@ -147,12 +152,12 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     return currentUser.wishlistDestinations.includes(destinationName);
   };
 
-  const openVideoModal = (videoUrl: string) => {
-    setSelectedVideoUrl(videoUrl);
+  const openVideoModal = (videoId: string) => {
+    setSelectedYouTubeVideoId(videoId);
   };
 
   const closeVideoModal = () => {
-    setSelectedVideoUrl(null);
+    setSelectedYouTubeVideoId(null);
   };
 
   return (
@@ -209,7 +214,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
         </CardContent>
       </Card>
 
-      {(authIsLoading || destinations.some(d => d.isLoadingImage || d.isLoadingYouTubeUrl)) && (
+      {(authIsLoading || destinations.some(d => d.isLoadingImage || d.isLoadingYouTubeVideoId)) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(3)].map((_, index) => (
             <Card key={`skeleton-${index}`} className="overflow-hidden flex flex-col">
@@ -231,7 +236,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
         </div>
       )}
 
-      {!authIsLoading && filteredDestinations.length === 0 && !destinations.some(d => d.isLoadingImage || d.isLoadingYouTubeUrl) && (
+      {!authIsLoading && filteredDestinations.length === 0 && !destinations.some(d => d.isLoadingImage || d.isLoadingYouTubeVideoId) && (
          <Card>
             <CardContent className="p-6 text-center">
                 <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -245,7 +250,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {destinations.map((destination) => (
-          (destination.isLoadingImage || destination.isLoadingYouTubeUrl) ? ( // Check if still loading either
+          (destination.isLoadingImage || destination.isLoadingYouTubeVideoId) ? (
             <Card key={destination.id || Math.random().toString()} className="overflow-hidden flex flex-col">
               <Skeleton className="h-48 w-full" />
               <CardContent className="p-4 flex-grow">
@@ -307,12 +312,12 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                     <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
                   </Link>
                 </Button>
-                {destination.youtubeEmbedUrl && (
+                {destination.youtubeVideoId && (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive/5 sm:col-span-3" // Spans full width on small, then normal
-                    onClick={() => openVideoModal(destination.youtubeEmbedUrl!)}
+                    className="border-destructive text-destructive hover:bg-destructive/5 sm:col-span-3" 
+                    onClick={() => openVideoModal(destination.youtubeVideoId!)}
                   >
                     <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
                   </Button>
@@ -323,8 +328,8 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
         ))}
       </div>
 
-      {selectedVideoUrl && (
-        <Dialog open={!!selectedVideoUrl} onOpenChange={(isOpen) => !isOpen && closeVideoModal()}>
+      {selectedYouTubeVideoId && (
+        <Dialog open={!!selectedYouTubeVideoId} onOpenChange={(isOpen) => !isOpen && closeVideoModal()}>
           <DialogContent className="max-w-3xl p-0">
             <DialogHeader className="p-4 pb-0">
               <DialogTitle>Video Preview</DialogTitle>
@@ -333,7 +338,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
               <iframe
                 width="100%"
                 height="100%"
-                src={selectedVideoUrl}
+                src={`https://www.youtube.com/embed/${selectedYouTubeVideoId}?autoplay=1`}
                 title="YouTube video player"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
