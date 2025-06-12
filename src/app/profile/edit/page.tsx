@@ -25,11 +25,11 @@ const profileFormSchema = z.object({
   age: z.coerce.number().positive('Age must be a positive number.').optional().or(z.literal('')),
   gender: z.enum(['Male', 'Female', 'Other', 'Prefer not to say']).optional(),
   bio: z.string().max(500, 'Bio cannot exceed 500 characters.').optional(),
-  profileImageDataUri: z.string().optional(), 
+  profileImageDataUri: z.string().optional(),
   travelPreferences_soloOrGroup: z.enum(['Solo', 'Group', 'Flexible']).optional(),
   travelPreferences_budget: z.enum(['Budget', 'Mid-range', 'Luxury', 'Flexible']).optional(),
   travelPreferences_style: z.string().max(100).optional(),
-  languagesSpoken: z.string().optional(), 
+  languagesSpoken: z.string().optional(),
   trekkingExperience: z.enum(['Beginner', 'Intermediate', 'Advanced', 'Expert']).optional(),
 });
 
@@ -38,7 +38,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function EditProfilePage() {
   const { toast } = useToast()
   const { user: currentUser, isLoading: authIsLoading, updateUserInContext } = useCustomAuth();
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true) 
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [currentPhotoUrlForPreview, setCurrentPhotoUrlForPreview] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -67,7 +67,7 @@ export default function EditProfilePage() {
         age: currentUser.age || '',
         gender: currentUser.gender as ProfileFormValues['gender'] || undefined,
         bio: currentUser.bio || '',
-        profileImageDataUri: '', 
+        profileImageDataUri: '',
         travelPreferences_soloOrGroup: currentUser.travelPreferences?.soloOrGroup as ProfileFormValues['travelPreferences_soloOrGroup'] || undefined,
         travelPreferences_budget: currentUser.travelPreferences?.budget as ProfileFormValues['travelPreferences_budget'] || undefined,
         travelPreferences_style: currentUser.travelPreferences?.style || '',
@@ -77,7 +77,7 @@ export default function EditProfilePage() {
       setCurrentPhotoUrlForPreview(currentUser.photoUrl);
       setIsLoadingProfile(false);
     } else if (!authIsLoading && !currentUser) {
-      setIsLoadingProfile(false); 
+      setIsLoadingProfile(false);
     }
   }, [currentUser, authIsLoading, form]);
 
@@ -85,7 +85,7 @@ export default function EditProfilePage() {
   const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5000000) { 
+      if (file.size > 5000000) {
         toast({ variant: "destructive", title: "Image Too Large", description: "Maximum file size is 5MB." });
         form.setError("profileImageDataUri", { type: "manual", message: "Max file size is 5MB."});
         return;
@@ -114,7 +114,7 @@ export default function EditProfilePage() {
       return;
     }
     setIsSaving(true);
-    
+
     const profileUpdateData: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt' | 'lastLoginAt' | 'password'>> = {
         name: data.name,
         age: data.age ? Number(data.age) : undefined,
@@ -132,18 +132,18 @@ export default function EditProfilePage() {
     if (data.profileImageDataUri) {
         profileUpdateData.photoUrl = data.profileImageDataUri;
     } else {
-        profileUpdateData.photoUrl = currentPhotoUrlForPreview; 
+        profileUpdateData.photoUrl = currentPhotoUrlForPreview;
     }
-    
+
     try {
       const updatedMongoDBProfile = await updateUserProfile(currentUser.id, profileUpdateData);
-      
+
       if (updatedMongoDBProfile) {
         updateUserInContext(updatedMongoDBProfile); // Directly update context
         toast({ title: 'Profile Updated', description: 'Your profile has been successfully saved.'});
-        setCurrentPhotoUrlForPreview(updatedMongoDBProfile.photoUrl); 
-        setProfileImagePreview(null); 
-        form.setValue('profileImageDataUri', ''); 
+        setCurrentPhotoUrlForPreview(updatedMongoDBProfile.photoUrl);
+        setProfileImagePreview(null);
+        form.setValue('profileImageDataUri', '');
       } else {
         throw new Error('Failed to update profile in database.');
       }
@@ -155,7 +155,9 @@ export default function EditProfilePage() {
     }
   };
 
-  if (authIsLoading || isLoadingProfile) {
+  const inputsDisabled = isSaving || authIsLoading || isLoadingProfile;
+
+  if (authIsLoading || isLoadingProfile && !currentUser) { // Show loader if auth check is happening OR profile is loading AND no current user yet
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading Editor...</span>
@@ -191,11 +193,11 @@ export default function EditProfilePage() {
         <div className="space-y-2">
           <Label>Profile Picture</Label>
           <div className="flex items-center gap-4">
-            <NextImage 
-              src={profileImagePreview || currentPhotoUrlForPreview || PLACEHOLDER_IMAGE_URL(80,80)} 
-              alt="Profile" 
-              width={80} 
-              height={80} 
+            <NextImage
+              src={profileImagePreview || currentPhotoUrlForPreview || PLACEHOLDER_IMAGE_URL(80,80)}
+              alt="Profile"
+              width={80}
+              height={80}
               className="rounded-full border-2 border-primary object-cover"
               data-ai-hint="person current profile"
               onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(80,80); }}
@@ -206,35 +208,35 @@ export default function EditProfilePage() {
               accept="image/jpeg,image/png,image/gif,image/webp"
               onChange={handleProfileImageChange}
               className="hidden"
-              disabled={isSaving}
+              disabled={inputsDisabled}
             />
-            <Button type="button" variant="outline" onClick={() => document.getElementById('profile-image-upload')?.click()} disabled={isSaving}>
+            <Button type="button" variant="outline" onClick={() => document.getElementById('profile-image-upload')?.click()} disabled={inputsDisabled}>
               <ImageUp className="mr-2 h-4 w-4" /> {currentPhotoUrlForPreview || profileImagePreview ? "Change Image" : "Upload Image"}
             </Button>
           </div>
            {form.formState.errors.profileImageDataUri && <p className="text-sm text-destructive mt-1">{form.formState.errors.profileImageDataUri.message}</p>}
         </div>
 
-        <div> 
+        <div>
           <Label htmlFor="name">Full Name</Label>
-          <Input id="name" {...form.register('name')} required disabled={isSaving} />
+          <Input id="name" {...form.register('name')} required disabled={inputsDisabled} />
           {form.formState.errors.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.name.message}</p>}
         </div>
         <div>
           <Label htmlFor="bio">Bio (Optional)</Label>
-          <Textarea id="bio" {...form.register('bio')} rows={4} placeholder="Tell us a bit about your trekking adventures..." disabled={isSaving} />
+          <Textarea id="bio" {...form.register('bio')} rows={4} placeholder="Tell us a bit about your trekking adventures..." disabled={inputsDisabled} />
           {form.formState.errors.bio && <p className="text-sm text-destructive mt-1">{form.formState.errors.bio.message}</p>}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <Label htmlFor="age">Age (Optional)</Label>
-            <Input id="age" type="number" {...form.register('age')} disabled={isSaving} />
+            <Input id="age" type="number" {...form.register('age')} disabled={inputsDisabled} />
             {form.formState.errors.age && <p className="text-sm text-destructive mt-1">{form.formState.errors.age.message}</p>}
           </div>
           <div>
             <Label htmlFor="gender">Gender (Optional)</Label>
-            <Select onValueChange={(value) => form.setValue('gender', value as ProfileFormValues['gender'])} value={form.getValues('gender')} disabled={isSaving}>
+            <Select onValueChange={(value) => form.setValue('gender', value as ProfileFormValues['gender'])} value={form.getValues('gender')} disabled={inputsDisabled}>
               <SelectTrigger id="gender"><SelectValue placeholder="Select gender" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Male">Male</SelectItem>
@@ -252,7 +254,7 @@ export default function EditProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <div>
               <Label htmlFor="travelPreferences_soloOrGroup">Travel Style</Label>
-              <Select onValueChange={(value) => form.setValue('travelPreferences_soloOrGroup', value as ProfileFormValues['travelPreferences_soloOrGroup'])} value={form.getValues('travelPreferences_soloOrGroup')} disabled={isSaving}>
+              <Select onValueChange={(value) => form.setValue('travelPreferences_soloOrGroup', value as ProfileFormValues['travelPreferences_soloOrGroup'])} value={form.getValues('travelPreferences_soloOrGroup')} disabled={inputsDisabled}>
                 <SelectTrigger id="travelPreferences_soloOrGroup"><SelectValue placeholder="Solo or Group?" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Solo">Solo</SelectItem>
@@ -263,7 +265,7 @@ export default function EditProfilePage() {
             </div>
             <div>
               <Label htmlFor="travelPreferences_budget">Budget Level</Label>
-              <Select onValueChange={(value) => form.setValue('travelPreferences_budget', value as ProfileFormValues['travelPreferences_budget'])} value={form.getValues('travelPreferences_budget')} disabled={isSaving}>
+              <Select onValueChange={(value) => form.setValue('travelPreferences_budget', value as ProfileFormValues['travelPreferences_budget'])} value={form.getValues('travelPreferences_budget')} disabled={inputsDisabled}>
                 <SelectTrigger id="travelPreferences_budget"><SelectValue placeholder="Budget level" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Budget">Budget</SelectItem>
@@ -276,17 +278,17 @@ export default function EditProfilePage() {
           </div>
            <div className="mt-4">
             <Label htmlFor="travelPreferences_style">Preferred Activities/Style (Optional)</Label>
-            <Input id="travelPreferences_style" {...form.register('travelPreferences_style')} placeholder="e.g., Challenging treks, Photography, Cultural immersion" disabled={isSaving} />
+            <Input id="travelPreferences_style" {...form.register('travelPreferences_style')} placeholder="e.g., Challenging treks, Photography, Cultural immersion" disabled={inputsDisabled} />
            </div>
         </div>
-        
+
         <div>
           <Label htmlFor="languagesSpoken">Languages Spoken (Optional, comma-separated)</Label>
-          <Input id="languagesSpoken" {...form.register('languagesSpoken')} placeholder="e.g., English, Hindi, Local dialects" disabled={isSaving} />
+          <Input id="languagesSpoken" {...form.register('languagesSpoken')} placeholder="e.g., English, Hindi, Local dialects" disabled={inputsDisabled} />
         </div>
         <div>
           <Label htmlFor="trekkingExperience">Trekking Experience (Optional)</Label>
-          <Select onValueChange={(value) => form.setValue('trekkingExperience', value as ProfileFormValues['trekkingExperience'])} value={form.getValues('trekkingExperience')} disabled={isSaving}>
+          <Select onValueChange={(value) => form.setValue('trekkingExperience', value as ProfileFormValues['trekkingExperience'])} value={form.getValues('trekkingExperience')} disabled={inputsDisabled}>
             <SelectTrigger id="trekkingExperience"><SelectValue placeholder="Select experience level" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Beginner">Beginner</SelectItem>
@@ -297,7 +299,7 @@ export default function EditProfilePage() {
           </Select>
         </div>
 
-        <Button type="submit" disabled={isSaving || authIsLoading || isLoadingProfile} className="w-full sm:w-auto">
+        <Button type="submit" disabled={inputsDisabled} className="w-full sm:w-auto">
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save Changes
         </Button>
@@ -305,3 +307,5 @@ export default function EditProfilePage() {
     </div>
   );
 }
+
+    

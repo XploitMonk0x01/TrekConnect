@@ -8,20 +8,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button"; 
-import { Input } from "@/components/ui/input";   
-import { Label } from "@/components/ui/label";   
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Lock, Palette, UserCircle, ShieldQuestion, Save, Loader2, AlertTriangle } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Bell, Lock, Palette, UserCircle, ShieldQuestion, Save, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { ThemeToggleSwitch } from "@/components/settings/ThemeToggleSwitch";
 import { useCustomAuth } from '@/contexts/CustomAuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserProfile } from '@/services/users'; 
-import type { UserProfile } from '@/lib/types'; 
+import { updateUserProfile } from '@/services/users';
+import type { UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea'; 
+import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useRouter } from 'next/navigation';
 
 
 const accountFormSchema = z.object({
@@ -31,55 +33,133 @@ const accountFormSchema = z.object({
 
 type AccountFormValues = z.infer<typeof accountFormSchema>;
 
+const passwordFormSchema = z.object({
+  currentPassword: z.string().min(1, { message: "Current password is required." }),
+  newPassword: z.string().min(6, { message: "New password must be at least 6 characters." }),
+  confirmPassword: z.string().min(1, { message: "Please confirm your new password." }),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "New passwords don't match",
+  path: ["confirmPassword"], // path of error
+});
+
+type PasswordFormValues = z.infer<typeof passwordFormSchema>;
+
+
 export default function SettingsPage() {
-  const { user: currentUser, isLoading: authIsLoading, validateSession } = useCustomAuth();
+  const { user: currentUser, isLoading: authIsLoading, validateSession, signOut } = useCustomAuth();
   const { toast } = useToast();
-  const [isLoadingForm, setIsLoadingForm] = useState(true); 
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const form = useForm<AccountFormValues>({
+  const router = useRouter();
+  const [isLoadingForm, setIsLoadingForm] = useState(true);
+  const [isSavingAccount, setIsSavingAccount] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const accountForm = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: { name: '', bio: '' },
   });
 
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordFormSchema),
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  });
+
   useEffect(() => {
     if (currentUser && !authIsLoading) {
-      form.reset({
+      accountForm.reset({
         name: currentUser.name || '',
         bio: currentUser.bio || '',
       });
       setIsLoadingForm(false);
     } else if (!currentUser && !authIsLoading) {
-      setIsLoadingForm(false); // No user, form can be shown (with disabled state)
+      setIsLoadingForm(false);
     }
-  }, [currentUser, authIsLoading, form]);
+  }, [currentUser, authIsLoading, accountForm]);
 
   async function onAccountSubmit(data: AccountFormValues) {
     if (!currentUser || !currentUser.id) {
       toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
       return;
     }
-    setIsSaving(true);
-    
+    setIsSavingAccount(true);
+
     const profileUpdateData: Partial<Pick<UserProfile, 'name' | 'bio'>> = {
         name: data.name,
-        bio: data.bio || null, // Ensure bio is null if empty, not undefined
+        bio: data.bio || null,
     };
 
     try {
       const updatedUser = await updateUserProfile(currentUser.id, profileUpdateData);
       if (updatedUser) {
         toast({ title: 'Account Info Updated', description: 'Your account information has been saved.' });
-        await validateSession(); // Refresh user data in context
+        await validateSession();
       } else {
         throw new Error('Failed to update account information.');
       }
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Update Failed', description: error.message || 'Could not save your account information.' });
     } finally {
-      setIsSaving(false);
+      setIsSavingAccount(false);
     }
   }
+
+  async function onChangePasswordSubmit(data: PasswordFormValues) {
+    if (!currentUser || !currentUser.id) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      const response = await fetch(`/api/auth/change-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to change password.');
+      }
+      toast({ title: 'Password Changed', description: 'Your password has been successfully updated.' });
+      passwordForm.reset();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Password Change Failed', description: error.message || 'Could not change your password.' });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!currentUser || !currentUser.id) {
+      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      const response = await fetch(`/api/users/${currentUser.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: 'Failed to delete account.' }));
+        throw new Error(result.error || 'Failed to delete account.');
+      }
+      toast({ title: 'Account Deleted', description: 'Your account has been permanently deleted.' });
+      signOut(); // This will clear local storage and redirect
+      router.push('/auth/signup'); // Fallback redirect
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message || 'Could not delete your account.' });
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }
+
 
   const renderAccountForm = () => {
     if (authIsLoading || isLoadingForm) {
@@ -95,7 +175,7 @@ export default function SettingsPage() {
       );
     }
 
-    if (!currentUser && !authIsLoading) { 
+    if (!currentUser && !authIsLoading) {
         return (
             <div className="text-center p-4 text-muted-foreground">
                 <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
@@ -105,26 +185,46 @@ export default function SettingsPage() {
     }
 
     return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onAccountSubmit)} className="space-y-4">
+      <Form {...accountForm}>
+        <form onSubmit={accountForm.handleSubmit(onAccountSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Your full name" /></FormControl><FormMessage /></FormItem> )} />
+            <FormField control={accountForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Your full name" disabled={isSavingAccount} /></FormControl><FormMessage /></FormItem> )} />
             <div>
                 <Label htmlFor="email">Email Address</Label>
                 <Input id="email" type="email" value={currentUser?.email || ''} placeholder="your@example.com" disabled />
                 <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here.</p>
             </div>
             </div>
-            <FormField control={form.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>Bio</FormLabel><FormControl><Textarea {...field} placeholder="A short bio about yourself (optional)" rows={3} /></FormControl><FormMessage /></FormItem> )} />
-            
-            <Button type="submit" disabled={isSaving || authIsLoading || isLoadingForm}>
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Changes
+            <FormField control={accountForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>Bio</FormLabel><FormControl><Textarea {...field} placeholder="A short bio about yourself (optional)" rows={3} disabled={isSavingAccount} /></FormControl><FormMessage /></FormItem> )} />
+
+            <Button type="submit" disabled={isSavingAccount || authIsLoading || isLoadingForm}>
+            {isSavingAccount ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save Account Changes
             </Button>
         </form>
       </Form>
     );
   }
+
+  const renderPasswordForm = () => {
+    if (authIsLoading || isLoadingForm) return null; // Don't show password form if initial user load is pending
+    if (!currentUser) return null; // No form if not logged in
+
+    return (
+      <Form {...passwordForm}>
+        <form onSubmit={passwordForm.handleSubmit(onChangePasswordSubmit)} className="space-y-4">
+          <FormField control={passwordForm.control} name="currentPassword" render={({ field }) => ( <FormItem><FormLabel>Current Password</FormLabel><FormControl><Input type="password" {...field} disabled={isChangingPassword} /></FormControl><FormMessage /></FormItem> )} />
+          <FormField control={passwordForm.control} name="newPassword" render={({ field }) => ( <FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} disabled={isChangingPassword} /></FormControl><FormMessage /></FormItem> )} />
+          <FormField control={passwordForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>Confirm New Password</FormLabel><FormControl><Input type="password" {...field} disabled={isChangingPassword} /></FormControl><FormMessage /></FormItem> )} />
+          <Button type="submit" disabled={isChangingPassword}>
+            {isChangingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Change Password
+          </Button>
+        </form>
+      </Form>
+    );
+  }
+
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
@@ -149,10 +249,8 @@ export default function SettingsPage() {
           <CardTitle className="font-headline text-xl flex items-center"><Lock className="mr-2 h-5 w-5" /> Security</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Button variant="outline" disabled={!currentUser}>Change Password (Soon)</Button> 
-            {!currentUser && <p className="text-xs text-muted-foreground mt-1">Sign in to change password.</p>}
-          </div>
+          {renderPasswordForm()}
+          <Separator />
           <div className="flex items-center justify-between">
             <Label htmlFor="twoFactorAuth" className="flex flex-col space-y-1">
               <span>Two-Factor Authentication</span>
@@ -181,7 +279,7 @@ export default function SettingsPage() {
            {!currentUser && <p className="text-xs text-muted-foreground">Sign in to manage notifications.</p>}
         </CardContent>
       </Card>
-      
+
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-xl flex items-center"><Palette className="mr-2 h-5 w-5" /> Appearance</CardTitle>
@@ -193,7 +291,7 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center"><ShieldQuestion className="mr-2 h-5 w-5" /> Privacy</CardTitle>
+          <CardTitle className="font-headline text-xl flex items-center"><ShieldQuestion className="mr-2 h-5 w-5" /> Privacy & Data</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -205,12 +303,37 @@ export default function SettingsPage() {
                 </Label>
                 <Button variant="outline" size="sm" disabled>Manage Visibility</Button>
             </div>
-             <Button variant="link" className="p-0 h-auto text-primary">View Privacy Policy</Button>
-             <Separator />
-             <Button variant="destructive" className="w-full sm:w-auto" disabled={!currentUser}>Delete Account (Soon)</Button>
-             {!currentUser && <p className="text-xs text-muted-foreground mt-1">Sign in to delete your account.</p>}
+            <Button variant="link" className="p-0 h-auto text-primary">View Privacy Policy</Button>
+            <Separator />
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full sm:w-auto" disabled={!currentUser || isDeletingAccount}>
+                  {isDeletingAccount ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                  Delete Account
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your
+                    account and remove your data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeletingAccount}>
+                    {isDeletingAccount ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Yes, delete account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            {!currentUser && <p className="text-xs text-muted-foreground mt-1">Sign in to manage your account data.</p>}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+    
