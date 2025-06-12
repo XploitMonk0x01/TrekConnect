@@ -72,7 +72,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
 
         let fetchedYoutubeVideoId: string | null = null;
         let isLoadingYTVideoId = true;
-        const youtubeQuery = `${dest.name} ${dest.region || dest.country || ''}`;
+        const youtubeQuery = dest.aiHint || `${dest.name} ${dest.region || dest.country || ''}`;
         try {
           fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery);
           console.log(`Explore Page - YouTube fetch for "${youtubeQuery}": ID = ${fetchedYoutubeVideoId}`);
