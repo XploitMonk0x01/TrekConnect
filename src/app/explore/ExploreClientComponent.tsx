@@ -6,19 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Search, Star, Filter as FilterIcon, Globe, Heart, Loader2, AlertTriangle, Route as RouteIcon, PlayCircle, XCircle, Wand2 } from "lucide-react"; // Added XCircle, Wand2
+import { MapPin, Search, Star, Filter as FilterIcon, Globe, Heart, Loader2, AlertTriangle, Route as RouteIcon, PlayCircle, XCircle, Wand2 } from "lucide-react";
 import type { Destination } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { searchPexelsImage } from "@/services/pexels";
 import { searchYouTubeVideoId } from "@/services/youtube";
-import { useState, useEffect, useMemo } from "react"; // Added useMemo
+import { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomAuth } from "@/contexts/CustomAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/services/users";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { filterDestinations } from "@/ai/flows/filter-destinations-flow"; // Import the new AI flow
+import { filterDestinations } from "@/ai/flows/filter-destinations-flow";
 
 interface ExploreClientComponentProps {
   initialDestinations: Destination[];
@@ -40,7 +40,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     initialDestinations.map(d => ({
       ...d,
       isLoadingImage: true,
-      fetchedImageUrl: d.imageUrl, // Keep original as fallback during load
+      fetchedImageUrl: d.imageUrl, 
       isLoadingYouTubeVideoId: true,
       youtubeVideoId: null,
     }))
@@ -50,7 +50,6 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
   const [mapUrl, setMapUrl] = useState<string | null>(null);
   const [selectedYouTubeVideoId, setSelectedYouTubeVideoId] = useState<string | null>(null);
 
-  // State for AI Filtering
   const [aiFilterQuery, setAiFilterQuery] = useState('');
   const [isFilteringWithAI, setIsFilteringWithAI] = useState(false);
   const [aiFilteredDestinationIds, setAiFilteredDestinationIds] = useState<string[] | null>(null);
@@ -61,7 +60,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     const fetchMediaForAllDestinations = async () => {
       const mediaPromises = initialDestinations.map(async (dest) => {
         let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400);
-        let isLoadingImg = true; // Will be false after fetch attempt
+        let isLoadingImg = true; 
         const imageQuery = dest.aiHint || dest.name;
         try {
           pexelsImageUrl = await searchPexelsImage(imageQuery, 600, 400);
@@ -95,7 +94,6 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       const destinationsWithFetchedMedia = await Promise.all(mediaPromises);
       setDestinations(destinationsWithFetchedMedia);
       
-      // Set map URL (this logic can remain as is or be improved)
       const firstDestinationWithCoords = initialDestinations.find(d => d.coordinates?.lat && d.coordinates?.lng);
       if (firstDestinationWithCoords && firstDestinationWithCoords.coordinates) {
         const { lat, lng } = firstDestinationWithCoords.coordinates;
@@ -127,7 +125,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       const destinationsToFilter = initialDestinations.map(d => ({
         id: d.id,
         name: d.name,
-        description: d.description.substring(0, 300), // Send a snippet
+        description: d.description.substring(0, 300),
         region: d.region,
         travelTips: d.travelTips?.substring(0,200),
         aiHint: d.aiHint
@@ -140,7 +138,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     } catch (error: any) {
       console.error("Error applying AI filter:", error);
       toast({ variant: "destructive", title: "AI Filter Failed", description: error.message || "Could not apply AI filter." });
-      setAiFilteredDestinationIds(null); // Clear on error
+      setAiFilteredDestinationIds(null); 
     } finally {
       setIsFilteringWithAI(false);
     }
@@ -164,10 +162,8 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     if (aiFilteredDestinationIds) {
       const orderedByIds = aiFilteredDestinationIds.map(id => 
         currentList.find(dest => dest.id === id)
-      ).filter(Boolean) as DestinationWithMedia[]; // Keep only those found and in order
+      ).filter(Boolean) as DestinationWithMedia[]; 
       
-      // If AI filter is active and returned some IDs, only show those.
-      // If AI filter is active but returned no IDs, currentList will become empty here.
       currentList = orderedByIds;
     }
     return currentList;
@@ -272,7 +268,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayedDestinations.map((destination) => (
-          (destination.isLoadingImage || destination.isLoadingYouTubeVideoId) && !isFilteringWithAI ? ( // Only show skeleton if not AI filtering to avoid flicker
+          (destination.isLoadingImage || destination.isLoadingYouTubeVideoId) && !isFilteringWithAI ? ( 
             <Card key={`${destination.id}-loading`} className="overflow-hidden flex flex-col">
               <Skeleton className="h-48 w-full" />
               <CardContent className="p-4 flex-grow"><Skeleton className="h-6 w-3/4 mb-2" /><Skeleton className="h-4 w-1/2 mb-3" /><Skeleton className="h-4 w-full mb-1" /><Skeleton className="h-4 w-full mb-1" /><Skeleton className="h-4 w-2/3" /></CardContent>
@@ -291,11 +287,20 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                 <div className="flex items-center text-sm text-muted-foreground mb-2"><MapPin className="h-4 w-4 mr-1" />{destination.country}{destination.region ? `, ${destination.region}` : ''}</div>
                 <CardDescription className="text-sm line-clamp-3">{destination.description}</CardDescription>
               </CardContent>
-              <CardFooter className="p-4 border-t grid grid-cols-2 sm:grid-cols-3 gap-2 items-center">
-                <div className="flex items-center"><Star className="h-5 w-5 text-yellow-400 fill-yellow-400 mr-1" /><span className="text-sm font-semibold">{destination.averageRating}</span></div>
-                <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/5"><Link href={`/explore/${destination.id}`}>View Details</Link></Button>
-                <Button asChild size="sm" variant="outline" className="border-accent text-accent hover:bg-accent/5"><Link href={`/explore/routes/new?destinationId=${destination.id}`}><RouteIcon className="mr-2 h-4 w-4" /> Plan Route</Link></Button>
-                {destination.youtubeVideoId && (<Button size="sm" variant="outline" className="border-accent text-accent hover:bg-accent/10 sm:col-span-3" onClick={() => openVideoModal(destination.youtubeVideoId!)}><PlayCircle className="mr-2 h-4 w-4" /> Watch Video</Button>)}
+              <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
+                <div className="flex items-center col-span-1"><Star className="h-5 w-5 text-yellow-400 fill-yellow-400 mr-1" /><span className="text-sm font-semibold">{destination.averageRating}</span></div>
+                <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/5 col-span-1"><Link href={`/explore/${destination.id}`}>View Details</Link></Button>
+                <Button asChild size="sm" variant="outline" className="border-accent text-accent hover:bg-accent/5 col-span-full mt-2"><Link href={`/explore/routes/new?destinationId=${destination.id}`}><RouteIcon className="mr-2 h-4 w-4" /> Plan Route</Link></Button>
+                {destination.youtubeVideoId && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="border-accent text-accent hover:bg-accent/10 col-span-full mt-2" 
+                    onClick={() => openVideoModal(destination.youtubeVideoId!)}
+                  >
+                    <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           )
@@ -304,9 +309,22 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
 
       {selectedYouTubeVideoId && (
         <Dialog open={!!selectedYouTubeVideoId} onOpenChange={(isOpen) => !isOpen && closeVideoModal()}>
-          <DialogContent className="max-w-3xl p-0">
-            <DialogHeader className="p-4 pb-0"><DialogTitle>Video Preview</DialogTitle></DialogHeader>
-            <div className="aspect-video"><iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${selectedYouTubeVideoId}?autoplay=1`} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="rounded-b-lg"></iframe></div>
+          <DialogContent className="max-w-3xl p-6"> {/* Restored padding */}
+            <DialogHeader className="pb-2"> {/* Adjusted padding */}
+                <DialogTitle>Video Preview</DialogTitle>
+            </DialogHeader>
+            <div className="aspect-video">
+                <iframe 
+                    width="100%" 
+                    height="100%" 
+                    src={`https://www.youtube.com/embed/${selectedYouTubeVideoId}?autoplay=1`} 
+                    title="YouTube video player" 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    allowFullScreen 
+                    className="rounded-md"> {/* Rounded on iframe itself if DialogContent has padding */}
+                </iframe>
+            </div>
           </DialogContent>
         </Dialog>
       )}
