@@ -38,7 +38,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 export default function EditProfilePage() {
   const { toast } = useToast()
   const { user: currentUser, isLoading: authIsLoading, updateUserInContext } = useCustomAuth();
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true); // Initialize to true
   const [isSaving, setIsSaving] = useState(false)
   const [currentPhotoUrlForPreview, setCurrentPhotoUrlForPreview] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -60,14 +60,22 @@ export default function EditProfilePage() {
   });
 
   useEffect(() => {
-    if (!authIsLoading && currentUser) {
-      setIsLoadingProfile(true);
+    if (authIsLoading) {
+      // If auth is still loading, ensure profile is also marked as loading.
+      // This prevents inputs from being prematurely enabled if `currentUser` is stale.
+      if (!isLoadingProfile) setIsLoadingProfile(true);
+      return;
+    }
+
+    // Auth check is complete (authIsLoading is false).
+    if (currentUser) {
+      // User data is available. Populate the form.
       form.reset({
         name: currentUser.name || '',
         age: currentUser.age || '',
         gender: currentUser.gender as ProfileFormValues['gender'] || undefined,
         bio: currentUser.bio || '',
-        profileImageDataUri: '',
+        profileImageDataUri: '', // File input value is not set directly like this
         travelPreferences_soloOrGroup: currentUser.travelPreferences?.soloOrGroup as ProfileFormValues['travelPreferences_soloOrGroup'] || undefined,
         travelPreferences_budget: currentUser.travelPreferences?.budget as ProfileFormValues['travelPreferences_budget'] || undefined,
         travelPreferences_style: currentUser.travelPreferences?.style || '',
@@ -75,11 +83,15 @@ export default function EditProfilePage() {
         trekkingExperience: currentUser.trekkingExperience as ProfileFormValues['trekkingExperience'] || undefined,
       });
       setCurrentPhotoUrlForPreview(currentUser.photoUrl);
+      // Profile data applied to form. Mark profile loading as complete.
       setIsLoadingProfile(false);
-    } else if (!authIsLoading && !currentUser) {
+    } else {
+      // No current user, and auth check is complete.
+      // Nothing to load into the form. Mark profile loading as complete.
+      // The UI will likely show an "Access Denied" message or redirect.
       setIsLoadingProfile(false);
     }
-  }, [currentUser, authIsLoading, form]);
+  }, [currentUser, authIsLoading, form, isLoadingProfile]); // Added isLoadingProfile to dependency array
 
 
   const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -139,7 +151,7 @@ export default function EditProfilePage() {
       const updatedMongoDBProfile = await updateUserProfile(currentUser.id, profileUpdateData);
 
       if (updatedMongoDBProfile) {
-        updateUserInContext(updatedMongoDBProfile); // Directly update context
+        updateUserInContext(updatedMongoDBProfile); 
         toast({ title: 'Profile Updated', description: 'Your profile has been successfully saved.'});
         setCurrentPhotoUrlForPreview(updatedMongoDBProfile.photoUrl);
         setProfileImagePreview(null);
@@ -157,7 +169,7 @@ export default function EditProfilePage() {
 
   const inputsDisabled = isSaving || authIsLoading || isLoadingProfile;
 
-  if (authIsLoading || isLoadingProfile && !currentUser) { // Show loader if auth check is happening OR profile is loading AND no current user yet
+  if (authIsLoading || isLoadingProfile) { 
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" /> <span className="ml-2">Loading Editor...</span>
@@ -165,7 +177,7 @@ export default function EditProfilePage() {
     );
   }
 
-  if (!currentUser && !authIsLoading) {
+  if (!currentUser && !authIsLoading) { // This implies isLoadingProfile is false by this point
      return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
