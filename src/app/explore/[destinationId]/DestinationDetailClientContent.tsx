@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, MapPin, Star, Sun, CloudSun, CloudRain, CalendarDays, ExternalLink, Share2, ShieldCheck, Edit, Sparkles, Loader2, Heart as HeartIcon } from "lucide-react";
+import { ArrowLeft, MapPin, Star, Sun, CloudSun, CloudRain, CalendarDays, ExternalLink, Share2, ShieldCheck, Edit, Sparkles, Loader2, Heart as HeartIcon, Route as RouteIcon } from "lucide-react";
 import { useRouter } from 'next/navigation';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -280,8 +280,10 @@ export default function DestinationDetailClientContent({
 
             <div>
               <h3 className="font-headline text-xl mb-2">Route Planning</h3>
-              <Button variant="outline" className="border-accent text-accent hover:bg-accent/5" disabled>
-                <Edit className="mr-2 h-4 w-4" /> Create Custom Route (Soon)
+              <Button asChild variant="outline" className="border-accent text-accent hover:bg-accent/5">
+                <Link href={`/explore/routes/new?destinationId=${destination.id}`}>
+                  <RouteIcon className="mr-2 h-4 w-4" /> Create Custom Route
+                </Link>
               </Button>
             </div>
           </div>

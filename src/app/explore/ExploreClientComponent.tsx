@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Search, Star, Filter, Globe, Heart, Loader2, AlertTriangle } from "lucide-react";
+import { MapPin, Search, Star, Filter, Globe, Heart, Loader2, AlertTriangle, Route as RouteIcon, Edit } from "lucide-react";
 import type { Destination, UserProfile } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { searchPexelsImage } from "@/services/pexels";
@@ -212,9 +212,10 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                 <Skeleton className="h-4 w-full mb-1" />
                 <Skeleton className="h-4 w-2/3" />
               </CardContent>
-              <CardFooter className="p-4 border-t flex justify-between items-center">
+              <CardFooter className="p-4 border-t flex flex-wrap justify-between items-center gap-2">
                 <Skeleton className="h-5 w-12" />
                 <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-32" />
               </CardFooter>
             </Card>
           ) : (
@@ -252,13 +253,18 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                 </div>
                 <CardDescription className="text-sm line-clamp-3">{destination.description}</CardDescription>
               </CardContent>
-              <CardFooter className="p-4 border-t flex justify-between items-center">
+              <CardFooter className="p-4 border-t flex flex-wrap justify-between items-center gap-2">
                 <div className="flex items-center">
                   <Star className="h-5 w-5 text-yellow-400 fill-yellow-400 mr-1" />
                   <span className="text-sm font-semibold">{destination.averageRating}</span>
                 </div>
                 <Button asChild size="sm" variant="outline" className="border-primary text-primary hover:bg-primary/5">
                   <Link href={`/explore/${destination.id}`}>View Details</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="border-accent text-accent hover:bg-accent/5">
+                  <Link href={`/explore/routes/new?destinationId=${destination.id}`}>
+                    <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -274,9 +280,10 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                 <Skeleton className="h-4 w-full mb-1" />
                 <Skeleton className="h-4 w-2/3" />
               </CardContent>
-              <CardFooter className="p-4 border-t flex justify-between items-center">
+              <CardFooter className="p-4 border-t flex flex-wrap justify-between items-center gap-2">
                 <Skeleton className="h-5 w-12" />
                 <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-32" />
               </CardFooter>
             </Card>
         ))}
