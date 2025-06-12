@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { MapPin, Search, Star, Filter, Globe, Heart, Loader2, AlertTriangle, Rou
 import type { Destination, UserProfile } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
 import { searchPexelsImage } from "@/services/pexels";
-import { searchYouTubeVideoId } from "@/services/youtube"; // Import new YouTube service
+import { searchYouTubeVideoId } from "@/services/youtube";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomAuth } from "@/contexts/CustomAuthContext";
@@ -25,8 +26,8 @@ interface ExploreClientComponentProps {
 type DestinationWithMedia = Destination & {
   isLoadingImage?: boolean;
   fetchedImageUrl?: string;
-  isLoadingYouTubeVideoId?: boolean; // Renamed for clarity
-  youtubeVideoId?: string | null; // Store YouTube video ID
+  isLoadingYouTubeVideoId?: boolean;
+  youtubeVideoId?: string | null;
 };
 
 export default function ExploreClientComponent({ initialDestinations }: ExploreClientComponentProps) {
@@ -39,14 +40,14 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       ...d,
       isLoadingImage: true,
       fetchedImageUrl: d.imageUrl,
-      isLoadingYouTubeVideoId: true, 
+      isLoadingYouTubeVideoId: true,
       youtubeVideoId: null,
     }))
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [wishlistProcessing, setWishlistProcessing] = useState<Record<string, boolean>>({});
   const [mapUrl, setMapUrl] = useState<string | null>(null);
-  const [selectedYouTubeVideoId, setSelectedYouTubeVideoId] = useState<string | null>(null); // Store ID for modal
+  const [selectedYouTubeVideoId, setSelectedYouTubeVideoId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -64,11 +65,12 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
 
           let fetchedYoutubeVideoId: string | null = null;
           let isLoadingYTVideoId = true;
+          const youtubeQuery = `${dest.name} ${dest.region || dest.country || ''}`;
           try {
-            const youtubeQuery = `${dest.name} ${dest.region || dest.country || ''}`;
             fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery);
+            console.log(`Explore Page - YouTube fetch for "${youtubeQuery}": ID = ${fetchedYoutubeVideoId}`);
           } catch (error) {
-            console.error(`Failed to load YouTube video ID for ${dest.name}:`, error);
+            console.error(`Failed to load YouTube video ID for ${dest.name} (query: ${youtubeQuery}):`, error);
           }
           isLoadingYTVideoId = false;
 
@@ -89,7 +91,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
       const firstDestinationWithCoords = initialDestinations.find(d => d.coordinates?.lat && d.coordinates?.lng);
       if (firstDestinationWithCoords && firstDestinationWithCoords.coordinates) {
         const { lat, lng } = firstDestinationWithCoords.coordinates;
-        const zoomLevel = 0.5; 
+        const zoomLevel = 0.5;
         setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng - zoomLevel}%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${lat + zoomLevel}&layer=mapnik&marker=${lat}%2C${lng}`);
       } else {
         setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`);
@@ -316,7 +318,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                   <Button
                     size="sm"
                     variant="outline"
-                    className="border-destructive text-destructive hover:bg-destructive/5 sm:col-span-3" 
+                    className="border-accent text-accent hover:bg-accent/10 sm:col-span-3"
                     onClick={() => openVideoModal(destination.youtubeVideoId!)}
                   >
                     <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
