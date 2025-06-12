@@ -6,70 +6,91 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin, Search, Star, Filter, Globe, Heart, Loader2, AlertTriangle, Route as RouteIcon, Edit } from "lucide-react";
+import { MapPin, Search, Star, Filter, Globe, Heart, Loader2, AlertTriangle, Route as RouteIcon, PlayCircle } from "lucide-react";
 import type { Destination, UserProfile } from "@/lib/types";
 import { PLACEHOLDER_IMAGE_URL } from "@/lib/constants";
-import { searchPexelsImage } from "@/services/pexels";
+import { searchPexelsImage } from "@/services/pexels"; // Pexels for images only now
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCustomAuth } from "@/contexts/CustomAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserProfile } from "@/services/users";
 import { useRouter } from "next/navigation";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ExploreClientComponentProps {
   initialDestinations: Destination[];
 }
 
-type DestinationWithLoading = Destination & { isLoadingImage?: boolean; fetchedImageUrl?: string };
+type DestinationWithMedia = Destination & {
+  isLoadingImage?: boolean;
+  fetchedImageUrl?: string;
+  isLoadingYouTubeUrl?: boolean; // New state for YouTube
+  youtubeEmbedUrl?: string | null; // Store YouTube embed URL
+};
 
 export default function ExploreClientComponent({ initialDestinations }: ExploreClientComponentProps) {
   const { user: currentUser, isLoading: authIsLoading, updateUserInContext } = useCustomAuth();
   const { toast } = useToast();
   const router = useRouter();
 
-  const [destinations, setDestinations] = useState<DestinationWithLoading[]>(
-    initialDestinations.map(d => ({ ...d, isLoadingImage: true, fetchedImageUrl: d.imageUrl }))
+  const [destinations, setDestinations] = useState<DestinationWithMedia[]>(
+    initialDestinations.map(d => ({
+      ...d,
+      isLoadingImage: true,
+      fetchedImageUrl: d.imageUrl,
+      isLoadingYouTubeUrl: true, // Initialize YouTube loading state
+      youtubeEmbedUrl: null,
+    }))
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [wishlistProcessing, setWishlistProcessing] = useState<Record<string, boolean>>({});
   const [mapUrl, setMapUrl] = useState<string | null>(null);
-
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null); // For YouTube modal
 
   useEffect(() => {
-    const fetchImages = async () => {
-      const destinationsWithFetchedImages = await Promise.all(
+    const fetchMedia = async () => {
+      const destinationsWithFetchedMedia = await Promise.all(
         initialDestinations.map(async (dest) => {
-          const query = dest.aiHint || dest.name;
+          let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400);
+          let isLoadingImg = true;
+          const imageQuery = dest.aiHint || dest.name;
           try {
-            const pexelsImageUrl = await searchPexelsImage(query, 600, 400);
-            return { ...dest, fetchedImageUrl: pexelsImageUrl, isLoadingImage: false };
+            pexelsImageUrl = await searchPexelsImage(imageQuery, 600, 400);
+            isLoadingImg = false;
           } catch (error) {
             console.error(`Failed to load image for ${dest.name}:`, error);
-            return { ...dest, fetchedImageUrl: dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400), isLoadingImage: false };
+            isLoadingImg = false; // Still set to false on error to stop skeleton
           }
+
+          // Construct YouTube search embed URL
+          const youtubeQuery = `${dest.name} ${dest.region || dest.country || ''} travel guide`;
+          const constructedYoutubeEmbedUrl = `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(youtubeQuery)}`;
+
+          return {
+            ...dest,
+            fetchedImageUrl: pexelsImageUrl,
+            isLoadingImage: isLoadingImg,
+            youtubeEmbedUrl: constructedYoutubeEmbedUrl, // Store the constructed URL
+            isLoadingYouTubeUrl: false, // Set to false as we're constructing, not fetching API
+          };
         })
       );
-      setDestinations(destinationsWithFetchedImages);
+      setDestinations(destinationsWithFetchedMedia);
     };
 
     if (initialDestinations.length > 0) {
-      fetchImages();
-      // Setup map URL
+      fetchMedia();
       const firstDestinationWithCoords = initialDestinations.find(d => d.coordinates?.lat && d.coordinates?.lng);
       if (firstDestinationWithCoords && firstDestinationWithCoords.coordinates) {
         const { lat, lng } = firstDestinationWithCoords.coordinates;
-        // More zoomed out view for the explore page, showing one marker
-        const zoomLevel = 0.5; // Bbox size, smaller is more zoomed in
+        const zoomLevel = 0.5;
         setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng - zoomLevel}%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${lat + zoomLevel}&layer=mapnik&marker=${lat}%2C${lng}`);
       } else {
-        // Default view of Himalayas if no specific coordinates
         setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`);
       }
     } else {
       setDestinations([]);
-      // Default view if no destinations
       setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,7 +122,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     try {
       const updatedUser = await updateUserProfile(currentUser.id, { wishlistDestinations: newWishlist });
       if (updatedUser) {
-        updateUserInContext(updatedUser as UserProfile); 
+        updateUserInContext(updatedUser as UserProfile);
         toast({
           title: isWishlisted ? "Removed from Wishlist" : "Added to Wishlist",
           description: `${destinationName} has been ${isWishlisted ? 'removed from' : 'added to'} your wishlist.`,
@@ -126,6 +147,13 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
     return currentUser.wishlistDestinations.includes(destinationName);
   };
 
+  const openVideoModal = (videoUrl: string) => {
+    setSelectedVideoUrl(videoUrl);
+  };
+
+  const closeVideoModal = () => {
+    setSelectedVideoUrl(null);
+  };
 
   return (
     <div className="space-y-8">
@@ -181,20 +209,35 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
         </CardContent>
       </Card>
 
-      {authIsLoading && ( 
-        <div className="flex justify-center items-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Loading destinations...</span>
+      {(authIsLoading || destinations.some(d => d.isLoadingImage || d.isLoadingYouTubeUrl)) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, index) => (
+            <Card key={`skeleton-${index}`} className="overflow-hidden flex flex-col">
+              <Skeleton className="h-48 w-full" />
+              <CardContent className="p-4 flex-grow">
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2 mb-3" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-full mb-1" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardContent>
+              <CardFooter className="p-4 border-t grid grid-cols-3 gap-2 items-center">
+                <Skeleton className="h-5 w-12" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       )}
 
-      {!authIsLoading && filteredDestinations.length === 0 && !destinations.some(d => d.isLoadingImage) && (
+      {!authIsLoading && filteredDestinations.length === 0 && !destinations.some(d => d.isLoadingImage || d.isLoadingYouTubeUrl) && (
          <Card>
             <CardContent className="p-6 text-center">
                 <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold">No Treks Found</h3>
                 <p className="text-muted-foreground">
-                    {searchQuery ? "Try adjusting your search query." : "There are no treks available at the moment. Please check back later or ensure data is loaded in the database."}
+                    {searchQuery ? "Try adjusting your search query." : "There are no treks available at the moment."}
                 </p>
             </CardContent>
         </Card>
@@ -202,7 +245,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {destinations.map((destination) => (
-          destination.isLoadingImage ? (
+          (destination.isLoadingImage || destination.isLoadingYouTubeUrl) ? ( // Check if still loading either
             <Card key={destination.id || Math.random().toString()} className="overflow-hidden flex flex-col">
               <Skeleton className="h-48 w-full" />
               <CardContent className="p-4 flex-grow">
@@ -212,14 +255,14 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                 <Skeleton className="h-4 w-full mb-1" />
                 <Skeleton className="h-4 w-2/3" />
               </CardContent>
-              <CardFooter className="p-4 border-t flex flex-wrap justify-between items-center gap-2">
+              <CardFooter className="p-4 border-t grid grid-cols-3 gap-2 items-center">
                 <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
               </CardFooter>
             </Card>
           ) : (
-            filteredDestinations.find(fd => fd.id === destination.id) && 
+            filteredDestinations.find(fd => fd.id === destination.id) &&
             <Card key={destination.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="p-0 relative h-48">
                 <Image
@@ -228,9 +271,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                   layout="fill"
                   objectFit="cover"
                   data-ai-hint={destination.aiHint || destination.name.toLowerCase().split(' ').slice(0,2).join(' ')}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(600,400);
-                  }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(600,400); }}
                 />
                  <Button
                     size="icon"
@@ -253,7 +294,7 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                 </div>
                 <CardDescription className="text-sm line-clamp-3">{destination.description}</CardDescription>
               </CardContent>
-              <CardFooter className="p-4 border-t flex flex-wrap justify-between items-center gap-2">
+              <CardFooter className="p-4 border-t grid grid-cols-2 sm:grid-cols-3 gap-2 items-center">
                 <div className="flex items-center">
                   <Star className="h-5 w-5 text-yellow-400 fill-yellow-400 mr-1" />
                   <span className="text-sm font-semibold">{destination.averageRating}</span>
@@ -266,28 +307,43 @@ export default function ExploreClientComponent({ initialDestinations }: ExploreC
                     <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
                   </Link>
                 </Button>
+                {destination.youtubeEmbedUrl && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive/5 sm:col-span-3" // Spans full width on small, then normal
+                    onClick={() => openVideoModal(destination.youtubeEmbedUrl!)}
+                  >
+                    <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           )
         ))}
-        {searchQuery && destinations.filter(d => d.isLoadingImage).map(destination => (
-            <Card key={destination.id || Math.random().toString()} className="overflow-hidden flex flex-col">
-              <Skeleton className="h-48 w-full" />
-              <CardContent className="p-4 flex-grow">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2 mb-3" />
-                <Skeleton className="h-4 w-full mb-1" />
-                <Skeleton className="h-4 w-full mb-1" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-              <CardFooter className="p-4 border-t flex flex-wrap justify-between items-center gap-2">
-                <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-8 w-32" />
-              </CardFooter>
-            </Card>
-        ))}
       </div>
+
+      {selectedVideoUrl && (
+        <Dialog open={!!selectedVideoUrl} onOpenChange={(isOpen) => !isOpen && closeVideoModal()}>
+          <DialogContent className="max-w-3xl p-0">
+            <DialogHeader className="p-4 pb-0">
+              <DialogTitle>Video Preview</DialogTitle>
+            </DialogHeader>
+            <div className="aspect-video">
+              <iframe
+                width="100%"
+                height="100%"
+                src={selectedVideoUrl}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="rounded-b-lg"
+              ></iframe>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
