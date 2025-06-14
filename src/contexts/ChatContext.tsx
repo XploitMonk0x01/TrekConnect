@@ -1,3 +1,4 @@
+
 'use client'
 
 import {
@@ -15,7 +16,7 @@ import type { Message } from '@/lib/types'
 interface ChatContextType {
   socket: Socket | null
   messages: Message[]
-  sendMessage: (roomId: string, content: string) => void
+  sendMessage: (roomId: string, content: string, receiverUserId: string) => void // Added receiverUserId
   joinRoom: (roomId: string) => void
   leaveRoom: (roomId: string) => void
   isLoading: boolean
@@ -66,19 +67,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const sendMessage = useCallback(
-    (roomId: string, content: string) => {
+    (roomId: string, content: string, receiverUserId: string) => { // Added receiverUserId
       if (!socketRef.current || !user) {
         console.error('Socket not connected or user not authenticated')
         return
       }
 
-      console.log('Sending message:', { roomId, content, userId: user.id })
+      console.log('Sending message:', { roomId, content, userId: user.id, receiverUserId })
 
       const message: Message = {
-        id: Math.random().toString(36).substring(7),
+        id: Math.random().toString(36).substring(7), // Client-side ID, server may re-assign if needed
         roomId,
         senderId: user.id,
-        receiverId: roomId,
+        receiverId: receiverUserId, // Correctly use receiverUserId
         content,
         timestamp: new Date(),
         read: false,
@@ -97,7 +98,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Joining room:', roomId)
-      setMessages([])
+      setMessages([]) // Clear messages from previous room
       socketRef.current.emit('join-room', roomId)
     },
     [user]
@@ -118,20 +119,39 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const initializeSocket = async () => {
       if (!user) {
         console.log('User not authenticated, skipping socket initialization')
+        if (socketRef.current) { // If user signs out, disconnect existing socket
+            socketRef.current.disconnect();
+            socketRef.current = null;
+            setSocket(null);
+        }
         return
       }
+
+      // Prevent re-initialization if socket already exists and is connected for the current user
+      if (socketRef.current && socketRef.current.connected && socketRef.current.auth.userId === user.id) {
+        return;
+      }
+      
+      // If there's an old socket, disconnect it before creating a new one
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+
 
       try {
         setIsLoading(true)
         console.log('Initializing socket connection...')
-        await fetch('/api/socket')
+        // Ensure the API route is available
+        await fetch('/api/socket').catch(err => console.warn("Pre-fetch to /api/socket failed, continuing with socket connection attempt.", err));
+
 
         const socketInstance = io({
           path: '/api/socket',
           addTrailingSlash: false,
-          auth: {
+          auth: { // Pass userId for server-side authentication of the socket
             userId: user.id,
           },
+          reconnectionAttempts: 5, // Attempt to reconnect
         })
 
         socketInstance.on('connect', handleConnect)
@@ -154,18 +174,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       if (socketRef.current) {
-        console.log('Cleaning up socket connection...')
+        console.log('Cleaning up socket connection in ChatContext useEffect return...')
         socketRef.current.off('connect', handleConnect)
         socketRef.current.off('connect_error', handleConnectError)
         socketRef.current.off('receive-message', handleReceiveMessage)
         socketRef.current.off('load-messages', handleLoadMessages)
         socketRef.current.off('error', handleError)
-        socketRef.current.disconnect()
-        socketRef.current = null
+        // Only disconnect if it's truly unmounting, not on user change if re-init is handled
+        // socketRef.current.disconnect(); 
+        // socketRef.current = null;
       }
     }
   }, [
-    user,
+    user, // Re-run if user changes (e.g., login/logout)
     handleConnect,
     handleConnectError,
     handleReceiveMessage,
