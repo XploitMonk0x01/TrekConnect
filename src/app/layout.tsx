@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   },
   description: APP_DESCRIPTION,
   icons: {
-    icon: '/logo.jpeg', // Updated path to your logo
+    icon: '/logo.png', // Updated path to your logo
     // apple: '/apple-icon.png', // Example for Apple touch icon if you have one
     // shortcut: '/favicon-16x16.png', // Example for another shortcut icon
   },
