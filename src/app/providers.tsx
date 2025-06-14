@@ -1,14 +1,17 @@
 'use client'
 
-import { ReactNode } from 'react'
-import { AuthProvider } from '@/lib/auth-context'
+import { ThemeProvider } from 'next-themes'
+import { CustomAuthProvider } from '@/contexts/CustomAuthContext'
+import { ChatProvider } from '@/contexts/ChatContext'
 import { Toaster } from '@/components/ui/toaster'
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      {children}
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <CustomAuthProvider>
+        <ChatProvider>{children}</ChatProvider>
+      </CustomAuthProvider>
       <Toaster />
-    </AuthProvider>
+    </ThemeProvider>
   )
 }

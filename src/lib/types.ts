@@ -1,4 +1,3 @@
-
 export interface UserProfile {
   id: string // MongoDB _id (string representation of ObjectId for new users)
   // firebaseUid field removed
@@ -6,7 +5,13 @@ export interface UserProfile {
   email: string | null // Email will be primary identifier for login with custom auth
   photoUrl: string | null
   age?: number
-  gender?: 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say' | string // Allow string for flexibility
+  gender?:
+    | 'Male'
+    | 'Female'
+    | 'Non-binary'
+    | 'Other'
+    | 'Prefer not to say'
+    | string // Allow string for flexibility
   bio?: string | null
   travelPreferences: {
     soloOrGroup?: 'Solo' | 'Group' | 'Flexible'
@@ -28,7 +33,7 @@ export interface Destination {
   id: string
   name: string
   description: string
-  imageUrl: string 
+  imageUrl: string
   country?: string
   region?: string
   attractions?: string[]
@@ -42,8 +47,8 @@ export interface PlannedTrip {
   id: string
   destinationId: string // Could be destination name if IDs are not stable
   destinationName: string
-  startDate: string 
-  endDate: string 
+  startDate: string
+  endDate: string
   notes?: string
 }
 
@@ -60,12 +65,12 @@ export interface Photo {
   // firebaseUid removed
   userName: string // Denormalized for easier display
   userAvatarUrl?: string | null // Denormalized
-  imageUrl: string 
+  imageUrl: string
   destinationId?: string
   destinationName?: string
   caption?: string
   tags?: string[]
-  uploadedAt: string 
+  uploadedAt: string
   likesCount: number
   commentsCount: number
   likes?: string[] // Array of user IDs who liked
@@ -74,7 +79,7 @@ export interface Photo {
 export type CreatePhotoInput = Pick<
   Photo,
   'imageUrl' | 'caption' | 'destinationId' | 'destinationName' | 'tags'
-> & { userId: string; userName: string; userAvatarUrl?: string | null }; // Add user info for creation
+> & { userId: string; userName: string; userAvatarUrl?: string | null } // Add user info for creation
 
 export interface Story {
   id: string // MongoDB _id
@@ -88,8 +93,8 @@ export interface Story {
   destinationId?: string
   destinationName?: string
   tags?: string[]
-  createdAt: string 
-  updatedAt: string 
+  createdAt: string
+  updatedAt: string
   likesCount: number
   commentsCount: number
   likes?: string[] // Array of user IDs who liked
@@ -103,8 +108,7 @@ export type CreateStoryInput = Pick<
   | 'destinationId'
   | 'destinationName'
   | 'tags'
-> & { userId: string; userName: string; userAvatarUrl?: string | null }; // Add user info for creation
-
+> & { userId: string; userName: string; userAvatarUrl?: string | null } // Add user info for creation
 
 export interface WeatherInfo {
   temperature: string
@@ -133,4 +137,14 @@ export type SmartMatchUserProfileInput = {
   trekkingExperience: string
   wishlistDestinations: string[]
   travelHistory: string[]
+}
+
+export interface Message {
+  id: string
+  roomId: string
+  senderId: string
+  receiverId: string
+  content: string
+  timestamp: Date
+  read?: boolean
 }
