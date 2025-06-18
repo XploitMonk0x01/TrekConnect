@@ -1,4 +1,3 @@
-
 'use server';
 
 interface YouTubeVideoItem {
@@ -72,3 +71,7 @@ export async function searchYouTubeVideoId(query: string): Promise<string | null
       return null;
     }
   } catch (error) {
+    console.error('Error fetching YouTube video:', error);
+    return null;
+  }
+}
