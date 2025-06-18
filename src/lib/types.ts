@@ -1,6 +1,5 @@
 export interface UserProfile {
   id: string // MongoDB _id (string representation of ObjectId for new users)
-  // firebaseUid field removed
   name: string | null
   email: string | null // Email will be primary identifier for login with custom auth
   photoUrl: string | null
@@ -62,7 +61,6 @@ export interface Badge {
 export interface Photo {
   id: string // MongoDB _id
   userId: string // MongoDB user _id (who uploaded)
-  // firebaseUid removed
   userName: string // Denormalized for easier display
   userAvatarUrl?: string | null // Denormalized
   imageUrl: string
@@ -84,7 +82,6 @@ export type CreatePhotoInput = Pick<
 export interface Story {
   id: string // MongoDB _id
   userId: string // MongoDB user _id (author)
-  // firebaseUid removed
   userName: string // Denormalized
   userAvatarUrl?: string | null // Denormalized
   title: string

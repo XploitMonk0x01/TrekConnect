@@ -1,5 +1,5 @@
-# Firebase Studio
+# TrekConnect
 
-This is a NextJS starter in Firebase Studio.
+A NextJS travel application for connecting travelers and sharing experiences.
 
 To get started, take a look at src/app/page.tsx.

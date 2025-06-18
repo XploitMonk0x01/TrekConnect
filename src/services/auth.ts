@@ -1,22 +1,11 @@
+'use server'
 
-// 'use server' // This directive might not be needed if client-side Firebase is gone.
+// Authentication service functions for custom MongoDB-based authentication
+// This service handles user management operations for the TrekConnect application
 
-// Removed Firebase imports: auth, User as FirebaseUser
-// Removed MongoDB imports: getDb, ObjectId
-// Removed UserProfile type import as it's defined elsewhere or its Firebase-specific parts are gone.
-
-// The functions syncUserWithMongoDB and getUserByFirebaseId were specific to
-// synchronizing Firebase authenticated users with MongoDB.
-// Since Firebase Authentication is removed, these functions are no longer applicable
-// in their current form.
-
-// You will need new service functions to:
-// 1. Handle user creation in MongoDB during custom registration.
-// 2. Fetch user profiles from MongoDB based on MongoDB _id (retrieved from your custom JWT).
-
-// Example (placeholder for fetching user by MongoDB ID for custom auth):
+// Example function for fetching user by MongoDB ID (for custom auth):
 /*
-import type { UserProfile } from '@/lib/types'; // Assuming UserProfile is updated
+import type { UserProfile } from '@/lib/types';
 import { getDb } from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
@@ -33,15 +22,12 @@ export async function getUserByIdFromMongoDB(userId: string): Promise<UserProfil
 
     if (!userDoc) return null;
 
-    // Remap userDoc to UserProfile type
-    // Ensure UserProfile type doesn't have firebaseUid anymore
+    // Map userDoc to UserProfile type
     return {
       id: userDoc._id.toString(),
       name: userDoc.name || null,
       email: userDoc.email || null,
       photoUrl: userDoc.photoUrl || null,
-      // ... other fields from your UserProfile type
-      // Make sure to adjust the mapping based on your UserProfile definition in lib/types.ts
       age: userDoc.age,
       gender: userDoc.gender,
       bio: userDoc.bio,
