@@ -1,14 +1,18 @@
 import { MongoClient, MongoClientOptions, Db } from 'mongodb'
-import { config } from 'dotenv'
 
-config()
-
+// Next.js automatically loads .env files, so we don't need dotenv here
 // Ensure environment variables are set
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your Mongo URI to .env.local')
+  console.error('Environment variables check:')
+  console.error('MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set')
+  console.error('MONGODB_DB_NAME:', process.env.MONGODB_DB_NAME || 'Not set')
+  console.error('NODE_ENV:', process.env.NODE_ENV || 'Not set')
+  throw new Error('Please add your Mongo URI to .env')
 }
 if (!process.env.MONGODB_DB_NAME) {
-  throw new Error('Please define the MONGODB_DB_NAME environment variable')
+  throw new Error(
+    'Please define the MONGODB_DB_NAME environment variable in .env'
+  )
 }
 
 declare global {
@@ -18,13 +22,15 @@ declare global {
 const uri = process.env.MONGODB_URI
 const options: MongoClientOptions = {
   maxPoolSize: 10,
-  minPoolSize: 5,
-  serverSelectionTimeoutMS: 5000,
+  minPoolSize: 1,
+  serverSelectionTimeoutMS: 30000,
   socketTimeoutMS: 45000,
-  connectTimeoutMS: 10000,
+  connectTimeoutMS: 30000,
   retryWrites: true,
   retryReads: true,
   writeConcern: { w: 'majority' },
+  heartbeatFrequencyMS: 10000,
+  monitorCommands: process.env.NODE_ENV === 'development',
 }
 
 let clientPromise: Promise<MongoClient>
@@ -55,21 +61,35 @@ export default clientPromise
 
 export async function getDb() {
   try {
+    console.log('🔍 getDb() called')
+    console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set')
+    console.log('MONGODB_DB_NAME:', process.env.MONGODB_DB_NAME || 'Not set')
+
     const client = await clientPromise
+    console.log('✅ Client connected')
+
     if (!process.env.MONGODB_DB_NAME) {
       throw new Error('MONGODB_DB_NAME environment variable is not defined')
     }
-    return client.db(process.env.MONGODB_DB_NAME)
+
+    const db = client.db(process.env.MONGODB_DB_NAME)
+    console.log(`✅ Database accessed: ${process.env.MONGODB_DB_NAME}`)
+    return db
   } catch (error) {
-    console.error('MongoDB connection error:', error)
+    console.error('❌ MongoDB connection error:', error)
     throw new Error('Failed to connect to database')
   }
 }
 
 export async function getMongoDB(): Promise<{ client: MongoClient; db: Db }> {
-  const client = await clientPromise
-  const db = client.db(process.env.MONGODB_DB_NAME)
-  return { client, db }
+  try {
+    const client = await clientPromise
+    const db = client.db(process.env.MONGODB_DB_NAME)
+    return { client, db }
+  } catch (error) {
+    console.error('Error getting MongoDB connection:', error)
+    throw new Error('Failed to get database connection')
+  }
 }
 
 export async function initializeCollections() {
@@ -91,53 +111,23 @@ export async function initializeCollections() {
     // Create users collection if it doesn't exist
     const usersCollection = db.collection('users')
 
-    // Drop existing indexes to avoid conflicts
-    await usersCollection.dropIndexes().catch(() => {
-      // Ignore error if no indexes exist
-    })
-
-    // Create indexes for users collection with validation
-    await usersCollection.createIndexes([
-      {
-        key: { email: 1 },
-        unique: true,
-        partialFilterExpression: { email: { $type: 'string' } },
-      },
-      {
-        key: { username: 1 },
-        unique: true,
-        partialFilterExpression: { username: { $type: 'string' } },
-      },
-    ])
-
-    // Add validation to ensure required fields
-    await db.command({
-      collMod: 'users',
-      validator: {
-        $jsonSchema: {
-          bsonType: 'object',
-          required: ['email', 'username'],
-          properties: {
-            email: {
-              bsonType: 'string',
-              pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$',
-            },
-            username: {
-              bsonType: 'string',
-              minLength: 3,
-              maxLength: 30,
-            },
-          },
+    // Create indexes for users collection (without dropping existing ones)
+    await usersCollection
+      .createIndexes([
+        {
+          key: { email: 1 },
+          unique: true,
+          partialFilterExpression: { email: { $type: 'string' } },
         },
-      },
-    })
+      ])
+      .catch((error) => {
+        // Log but don't fail if indexes already exist
+        console.log('Some indexes may already exist:', error.message)
+      })
 
     console.log('MongoDB collections and indexes initialized successfully')
   } catch (error) {
     console.error('Error initializing MongoDB collections:', error)
-    throw error
+    // Don't throw error, just log it to prevent app crashes
   }
 }
-
-// Initialize collections when the module is imported
-initializeCollections().catch(console.error)

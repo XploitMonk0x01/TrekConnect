@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation' // Import useRouter
-import { UserProfileCard } from '@/components/UserProfileCard'
+import { useRouter } from 'next/navigation'
+import { SwipeableCard } from '@/components/SwipeableCard'
 import type { UserProfile } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,10 +28,11 @@ import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { getOtherUsers } from '@/services/users'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { Skeleton } from '@/components/ui/skeleton'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function ConnectSpherePage() {
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
-  const router = useRouter() // Initialize useRouter
+  const router = useRouter()
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [profiles, setProfiles] = useState<UserProfile[]>([])
@@ -116,6 +117,11 @@ export default function ConnectSpherePage() {
 
   const handleSwipe = (direction: 'left' | 'right') => {
     if (!currentUser || profiles.length === 0 || !profiles[currentIndex]) return
+
+    // Haptic feedback (if available)
+    if (navigator.vibrate) {
+      navigator.vibrate(50)
+    }
 
     if (matchAnimationTimeoutId) {
       clearTimeout(matchAnimationTimeoutId)
@@ -323,8 +329,68 @@ export default function ConnectSpherePage() {
               )}
             </Button>
           </div>
-        ) : currentProfileForCard ? (
-          <UserProfileCard user={currentProfileForCard} />
+        ) : profiles.length > 0 ? (
+          <div className="relative w-full h-full">
+            <AnimatePresence>
+              {/* Show next 3 cards in stack */}
+              {profiles
+                .slice(currentIndex, currentIndex + 3)
+                .map((profile, index) => {
+                  const isActive = index === 0
+                  const stackIndex = index
+
+                  return (
+                    <motion.div
+                      key={`${profile.id}-${currentIndex + index}`}
+                      initial={{
+                        scale: 0.8,
+                        opacity: 0,
+                        y: 50,
+                        rotateY: -15,
+                      }}
+                      animate={{
+                        scale: 1 - stackIndex * 0.05,
+                        opacity: 1 - stackIndex * 0.3,
+                        y: stackIndex * 8,
+                        rotateY: 0,
+                        zIndex: 10 - stackIndex,
+                      }}
+                      exit={{
+                        x:
+                          stackIndex === 0
+                            ? lastSwipedProfile
+                              ? 300
+                              : -300
+                            : 0,
+                        y: stackIndex === 0 ? -100 : 0,
+                        rotate: stackIndex === 0 ? 15 : 0,
+                        opacity: 0,
+                        scale: 0.8,
+                      }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 300,
+                        damping: 30,
+                        duration: 0.3,
+                      }}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                      }}
+                    >
+                      <SwipeableCard
+                        user={profile}
+                        onSwipe={handleSwipe}
+                        isActive={isActive}
+                      />
+                    </motion.div>
+                  )
+                })}
+            </AnimatePresence>
+          </div>
         ) : (
           <div className="text-center p-8 bg-card rounded-xl shadow-lg">
             {isLoadingProfiles || authIsLoading || shouldReloadProfiles ? (
@@ -356,34 +422,42 @@ export default function ConnectSpherePage() {
 
       {currentProfileForCard && (
         <div className="flex space-x-4 items-center">
-          <Button
-            variant="outline"
-            size="lg"
-            className="rounded-full p-4 border-destructive text-destructive hover:bg-destructive/10"
-            onClick={() => handleSwipe('left')}
-            aria-label="Pass"
-          >
-            <X className="h-8 w-8" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="rounded-full p-2 border-muted-foreground text-muted-foreground hover:bg-muted-foreground/10"
-            onClick={handleUndo}
-            aria-label="Undo"
-            disabled={currentIndex === 0 && !lastSwipedProfile}
-          >
-            <RotateCcw className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="outline"
-            size="lg"
-            className="rounded-full p-4 border-green-500 text-green-500 hover:bg-green-500/10"
-            onClick={() => handleSwipe('right')}
-            aria-label="Connect"
-          >
-            <Heart className="h-8 w-8" />
-          </Button>
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="outline"
+              size="lg"
+              className="rounded-full p-4 border-destructive text-destructive hover:bg-destructive/10"
+              onClick={() => handleSwipe('left')}
+              aria-label="Pass"
+            >
+              <X className="h-8 w-8" />
+            </Button>
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full p-2 border-muted-foreground text-muted-foreground hover:bg-muted-foreground/10"
+              onClick={handleUndo}
+              aria-label="Undo"
+              disabled={currentIndex === 0 && !lastSwipedProfile}
+            >
+              <RotateCcw className="h-5 w-5" />
+            </Button>
+          </motion.div>
+
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              variant="outline"
+              size="lg"
+              className="rounded-full p-4 border-green-500 text-green-500 hover:bg-green-500/10"
+              onClick={() => handleSwipe('right')}
+              aria-label="Connect"
+            >
+              <Heart className="h-8 w-8" />
+            </Button>
+          </motion.div>
         </div>
       )}
     </div>
