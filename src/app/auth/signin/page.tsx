@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from 'next/link'
@@ -22,24 +21,33 @@ import { Loader2 } from 'lucide-react'
 export default function SignInPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { signIn: customSignIn, isLoading: authIsLoading } = useCustomAuth(); // Use custom hook
+  const { signIn: customSignIn, isLoading: authIsLoading } = useCustomAuth() // Use custom hook
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsSubmitting(true);
-    const success = await customSignIn(email, password);
+    setIsSubmitting(true)
+    const success = await customSignIn(email, password)
     if (success) {
       toast({
         title: 'Signed In!',
         description: 'Welcome back to TrekConnect!',
-      });
-      router.push('/'); // Redirect to dashboard or desired page
+      })
+
+      // Check for redirect parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      const redirectTo = urlParams.get('redirect')
+
+      if (redirectTo && redirectTo.startsWith('/')) {
+        router.push(redirectTo)
+      } else {
+        router.push('/') // Default redirect to dashboard
+      }
     }
     // Error toasts are handled within customSignIn
-    setIsSubmitting(false);
+    setIsSubmitting(false)
   }
 
   return (
@@ -86,10 +94,11 @@ export default function SignInPage() {
               className="w-full bg-primary hover:bg-primary/90"
               disabled={isSubmitting || authIsLoading}
             >
-              {(isSubmitting || authIsLoading) ? (
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                ) : 'Sign In'
-              }
+              {isSubmitting || authIsLoading ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                'Sign In'
+              )}
             </Button>
           </form>
         </CardContent>

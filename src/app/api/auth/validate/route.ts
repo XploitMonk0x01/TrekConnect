@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { verify, TokenExpiredError, JsonWebTokenError } from 'jsonwebtoken'
+import { jwtVerify } from 'jose'
 import { getDb } from '@/lib/mongodb'
-import { headers } from 'next/headers'
+import { cookies } from 'next/headers'
 import { ObjectId } from 'mongodb'
 import type { UserProfile } from '@/lib/types'
 
@@ -23,39 +23,31 @@ interface JwtPayload {
 
 export async function GET(request: Request) {
   try {
-    const headersList = await headers()
-    const authHeader = headersList.get('Authorization')
+    const cookieStore = await cookies()
+    const authToken = cookieStore.get('authToken')?.value
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authToken) {
       return NextResponse.json(
-        { error: 'No token provided or malformed header' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { error: 'No token found after Bearer' },
+        { error: 'No authentication token found' },
         { status: 401 }
       )
     }
 
     let decoded: JwtPayload
     try {
-      const verified = verify(token, JWT_SECRET as string)
-      decoded = verified as unknown as JwtPayload
+      const { payload } = await jwtVerify(
+        authToken,
+        new TextEncoder().encode(JWT_SECRET)
+      )
+      decoded = payload as unknown as JwtPayload
     } catch (error) {
-      if (error instanceof TokenExpiredError) {
+      if (error instanceof Error && error.message.includes('expired')) {
         return NextResponse.json({ error: 'Token expired' }, { status: 401 })
       }
-      if (error instanceof JsonWebTokenError) {
-        return NextResponse.json(
-          { error: 'Invalid token signature or structure' },
-          { status: 401 }
-        )
-      }
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Invalid token signature or structure' },
+        { status: 401 }
+      )
     }
 
     if (!decoded.id || !ObjectId.isValid(decoded.id)) {

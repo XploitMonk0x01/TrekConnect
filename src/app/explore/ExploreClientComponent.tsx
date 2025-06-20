@@ -484,8 +484,9 @@ export default function ExploreClientComponent({
                     PLACEHOLDER_IMAGE_URL(600, 400)
                   }
                   alt={destination.name}
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover"
                   data-ai-hint={
                     destination.aiHint ||
                     destination.name
