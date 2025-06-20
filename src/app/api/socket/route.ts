@@ -1,63 +1,134 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { initSocket } from '@/lib/socket';
-import type { Server as HTTPServer } from 'http';
+import { Server as HTTPServer } from 'http';
+import { Server as SocketIOServer, Socket } from 'socket.io';
 import type { Socket as NetSocket } from 'net';
+import type { Message } from '@/lib/types';
+import { saveMessage, getMessages, markMessagesAsRead } from '@/services/messages';
 
 // Define a type for the server object if it's extended with 'io'
 interface ExtendedHttpServer extends HTTPServer {
-  io?: any; // Replace 'any' with 'SocketIOServer' type if available globally or passed
+  io?: SocketIOServer;
 }
 interface ExtendedNetSocket extends NetSocket {
   server: ExtendedHttpServer;
 }
-interface RequestWithSocket extends NextRequest {
-  socket?: ExtendedNetSocket; // Optional socket property
-}
+
+// This is a global or module-scoped variable to hold the Socket.IO server instance.
+// It helps ensure that we don't try to re-initialize it on every request if it already exists.
+let ioServerInstance: SocketIOServer | undefined;
 
 
-export async function GET(req: RequestWithSocket) {
-  // Try to get the HTTP server instance.
-  // This is often challenging in serverless environments or standard Next.js App Router.
-  // The `req.socket.server` pattern is more common in Pages Router or custom server setups.
-  // For App Router, this might be undefined if not running in a Node.js server environment
-  // where this property is explicitly set up.
-  const httpServer = req.socket?.server as HTTPServer | undefined;
+export async function GET(req: NextRequest) {
+  // Attempt to get the underlying HTTP server. This is environment-dependent.
+  // @ts-ignore _request is a private Next.js API, might break. More stable alternatives are hard in App Router.
+  const httpServer: ExtendedHttpServer | undefined = (req as any)._server?.server || (req.socket as any)?.server;
 
-  if (httpServer) {
-    // Attempt to initialize Socket.IO and attach it to the server
-    const io = initSocket(httpServer);
-    if (io) {
-        console.log('[API Socket Route] Socket.IO initialized or already running.');
-        // If Socket.IO is set up, it should handle its own requests for its path.
-        // We must return a Response object as per App Router requirements.
-        // This response is for the initial HTTP GET from the client (e.g., the fetch in ChatContext),
-        // NOT for Socket.IO's internal polling requests.
-        // Ideally, Socket.IO engine intercepts polling requests to its path before this handler sends JSON.
-    } else {
-        console.error('[API Socket Route] Failed to initialize Socket.IO server through initSocket.');
-        return NextResponse.json({ error: 'Socket server critical setup error.' }, { status: 500 });
-    }
-  } else {
-    // Fallback or warning if the HTTP server instance couldn't be accessed.
-    // This means WebSockets might not work, and polling relies on Socket.IO server
-    // being available globally and handling requests to its path.
-    console.warn('[API Socket Route] HTTP server instance not directly accessible. Socket.IO relies on global instance or may have issues.');
-    // Attempt to initialize with null, relying on global `io` instance logic in `initSocket`
-    const io = initSocket(null); 
-    if (!io) {
-         console.error('[API Socket Route] Failed to initialize Socket.IO server (global attempt).');
-         return NextResponse.json({ error: 'Socket server global setup error.' }, { status: 500 });
-    }
+
+  if (!httpServer) {
+    console.error('[API Socket Route] HTTP server instance not found. Cannot attach Socket.IO.');
+    // If the server instance cannot be found, we cannot proceed to attach Socket.IO
+    return NextResponse.json({ error: 'Socket server setup failed: HTTP server not found.' }, { status: 500 });
   }
 
-  // For App Router, a response MUST be returned.
-  // This response is for the initial `fetch` call from the client to "wake up" this endpoint.
-  // It's crucial that Socket.IO, if properly attached to the server, handles subsequent polling/websocket
-  // requests to its path ('/api/socket') *before* this JSON response is sent for those specific requests.
-  // If this JSON response is sent for Socket.IO's polling requests, "xhr poll error" will occur.
-  return NextResponse.json({ 
-    success: true, 
-    message: "Socket API endpoint acknowledged. Socket.IO should now handle its specific transport requests if configured correctly." 
-  });
+  if (!ioServerInstance) { // Check if global instance exists
+    console.log('[API Socket Route] Initializing new Socket.IO server instance...');
+    // Create a new Socket.IO server and attach it to the HTTP server
+    const newIo = new SocketIOServer(httpServer, {
+      path: '/api/socket', // Client will connect to this path
+      addTrailingSlash: false,
+      cors: {
+        origin: "*", // Adjust in production for security
+        methods: ["GET", "POST"]
+      }
+    });
+
+    newIo.use((socket: Socket, next: (err?: Error) => void) => {
+      const userId = socket.handshake.auth.userId;
+      if (!userId) {
+        console.error(`[Socket Auth Middleware] Failed: No userId in handshake.auth for socket ${socket.id}. Handshake auth:`, socket.handshake.auth);
+        return next(new Error('Authentication error: userId missing'));
+      }
+      socket.data.userId = userId; // Store userId in socket data
+      console.log(`[Socket Auth Middleware] Success: User ${userId} authenticated for socket ${socket.id}`);
+      next();
+    });
+
+    newIo.on('connection', (socket: Socket) => {
+      console.log(`[Socket Connection] Client connected: ${socket.id}, User ID: ${socket.data.userId}`);
+
+      socket.on('join-room', async (roomId: string) => {
+        const userId = socket.data.userId;
+        if (!userId) {
+          console.error(`[Socket Join Room] Auth error for socket ${socket.id} trying to join ${roomId}`);
+          socket.emit('error', 'Authentication required to join room');
+          return;
+        }
+        socket.join(roomId);
+        console.log(`[Socket Join Room] Socket ${socket.id} (User: ${userId}) joined room ${roomId}`);
+        try {
+          const messages = await getMessages(roomId);
+          socket.emit('load-messages', messages);
+          console.log(`[Socket Join Room] Loaded ${messages.length} messages for room ${roomId} for user ${userId}`);
+          await markMessagesAsRead(roomId, userId);
+        } catch (error) {
+          console.error(`[Socket Join Room] Error loading messages for room ${roomId}:`, error);
+          socket.emit('error', 'Failed to load messages');
+        }
+      });
+
+      socket.on('leave-room', (roomId: string) => {
+        socket.leave(roomId);
+        console.log(`[Socket Leave Room] Socket ${socket.id} (User: ${socket.data.userId}) left room ${roomId}`);
+      });
+
+      socket.on('send-message', async (data: { roomId: string; message: Message }) => {
+        const senderId = socket.data.userId;
+        if (!senderId) {
+          console.error(`[Socket Send Message] Auth error for socket ${socket.id} trying to send to ${data.roomId}`);
+          socket.emit('error', 'Authentication required to send message');
+          return;
+        }
+        
+        const messageToSave: Message = {
+          ...data.message,
+          roomId: data.roomId,
+          senderId: senderId,
+          timestamp: new Date(data.message.timestamp || Date.now()),
+          read: false,
+        };
+
+        try {
+          const savedMessage = await saveMessage(messageToSave);
+          newIo.to(data.roomId).emit('receive-message', savedMessage);
+          console.log(`[Socket Send Message] Message from ${senderId} broadcasted to room ${data.roomId}`);
+        } catch (error) {
+          console.error(`[Socket Send Message] Error saving/sending message for room ${data.roomId}:`, error);
+          socket.emit('error', 'Failed to send message');
+        }
+      });
+
+      socket.on('disconnect', (reason: string) => {
+        console.log(`[Socket Disconnect] Client disconnected: ${socket.id} (User: ${socket.data.userId}), Reason: ${reason}`);
+      });
+
+      socket.on('error', (err: Error) => {
+        console.error(`[Socket Error] Error on socket ${socket.id} (User: ${socket.data.userId}):`, err.message);
+      });
+    });
+
+    ioServerInstance = newIo; // Store in global scope
+    console.log('[API Socket Route] New Socket.IO server initialized and event handlers attached.');
+  } else {
+    console.log('[API Socket Route] Socket.IO server already initialized.');
+  }
+
+  // For App Router, we MUST return a NextResponse.
+  // This response is intended for the initial client fetch to this path (if any).
+  // For Socket.IO's own polling/websocket handshake requests, the Socket.IO engine
+  // (now attached to `httpServer` via `ioServerInstance`) should ideally intercept and handle
+  // these requests *before* this `NextResponse` is sent.
+  // If this handler still ends up processing Socket.IO's specific transport requests
+  // and sending this null response, "xhr poll error" might persist.
+  return new NextResponse(null, { status: 200 });
 }
