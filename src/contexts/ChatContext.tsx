@@ -16,31 +16,31 @@ import type { Message } from '@/lib/types'
 
 interface ChatContextType {
   socket: Socket | null
-  isConnected: boolean // New state to track connection status reliably
+  isConnected: boolean
   messages: Message[]
   sendMessage: (roomId: string, content: string, receiverUserId: string) => void
   joinRoom: (roomId: string) => void
   leaveRoom: (roomId: string) => void
-  isLoading: boolean
+  isLoading: boolean // For initial socket connection attempt
   error: string | null
 }
 
 const ChatContext = createContext<ChatContextType>({
   socket: null,
-  isConnected: false, // Default to false
+  isConnected: false,
   messages: [],
   sendMessage: () => {},
   joinRoom: () => {},
   leaveRoom: () => {},
-  isLoading: true, // Start with isLoading true
+  isLoading: true,
   error: null,
 })
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null)
-  const [isConnected, setIsConnected] = useState(false) // State for connection status
+  const [isConnected, setIsConnected] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [isLoading, setIsLoading] = useState(true) // Manages socket initialization loading
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useCustomAuth()
   const socketRef = useRef<Socket | null>(null)
@@ -54,16 +54,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const handleDisconnect = useCallback((reason: Socket.DisconnectReason) => {
     console.log('ChatContext: Socket disconnected.', reason)
     setIsConnected(false)
-    // if (reason === "io server disconnect" || reason === "io client disconnect") {
-      // setError("Chat disconnected. Please refresh or try again later.");
-    // }
-    // else the socket will automatically try to reconnect for other reasons
+    if (reason === "io server disconnect" || reason === "io client disconnect") {
+      setError("Chat disconnected. Please refresh or try again later.");
+    }
+    // For other reasons, the socket might attempt to reconnect automatically.
   }, [])
 
   const handleConnectError = useCallback((err: Error) => {
     console.error('ChatContext: Socket connection error:', err.message)
     setIsConnected(false)
-    setError(`Chat connection failed: ${err.message}. It might be trying to reconnect.`)
+    setError(`Chat connection failed: ${err.message}. Retrying...`)
   }, [])
 
   const handleReceiveMessage = useCallback((message: Message) => {
@@ -76,10 +76,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setMessages(loadedMessages)
   }, [])
 
-  const handleErrorEvent = useCallback((errorMessage: string) => { // Renamed from handleError to avoid conflict
+  const handleErrorEvent = useCallback((errorMessage: string) => {
     console.error('ChatContext: Socket error event received:', errorMessage)
     setError(errorMessage)
-    // Depending on the error, you might want to set isConnected to false
+    setIsConnected(false); // Assume critical error if server sends this
   }, [])
 
 
@@ -89,24 +89,23 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         console.log('ChatContext: User not authenticated, skipping socket initialization.')
         if (socketRef.current) {
             socketRef.current.disconnect()
+            setSocket(null) // Clear state
             socketRef.current = null
-            setSocket(null)
         }
         setIsConnected(false)
-        setIsLoading(false) // No user, so not loading socket
+        setIsLoading(false)
         return
       }
 
-      // Prevent re-initialization if socket already exists and is connected for the current user
       if (socketRef.current && socketRef.current.connected && socketRef.current.auth?.userId === user.id) {
         console.log('ChatContext: Socket already connected for this user.');
-        setIsConnected(true); // Ensure isConnected reflects this
+        setIsConnected(true);
         setIsLoading(false);
         return;
       }
       
       if (socketRef.current) {
-        console.log('ChatContext: Disconnecting existing socket before new initialization.');
+        console.log('ChatContext: Disconnecting existing socket before new initialization for new user or retry.');
         socketRef.current.disconnect();
         socketRef.current = null;
       }
@@ -117,18 +116,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       console.log('ChatContext: Initializing new socket connection...')
       
       try {
-        // Ensure the API route for socket.io server setup is available
-        await fetch('/api/socket').catch(err => console.warn("ChatContext: Pre-fetch to /api/socket failed, continuing with socket connection attempt.", err));
+        await fetch('/api/socket').catch(err => console.warn("ChatContext: Pre-fetch to /api/socket failed (this is okay if server is not up yet).", err));
 
         const socketInstance = io({
           path: '/api/socket',
           addTrailingSlash: false,
-          auth: {
-            userId: user.id,
-          },
+          auth: { userId: user.id },
           reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          timeout: 20000,
+          reconnectionDelay: 2000,
+          timeout: 10000,
         })
         console.log('ChatContext: Socket instance created, attempting to connect.');
 
@@ -141,19 +137,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
         socketRef.current = socketInstance
         setSocket(socketInstance)
-        // Note: isConnected will be set by the 'connect' event handler.
-      } catch (e) {
+      } catch (e: any) {
         console.error('ChatContext: Failed to initialize socket object:', e)
-        setError('Failed to initialize chat communications.')
+        setError(`Failed to initialize chat: ${e.message}`)
         if (socketRef.current) {
-            socketRef.current.disconnect(); // Clean up if partial setup
+            socketRef.current.disconnect();
             socketRef.current = null;
         }
         setSocket(null)
         setIsConnected(false)
       } finally {
         setIsLoading(false)
-        console.log('ChatContext: initializeSocket finished. isLoading:', isLoading, 'isConnected:', isConnected);
       }
     }
 
@@ -177,25 +171,25 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             console.log(`ChatContext: Socket ${oldSocketId} was not connected during cleanup, removing listeners.`);
         }
         socketRef.current = null;
-        setSocket(null);
+        setSocket(null); // Clear from state
         setIsConnected(false);
-      } else {
-        console.log("ChatContext: Cleanup called but no socketRef.current.");
       }
     }
-  }, [user, handleConnect, handleDisconnect, handleConnectError, handleReceiveMessage, handleLoadMessages, handleErrorEvent, isLoading, isConnected]) // Added isLoading, isConnected to dependencies
+  // Dependency array refined to primarily react to user changes for re-initialization.
+  // Callbacks are memoized, so they shouldn't cause re-runs unless their own dependencies change.
+  }, [user, handleConnect, handleDisconnect, handleConnectError, handleReceiveMessage, handleLoadMessages, handleErrorEvent])
 
 
   const sendMessage = useCallback(
     (roomId: string, content: string, receiverUserId: string) => {
-      if (!socketRef.current || !user || !isConnected) { // Check isConnected here
-        console.error('Socket not connected, user not authenticated, or socket not ready to send message.')
+      if (!socketRef.current || !user || !isConnected) {
+        console.error('Socket not connected or user not authenticated, cannot send message.')
         setError('Cannot send message: Chat not connected.');
         return
       }
-      console.log('ChatContext: Sending message:', { roomId, content, userId: user.id, receiverUserId })
+      console.log('ChatContext: Sending message:', { roomId, content, senderId: user.id, receiverUserId })
       const message: Message = {
-        id: Math.random().toString(36).substring(7), 
+        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Client-generated temp ID
         roomId,
         senderId: user.id,
         receiverId: receiverUserId,
@@ -204,13 +198,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         read: false,
       }
       socketRef.current.emit('send-message', { roomId, message })
+      // Optimistically add to local messages if desired, or wait for server broadcast
+      // setMessages((prev) => [...prev, message]); // Example of optimistic update
     },
-    [user, isConnected, setError] // Added isConnected and setError
+    [user, isConnected, setError]
   )
 
   const joinRoom = useCallback(
     (roomId: string) => {
-      if (!socketRef.current || !user || !isConnected) { // Check isConnected
+      if (!socketRef.current || !user || !isConnected) {
         console.error('Socket not connected or user not authenticated for joinRoom')
         return
       }
@@ -218,18 +214,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setMessages([]) 
       socketRef.current.emit('join-room', roomId)
     },
-    [user, isConnected] // Added isConnected
+    [user, isConnected]
   )
 
   const leaveRoom = useCallback((roomId: string) => {
-    if (!socketRef.current || !isConnected) { // Check isConnected
+    if (!socketRef.current || !isConnected) {
       console.error('Socket not connected for leaveRoom')
       return
     }
     console.log('ChatContext: Leaving room:', roomId)
     socketRef.current.emit('leave-room', roomId)
     setMessages([])
-  }, [isConnected]) // Added isConnected
+  }, [isConnected])
 
   return (
     <ChatContext.Provider
@@ -256,5 +252,3 @@ export const useChat = () => {
   }
   return context
 }
-
-    
