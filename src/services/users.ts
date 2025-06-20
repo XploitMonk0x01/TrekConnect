@@ -51,17 +51,17 @@ function mapDocToUserProfile(doc: WithId<UserDocument>): UserProfile {
         : (doc.trekkingExperience as UserProfile['trekkingExperience']),
     travelPreferences: {
       soloOrGroup:
-        doc.travelPreferences?.soloOrGroup === null
+        doc.travelPreferences?.soloOrGroup === null || doc.travelPreferences?.soloOrGroup === undefined
           ? undefined
           : (doc.travelPreferences
               ?.soloOrGroup as UserProfile['travelPreferences']['soloOrGroup']),
       budget:
-        doc.travelPreferences?.budget === null
+        doc.travelPreferences?.budget === null || doc.travelPreferences?.budget === undefined
           ? undefined
           : (doc.travelPreferences
               ?.budget as UserProfile['travelPreferences']['budget']),
       style:
-        doc.travelPreferences?.style === null
+        doc.travelPreferences?.style === null || doc.travelPreferences?.style === undefined
           ? undefined
           : doc.travelPreferences?.style,
     },
@@ -139,31 +139,59 @@ export async function updateUserProfile(
 
     const updatePayload: any = { updatedAt: new Date() }
 
-    // Explicitly set fields to be updated or nulled
-    if (dataToUpdate.name !== undefined) updatePayload.name = dataToUpdate.name;
-    if (dataToUpdate.photoUrl !== undefined) updatePayload.photoUrl = dataToUpdate.photoUrl; // Allow setting to null
-    if (dataToUpdate.bio !== undefined) updatePayload.bio = dataToUpdate.bio;
-    if (dataToUpdate.age !== undefined) updatePayload.age = dataToUpdate.age === undefined ? null : dataToUpdate.age;
-    if (dataToUpdate.gender !== undefined) updatePayload.gender = dataToUpdate.gender === undefined ? null : dataToUpdate.gender;
-    if (dataToUpdate.trekkingExperience !== undefined) updatePayload.trekkingExperience = dataToUpdate.trekkingExperience === undefined ? null : dataToUpdate.trekkingExperience;
-    if (dataToUpdate.languagesSpoken !== undefined) updatePayload.languagesSpoken = dataToUpdate.languagesSpoken;
-    if (dataToUpdate.wishlistDestinations !== undefined) updatePayload.wishlistDestinations = dataToUpdate.wishlistDestinations;
-    if (dataToUpdate.travelHistory !== undefined) updatePayload.travelHistory = dataToUpdate.travelHistory;
-    if (dataToUpdate.plannedTrips !== undefined) updatePayload.plannedTrips = dataToUpdate.plannedTrips; // Assuming these are structured correctly
-    if (dataToUpdate.badges !== undefined) updatePayload.badges = dataToUpdate.badges; // Assuming these are structured correctly
+    // Helper function to add field to payload if it's explicitly provided in dataToUpdate
+    // (i.e., key exists, value can be a value or null for clearing)
+    const processField = (fieldName: keyof typeof dataToUpdate) => {
+      if (Object.prototype.hasOwnProperty.call(dataToUpdate, fieldName)) {
+        updatePayload[fieldName] = dataToUpdate[fieldName];
+      }
+    };
 
+    processField('name');
+    processField('photoUrl');
+    processField('bio');
+    processField('age');
+    processField('gender');
+    processField('trekkingExperience');
+    processField('languagesSpoken');
+    processField('wishlistDestinations');
+    processField('travelHistory');
+    processField('plannedTrips');
+    processField('badges');
+    
     if (dataToUpdate.travelPreferences) {
-      updatePayload.travelPreferences = {
-        soloOrGroup: dataToUpdate.travelPreferences.soloOrGroup === undefined ? null : dataToUpdate.travelPreferences.soloOrGroup,
-        budget: dataToUpdate.travelPreferences.budget === undefined ? null : dataToUpdate.travelPreferences.budget,
-        style: dataToUpdate.travelPreferences.style === undefined ? null : dataToUpdate.travelPreferences.style,
-      };
+      const tpUpdate: any = {};
+      let hasTpUpdate = false;
+      if (Object.prototype.hasOwnProperty.call(dataToUpdate.travelPreferences, 'soloOrGroup')) {
+        tpUpdate.soloOrGroup = dataToUpdate.travelPreferences.soloOrGroup;
+        hasTpUpdate = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(dataToUpdate.travelPreferences, 'budget')) {
+        tpUpdate.budget = dataToUpdate.travelPreferences.budget;
+        hasTpUpdate = true;
+      }
+      if (Object.prototype.hasOwnProperty.call(dataToUpdate.travelPreferences, 'style')) {
+        tpUpdate.style = dataToUpdate.travelPreferences.style;
+        hasTpUpdate = true;
+      }
+      if (hasTpUpdate) {
+         // Merge with existing preferences if any, or set new ones
+        updatePayload['travelPreferences'] = tpUpdate;
+      }
     }
     
+    // Remove updatedAt from $set if it's the only field to prevent empty updates if nothing else changed
+    if (Object.keys(updatePayload).length === 1 && updatePayload.updatedAt) {
+        // No actual fields were changed other than the timestamp we'd add
+        const existingUser = await usersCollection.findOne(filter, { projection: { _id: 1 } });
+        if (existingUser) return mapDocToUserProfile(existingUser as UserDocument); // Return existing if no actual update
+        return null; // Should not happen if ID is valid
+    }
+
+
     const updateResult = await usersCollection.updateOne(
       filter,
-      { $set: updatePayload },
-      { bypassDocumentValidation: false } // Try to adhere to schema if possible, can be true if schema is loose
+      { $set: updatePayload }
     );
 
     if (updateResult.matchedCount === 0) {

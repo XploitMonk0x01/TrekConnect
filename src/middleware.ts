@@ -1,6 +1,7 @@
+
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { jwtVerify, decodeJwt } from 'jose'
+import { jwtVerify } from 'jose' // decodeJwt removed as it's not used
 
 const JWT_SECRET = process.env.JWT_SECRET
 
@@ -19,14 +20,15 @@ interface JwtPayload {
 // Routes that require authentication
 const protectedRoutes = [
   '/profile',
-  '/trips',
-  '/messages',
+  // '/trips', // Assuming trips might be a future feature
+  // '/messages', // Assuming messages might be part of chat or a separate feature
   '/settings',
   '/feed/upload',
   '/stories/new',
   '/connect',
-  '/explore',
-  '/recommendations',
+  '/chat', // Added /chat to protected routes
+  // '/explore', // Explore can be public, details might require auth or wishlist feature
+  // '/recommendations', // Recommendations might be public, actions might require auth
 ]
 
 // Routes that should not be accessed when authenticated (redirect to home)
@@ -35,15 +37,22 @@ const authRoutes = ['/auth/signin', '/auth/signup']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Always allow access to the home page
-  if (pathname === '/') {
-    return NextResponse.next()
+  // Always allow access to the home page, explore, recommendations, feed, stories (list views)
+  if (pathname === '/' || pathname.startsWith('/explore') || pathname.startsWith('/recommendations') || pathname.startsWith('/feed') || pathname.startsWith('/stories')) {
+    // Exception for specific sub-routes that DO require auth
+    if (pathname === '/feed/upload' || pathname === '/stories/new' || pathname.startsWith('/explore/routes/new')) {
+        // Fall through to protected route logic
+    } else {
+        return NextResponse.next();
+    }
   }
+
 
   // Check if the route requires authentication
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
-  )
+  ) || pathname === '/feed/upload' || pathname === '/stories/new' || pathname.startsWith('/explore/routes/new')
+
 
   // Check if it's an auth route (signin/signup)
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
@@ -55,7 +64,9 @@ export async function middleware(request: NextRequest) {
   if (isProtectedRoute) {
     if (!authToken) {
       // No token provided, redirect to signin
-      return NextResponse.redirect(new URL('/auth/signin', request.url))
+      const signInUrl = new URL('/auth/signin', request.url)
+      signInUrl.searchParams.set('redirect', pathname) // Add redirect query
+      return NextResponse.redirect(signInUrl)
     }
 
     try {
@@ -68,23 +79,27 @@ export async function middleware(request: NextRequest) {
 
       // Check if the token has the required fields
       if (!decoded.id || !decoded.email) {
-        return NextResponse.redirect(new URL('/auth/signin', request.url))
+        const signInUrl = new URL('/auth/signin', request.url)
+        signInUrl.searchParams.set('redirect', pathname)
+        const response = NextResponse.redirect(signInUrl)
+        response.cookies.delete('authToken') // Clear potentially malformed token
+        return response
       }
 
       // Token is valid, continue with the request
       return NextResponse.next()
-    } catch (error) {
+    } catch (error: any) {
       // Token is invalid or expired
-      if (error instanceof Error && error.message.includes('expired')) {
-        console.log('Token expired in middleware')
+      if (error.code === 'ERR_JWT_EXPIRED') {
+        console.log('Token expired in middleware for path:', pathname)
       } else {
-        console.log('Token validation error in middleware:', error)
+        console.log('Token validation error in middleware for path:', pathname, error.message)
       }
 
       // Clear the invalid token cookie and redirect to signin page
-      const response = NextResponse.redirect(
-        new URL('/auth/signin', request.url)
-      )
+      const signInUrl = new URL('/auth/signin', request.url)
+      signInUrl.searchParams.set('redirect', pathname)
+      const response = NextResponse.redirect(signInUrl)
       response.cookies.delete('authToken')
       return response
     }
@@ -103,7 +118,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/', request.url))
       }
     } catch (error) {
-      // Token is invalid, clear it and continue to auth page
+      // Token is invalid, clear it and allow access to auth page
       const response = NextResponse.next()
       response.cookies.delete('authToken')
       return response
@@ -122,8 +137,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder
+     * - public folder (logo.png etc.)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|logo.png).*)',
   ],
 }
