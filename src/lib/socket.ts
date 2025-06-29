@@ -1,99 +1,21 @@
-import { Server as NetServer } from 'http'
-import { Server as SocketIOServer } from 'socket.io'
-import { NextResponse } from 'next/server'
-import {
-  saveMessage,
-  getMessages,
-  markMessagesAsRead,
-} from '@/services/messages'
-import type { Message } from '@/lib/types'
 
-let io: SocketIOServer | null = null
+// This file is largely deprecated for server initialization as that logic has moved to src/app/api/socket/route.ts
+// It can be kept for shared types or client-side helper functions if needed in the future,
+// or removed if no longer used.
 
-export const initSocket = async (res: NextResponse) => {
-  if (!io) {
-    const httpServer = (res as any).socket?.server
-    if (!httpServer) {
-      throw new Error('Socket server not found')
-    }
+// Example of what might remain or be added here (e.g., client-side helper types if any)
+// export interface ClientSocketEventHandlers {
+//   onConnect?: () => void;
+//   onDisconnect?: (reason: string) => void;
+//   onConnectError?: (error: Error) => void;
+//   onReceiveMessage?: (message: Message) => void;
+//   // ... other client-side event handlers
+// }
 
-    io = new SocketIOServer(httpServer, {
-      path: '/api/socket',
-      addTrailingSlash: false,
-    })
+// No server-side initSocket function here anymore.
+// The Socket.IO server instance is now managed and attached directly within the
+// API route handler at /src/app/api/socket/route.ts
+// This is to better align with Next.js App Router patterns where direct HTTP server
+// access from a generic library function is less straightforward.
 
-    io.use((socket, next) => {
-      const userId = socket.handshake.auth.userId
-      if (!userId) {
-        return next(new Error('Authentication error'))
-      }
-      socket.data.userId = userId
-      next()
-    })
-
-    io.on('connection', (socket) => {
-      console.log('Client connected:', socket.id)
-
-      socket.on('join-room', async (roomId: string) => {
-        const userId = socket.data.userId
-        if (!userId) {
-          socket.emit('error', 'Authentication required')
-          return
-        }
-
-        socket.join(roomId)
-        console.log(`Socket ${socket.id} joined room ${roomId}`)
-
-        try {
-          // Load previous messages when joining a room
-          const messages = await getMessages(roomId)
-          socket.emit('load-messages', messages)
-
-          // Mark messages as read when joining a room
-          await markMessagesAsRead(roomId, userId)
-        } catch (error) {
-          console.error('Error loading messages:', error)
-          socket.emit('error', 'Failed to load messages')
-        }
-      })
-
-      socket.on('leave-room', (roomId: string) => {
-        socket.leave(roomId)
-        console.log(`Socket ${socket.id} left room ${roomId}`)
-      })
-
-      socket.on(
-        'send-message',
-        async (data: { roomId: string; message: Message }) => {
-          const userId = socket.data.userId
-          if (!userId) {
-            socket.emit('error', 'Authentication required')
-            return
-          }
-
-          try {
-            // Save message to database
-            const savedMessage = await saveMessage({
-              ...data.message,
-              roomId: data.roomId,
-              senderId: userId,
-              read: false,
-            })
-
-            // Broadcast message to all clients in the room
-            io?.to(data.roomId).emit('receive-message', savedMessage)
-          } catch (error) {
-            console.error('Error saving message:', error)
-            socket.emit('error', 'Failed to send message')
-          }
-        }
-      )
-
-      socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id)
-      })
-    })
-  }
-
-  return io
-}
+console.log("[Socket Lib] src/lib/socket.ts is now minimal. Server initialization is in /api/socket/route.ts");
