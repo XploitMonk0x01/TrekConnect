@@ -3,30 +3,8 @@ import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { WeatherInfo, Destination } from '@/lib/types'
 import { getDestinationById } from '@/services/destinations'
+import { getWeatherFromGemini } from '@/services/weather/weather.service'
 import DestinationDetailClientContent from './DestinationDetailClientContent'
-
-// Mock weather data - TODO: Replace with real API call
-const mockWeather: WeatherInfo = {
-  temperature: '10°C',
-  condition: 'Partly Cloudy',
-  iconCode: '02d',
-  forecast: [
-    {
-      date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-      minTemp: '5°C',
-      maxTemp: '12°C',
-      condition: 'Sunny',
-      iconCode: '01d',
-    },
-    {
-      date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-      minTemp: '3°C',
-      maxTemp: '10°C',
-      condition: 'Showers',
-      iconCode: '09d',
-    },
-  ],
-}
 
 export default async function DestinationDetailPage({
   params,
@@ -35,12 +13,22 @@ export default async function DestinationDetailPage({
 }) {
   let destination: Destination | null = null
   let error: string | null = null
+  let weatherInfo: WeatherInfo | null = null
+
   const destinationId = await Promise.resolve(params.destinationId)
 
   try {
     destination = await getDestinationById(destinationId)
+    if (destination?.coordinates?.lat && destination?.coordinates?.lng) {
+      // Use Gemini for weather
+      weatherInfo = await getWeatherFromGemini(
+        destination.name,
+        destination.coordinates.lat,
+        destination.coordinates.lng
+      )
+    }
   } catch (err) {
-    console.error('Error fetching destination:', err)
+    console.error('Error fetching destination or weather:', err)
     error = 'Failed to load destination details'
   }
 
@@ -60,10 +48,18 @@ export default async function DestinationDetailPage({
     )
   }
 
+  // Provide a fallback WeatherInfo if weatherInfo is null
+  const fallbackWeather: WeatherInfo = {
+    temperature: '--',
+    condition: 'Unavailable',
+    iconCode: '01d',
+    forecast: [],
+  }
+
   return (
     <DestinationDetailClientContent
       initialDestination={destination}
-      mockWeather={mockWeather}
+      mockWeather={weatherInfo || fallbackWeather}
     />
   )
 }

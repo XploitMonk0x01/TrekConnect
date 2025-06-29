@@ -52,11 +52,43 @@ type DestinationWithMedia = Destination & {
   isLoadingImage?: boolean
   fetchedImageUrl?: string
   isLoadingYouTubeVideoId?: boolean
-  youtubeVideoId?: string | null
+  youtubeVideoId: string | null
+  weather?: any
+  isLoadingWeather?: boolean
+  weatherError?: string | null
 }
 
-// Cache for storing image URLs
-const imageCache = new Map<string, string>()
+// Cache key for localStorage
+const IMAGE_CACHE_STORAGE_KEY = 'trekconnect_image_cache'
+
+// Helper to get cache from localStorage
+function getCache(): Map<string, string> {
+  if (typeof window === 'undefined') return new Map() // Server-side check
+  try {
+    const cachedData = localStorage.getItem(IMAGE_CACHE_STORAGE_KEY)
+    return cachedData ? new Map(JSON.parse(cachedData)) : new Map()
+  } catch (e) {
+    console.error('Failed to read image cache from localStorage:', e)
+    return new Map()
+  }
+}
+
+// Helper to set cache in localStorage
+function setCache(cache: Map<string, string>): void {
+  if (typeof window === 'undefined') return // Server-side check
+  try {
+    localStorage.setItem(
+      IMAGE_CACHE_STORAGE_KEY,
+      JSON.stringify(Array.from(cache.entries()))
+    )
+  } catch (e) {
+    console.error('Failed to write image cache to localStorage:', e)
+    // Handle potential QuotaExceededError if necessary
+  }
+}
+
+// Initialize cache from localStorage
+let imageCache = getCache()
 
 export default function ExploreClientComponent({
   initialDestinations,
@@ -76,6 +108,9 @@ export default function ExploreClientComponent({
       fetchedImageUrl: d.imageUrl,
       isLoadingYouTubeVideoId: true,
       youtubeVideoId: null,
+      isLoadingWeather: true,
+      weather: null,
+      weatherError: null,
     }))
   )
   const [searchQuery, setSearchQuery] = useState('')
@@ -121,69 +156,126 @@ export default function ExploreClientComponent({
   }, [destinations, searchQuery, aiFilteredDestinationIds])
 
   useEffect(() => {
+    let isComponentMounted = true
+    const abortController = new AbortController()
+
     const fetchMediaForAllDestinations = async () => {
-      const mediaPromises = initialDestinations.map(async (dest) => {
-        let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400)
-        let isLoadingImg = true
-        const imageQuery = dest.aiHint || dest.name
-        try {
-          pexelsImageUrl = await searchPexelsImage(imageQuery, 600, 400)
-        } catch (error) {
-          console.error(`Failed to load Pexels image for ${dest.name}:`, error)
-        } finally {
-          isLoadingImg = false
+      const mediaPromises = (initialDestinations as Destination[]).map(
+        async (dest: Destination) => {
+          if (!isComponentMounted) return null
+
+          let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400)
+          let isLoadingImg = true
+          const imageQuery = dest.aiHint || dest.name
+
+          // Check image cache first
+          if (imageCache.has(imageQuery)) {
+            pexelsImageUrl = imageCache.get(imageQuery)!
+            isLoadingImg = false
+          } else {
+            try {
+              pexelsImageUrl = await searchPexelsImage(imageQuery, {
+                width: 600,
+                height: 400,
+                signal: abortController.signal,
+              })
+              if (isComponentMounted) {
+                imageCache.set(imageQuery, pexelsImageUrl)
+                setCache(imageCache) // Save to localStorage
+              }
+            } catch (error) {
+              if ((error as { name?: string }).name === 'AbortError')
+                return null
+              console.error(
+                `Failed to load Pexels image for ${dest.name}:`,
+                error
+              )
+              if (isComponentMounted) {
+                toast({
+                  title: 'Image Load Error',
+                  description: `Failed to load image for ${dest.name}. Using placeholder instead.`,
+                  variant: 'destructive',
+                })
+              }
+            } finally {
+              isLoadingImg = false
+            }
+          }
+
+          if (!isComponentMounted) return null
+
+          let fetchedYoutubeVideoId: string | null = null
+          let isLoadingYTVideoId = true
+          const youtubeQuery =
+            dest.aiHint || `${dest.name} ${dest.region || dest.country || ''}`
+          try {
+            fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery)
+            if (!fetchedYoutubeVideoId) {
+              throw new Error('No video ID returned')
+            }
+          } catch (error) {
+            if ((error as { name?: string }).name === 'AbortError') return null
+            console.error(
+              `Failed to load YouTube video ID for ${dest.name} (query: ${youtubeQuery}):`,
+              error
+            )
+            if (isComponentMounted) {
+              toast({
+                title: 'Video Load Error',
+                description: `Failed to load video for ${dest.name}. Try again later.`,
+                variant: 'destructive',
+              })
+            }
+          } finally {
+            isLoadingYTVideoId = false
+          }
+
+          if (!isComponentMounted) return null
+
+          return {
+            ...dest,
+            fetchedImageUrl: pexelsImageUrl,
+            isLoadingImage: isLoadingImg,
+            youtubeVideoId: fetchedYoutubeVideoId,
+            isLoadingYouTubeVideoId: isLoadingYTVideoId,
+            // weather,
+            // isLoadingWeather,
+            // weatherError,
+          }
         }
-
-        let fetchedYoutubeVideoId: string | null = null
-        let isLoadingYTVideoId = true
-        const youtubeQuery =
-          dest.aiHint || `${dest.name} ${dest.region || dest.country || ''}`
-        try {
-          fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery)
-          console.log(
-            `Explore Page - YouTube fetch for "${youtubeQuery}": ID = ${fetchedYoutubeVideoId}`
-          )
-        } catch (error) {
-          console.error(
-            `Failed to load YouTube video ID for ${dest.name} (query: ${youtubeQuery}):`,
-            error
-          )
-        } finally {
-          isLoadingYTVideoId = false
-        }
-
-        return {
-          ...dest,
-          fetchedImageUrl: pexelsImageUrl,
-          isLoadingImage: isLoadingImg,
-          youtubeVideoId: fetchedYoutubeVideoId,
-          isLoadingYouTubeVideoId: isLoadingYTVideoId,
-        }
-      })
-
-      const destinationsWithFetchedMedia = await Promise.all(mediaPromises)
-      setDestinations(destinationsWithFetchedMedia)
-
-      const firstDestinationWithCoords = initialDestinations.find(
-        (d) => d.coordinates?.lat && d.coordinates?.lng
       )
-      if (
-        firstDestinationWithCoords &&
-        firstDestinationWithCoords.coordinates
-      ) {
-        const { lat, lng } = firstDestinationWithCoords.coordinates
-        const zoomLevel = 0.5
-        setMapUrl(
-          `https://www.openstreetmap.org/export/embed.html?bbox=${
-            lng - zoomLevel
-          }%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${
-            lat + zoomLevel
-          }&layer=mapnik&marker=${lat}%2C${lng}`
+
+      try {
+        const destinationsWithFetchedMedia = (
+          await Promise.all(mediaPromises)
+        ).filter(Boolean) as DestinationWithMedia[]
+        if (isComponentMounted) {
+          setDestinations(destinationsWithFetchedMedia)
+        }
+
+        const firstDestinationWithCoords = initialDestinations.find(
+          (d) => d.coordinates?.lat && d.coordinates?.lng
         )
-      } else {
-        setMapUrl(
-          `https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`
-        )
+        if (
+          firstDestinationWithCoords &&
+          firstDestinationWithCoords.coordinates
+        ) {
+          const { lat, lng } = firstDestinationWithCoords.coordinates
+          const zoomLevel = 0.5
+          setMapUrl(
+            `https://www.openstreetmap.org/export/embed.html?bbox=${
+              lng - zoomLevel
+            }%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${
+              lat + zoomLevel
+            }&layer=mapnik&marker=${lat}%2C${lng}`
+          )
+        } else {
+          setMapUrl(
+            `https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`
+          )
+        }
+      } catch (error) {
+        console.error('Error in fetchMediaForAllDestinations:', error)
       }
     }
 
@@ -195,8 +287,14 @@ export default function ExploreClientComponent({
         `https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`
       )
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialDestinations])
+
+    return () => {
+      isComponentMounted = false
+      abortController.abort()
+    }
+    // We include toast in the dependency array as it's used in the effect
+    // Add explicit type annotation for initialDestinations in the dependency array
+  }, [initialDestinations as Destination[], toast])
 
   const handleApplyAIFilter = async () => {
     if (!aiFilterQuery.trim()) {
@@ -541,6 +639,27 @@ export default function ExploreClientComponent({
                 <CardDescription className="text-sm line-clamp-3">
                   {destination.description}
                 </CardDescription>
+                {destination.isLoadingWeather ? (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Loading weather...
+                  </div>
+                ) : destination.weatherError ? (
+                  <div className="text-xs text-destructive mt-1">
+                    Weather unavailable
+                  </div>
+                ) : destination.weather ? (
+                  <div className="text-xs text-blue-700 mt-1">
+                    Weather:{' '}
+                    {destination.weather.summary ||
+                    destination.weather.description
+                      ? destination.weather.summary ||
+                        destination.weather.description
+                      : ''}{' '}
+                    {destination.weather.temp
+                      ? `| ${destination.weather.temp}°C`
+                      : ''}
+                  </div>
+                ) : null}
               </CardContent>
               <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
                 <div className="flex items-center col-span-1">
