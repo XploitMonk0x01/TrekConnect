@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server'
 import { getDb } from '../../../../lib/mongodb'
 import { ObjectId } from 'mongodb'
@@ -52,10 +53,10 @@ function validateUpdatePayload(updates: any): updates is UpdateUserBody {
 
 export async function GET(
   request: Request,
-  { params }: { params: { userId: string } }
+  context: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
+    const { userId } = context.params
     if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
@@ -85,10 +86,10 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { userId: string } }
+  context: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
+    const { userId } = context.params
     if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
@@ -152,10 +153,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { userId: string } }
+  context: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
+    const { userId } = context.params
     if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
