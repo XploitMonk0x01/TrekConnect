@@ -7,7 +7,7 @@ import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { ObjectId } from 'mongodb'
 
 // Define MongoDB document structure for Photo
-interface PhotoDocument {
+export interface PhotoDocument {
   _id: ObjectId // Use ObjectId for new photos
   userId: string // MongoDB user _id of the uploader
   userName: string

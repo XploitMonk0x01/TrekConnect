@@ -6,7 +6,7 @@ import { getDestinationById } from '@/services/destinations'
 import { getWeatherFromGemini } from '@/services/weather/weather.service'
 import DestinationDetailClientContent from './DestinationDetailClientContent'
 
-export default async function DestinationDetailPage({
+export default function DestinationDetailPage({
   params,
 }: {
   params: { destinationId: string }
@@ -15,13 +15,13 @@ export default async function DestinationDetailPage({
   let error: string | null = null
   let weatherInfo: WeatherInfo | null = null
 
-  const destinationId = await Promise.resolve(params.destinationId)
+  const destinationId = params.destinationId
 
   try {
-    destination = await getDestinationById(destinationId)
+    destination = getDestinationById(destinationId)
     if (destination?.coordinates?.lat && destination?.coordinates?.lng) {
       // Use Gemini for weather
-      weatherInfo = await getWeatherFromGemini(
+      weatherInfo = getWeatherFromGemini(
         destination.name,
         destination.coordinates.lat,
         destination.coordinates.lng

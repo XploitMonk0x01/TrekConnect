@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from 'next/link'
@@ -26,25 +25,32 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
-import { useCustomAuth } from '@/contexts/CustomAuthContext';
-import { useEffect, useState } from 'react';
-import type { Destination } from '@/lib/types';
-import { getAllDestinations } from '@/services/destinations'; // Service to fetch all destinations
+import { useCustomAuth } from '@/contexts/CustomAuthContext'
+import { useEffect, useState } from 'react'
+import type { Destination } from '@/lib/types'
+import { getAllDestinations } from '@/services/destinations' // Service to fetch all destinations
 
 interface DestinationNameCardProps {
-  name: string;
-  destinationId?: string; // Make destinationId optional
+  name: string
+  destinationId?: string // Make destinationId optional
 }
 
-function DestinationNameCard({ name, destinationId }: DestinationNameCardProps) {
+function DestinationNameCard({
+  name,
+  destinationId,
+}: DestinationNameCardProps) {
   const cardContent = (
     <div className="flex items-center">
       <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-      <p className={`text-sm font-medium truncate ${destinationId ? 'hover:text-primary' : ''}`}>
+      <p
+        className={`text-sm font-medium truncate ${
+          destinationId ? 'hover:text-primary' : ''
+        }`}
+      >
         {name}
       </p>
     </div>
-  );
+  )
 
   if (destinationId) {
     return (
@@ -53,48 +59,51 @@ function DestinationNameCard({ name, destinationId }: DestinationNameCardProps) 
           {cardContent}
         </Card>
       </Link>
-    );
+    )
   }
 
   return (
-    <Card className="p-3 opacity-70"> {/* Non-clickable or visually distinct */}
+    <Card className="p-3 opacity-70">
+      {' '}
+      {/* Non-clickable or visually distinct */}
       {cardContent}
     </Card>
-  );
+  )
 }
 
-
 export default function ProfilePage() {
-  const { user: currentUser, isLoading: authIsLoading } = useCustomAuth();
-  const [allDestinations, setAllDestinations] = useState<Destination[]>([]);
-  const [isLoadingDestinations, setIsLoadingDestinations] = useState(true);
-  const [destinationNameToIdMap, setDestinationNameToIdMap] = useState<Map<string, string>>(new Map());
+  const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
+  const [allDestinations, setAllDestinations] = useState<Destination[]>([])
+  const [isLoadingDestinations, setIsLoadingDestinations] = useState(true)
+  const [destinationNameToIdMap, setDestinationNameToIdMap] = useState<
+    Map<string, string>
+  >(new Map())
 
   useEffect(() => {
     async function fetchDestinations() {
-      if (currentUser) { // Only fetch if user is loaded, as wishlist/history depends on it
-        setIsLoadingDestinations(true);
+      if (currentUser) {
+        // Only fetch if user is loaded, as wishlist/history depends on it
+        setIsLoadingDestinations(true)
         try {
-          const destinations = await getAllDestinations();
-          setAllDestinations(destinations);
-          const nameToIdMap = new Map<string, string>();
-          destinations.forEach(dest => {
-            nameToIdMap.set(dest.name, dest.id);
-          });
-          setDestinationNameToIdMap(nameToIdMap);
+          const destinations = await getAllDestinations()
+          setAllDestinations(destinations)
+          const nameToIdMap = new Map<string, string>()
+          destinations.forEach((dest) => {
+            nameToIdMap.set(dest.name, dest.id)
+          })
+          setDestinationNameToIdMap(nameToIdMap)
         } catch (error) {
-          console.error("Failed to fetch destinations for profile page:", error);
+          console.error('Failed to fetch destinations for profile page:', error)
           // Optionally set an error state here
         } finally {
-          setIsLoadingDestinations(false);
+          setIsLoadingDestinations(false)
         }
       } else if (!authIsLoading && !currentUser) {
-        setIsLoadingDestinations(false); // No user, no need to load destinations
+        setIsLoadingDestinations(false) // No user, no need to load destinations
       }
     }
-    fetchDestinations();
-  }, [currentUser, authIsLoading]);
-
+    fetchDestinations()
+  }, [currentUser, authIsLoading])
 
   if (authIsLoading || (currentUser && isLoadingDestinations)) {
     return (
@@ -102,7 +111,7 @@ export default function ProfilePage() {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2">Loading Profile...</span>
       </div>
-    );
+    )
   }
 
   if (!currentUser && !authIsLoading) {
@@ -117,27 +126,42 @@ export default function ProfilePage() {
           <Link href="/auth/signin?redirect=/profile">Sign In</Link>
         </Button>
       </div>
-    );
+    )
   }
-  
-  const getAvatarFallback = (name?: string | null, email?: string | null): string => {
-    if (name) return name.charAt(0).toUpperCase();
-    if (email) return email.charAt(0).toUpperCase();
-    return 'U';
-  };
 
-  const travelPreferencesParts: string[] = [];
-  if (currentUser.travelPreferences?.soloOrGroup) {
-    travelPreferencesParts.push(currentUser.travelPreferences.soloOrGroup);
+  const getAvatarFallback = (
+    name?: string | null,
+    email?: string | null
+  ): string => {
+    if (name) return name.charAt(0).toUpperCase()
+    if (email) return email.charAt(0).toUpperCase()
+    return 'U'
   }
-  if (currentUser.travelPreferences?.budget) {
-    travelPreferencesParts.push(currentUser.travelPreferences.budget);
-  }
-  if (currentUser.travelPreferences?.style) {
-    travelPreferencesParts.push(currentUser.travelPreferences.style);
-  }
-  const travelPreferencesText = travelPreferencesParts.length > 0 ? travelPreferencesParts.join(', ') : 'Not specified';
 
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-xl text-red-500">
+          Access Denied: User not found or not logged in.
+        </p>
+      </div>
+    )
+  }
+
+  const travelPreferencesParts: string[] = []
+  if (currentUser?.travelPreferences?.soloOrGroup) {
+    travelPreferencesParts.push(currentUser.travelPreferences.soloOrGroup)
+  }
+  if (currentUser?.travelPreferences?.budget) {
+    travelPreferencesParts.push(currentUser.travelPreferences.budget)
+  }
+  if (currentUser?.travelPreferences?.style) {
+    travelPreferencesParts.push(currentUser.travelPreferences.style)
+  }
+  const travelPreferencesText =
+    travelPreferencesParts.length > 0
+      ? travelPreferencesParts.join(', ')
+      : 'Not specified'
 
   return (
     <div className="space-y-8">
@@ -147,9 +171,16 @@ export default function ProfilePage() {
             <AvatarImage
               src={currentUser.photoUrl || PLACEHOLDER_IMAGE_URL(128, 128)}
               alt={currentUser.name || 'User'}
-              data-ai-hint={`person portrait ${currentUser.name?.split(' ')[0] || 'user'}`}
+              data-ai-hint={`person portrait ${
+                currentUser.name?.split(' ')[0] || 'user'
+              }`}
               className="object-cover"
-              onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(128,128); }}
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
+                  128,
+                  128
+                )
+              }}
             />
             <AvatarFallback className="text-4xl">
               {getAvatarFallback(currentUser.name, currentUser.email)}
@@ -174,7 +205,12 @@ export default function ProfilePage() {
             <p className="mt-3 text-foreground/80 max-w-prose mx-auto md:mx-0">
               {currentUser.bio || 'No bio yet. Tell us about your adventures!'}
             </p>
-             <p className="text-xs text-muted-foreground mt-1">Joined: {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'N/A'}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Joined:{' '}
+              {currentUser.createdAt
+                ? new Date(currentUser.createdAt).toLocaleDateString()
+                : 'N/A'}
+            </p>
           </div>
         </CardHeader>
         <CardContent className="pt-2 pb-6 px-6">
@@ -188,13 +224,18 @@ export default function ProfilePage() {
             <div className="flex items-center p-3 bg-background rounded-lg border">
               <Languages className="h-5 w-5 mr-3 text-primary" />
               <div>
-                <strong>Languages:</strong> {currentUser.languagesSpoken && currentUser.languagesSpoken.length > 0 ? currentUser.languagesSpoken.join(', ') : 'N/A'}
+                <strong>Languages:</strong>{' '}
+                {currentUser.languagesSpoken &&
+                currentUser.languagesSpoken.length > 0
+                  ? currentUser.languagesSpoken.join(', ')
+                  : 'N/A'}
               </div>
             </div>
             <div className="flex items-center p-3 bg-background rounded-lg border">
               <Mountain className="h-5 w-5 mr-3 text-primary" />
               <div>
-                <strong>Trekking:</strong> {currentUser.trekkingExperience || 'N/A'}
+                <strong>Trekking:</strong>{' '}
+                {currentUser.trekkingExperience || 'N/A'}
               </div>
             </div>
           </div>
@@ -206,8 +247,13 @@ export default function ProfilePage() {
               </h3>
               <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                 {currentUser.badges.map((badge) => (
-                  <Badge key={badge.id} variant="secondary" className="py-1 px-3 text-sm shadow-sm" >
-                    <StarIcon className="h-4 w-4 mr-1.5 text-yellow-500" /> {badge.name}
+                  <Badge
+                    key={badge.id}
+                    variant="secondary"
+                    className="py-1 px-3 text-sm shadow-sm"
+                  >
+                    <StarIcon className="h-4 w-4 mr-1.5 text-yellow-500" />{' '}
+                    {badge.name}
                   </Badge>
                 ))}
               </div>
@@ -231,19 +277,38 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">My Wishlist</CardTitle>
-              <CardDescription>Destinations I dream of visiting.</CardDescription>
+              <CardDescription>
+                Destinations I dream of visiting.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingDestinations ? <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" /> :
-              (currentUser.wishlistDestinations || []).length > 0 ? (
+              {isLoadingDestinations ? (
+                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+              ) : (currentUser.wishlistDestinations || []).length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {(currentUser.wishlistDestinations || []).map((destName, index) => {
-                    const destId = destinationNameToIdMap.get(destName);
-                    return <DestinationNameCard key={`wishlist-${index}-${destId || destName}`} name={destName} destinationId={destId} />;
-                  })}
+                  {(currentUser.wishlistDestinations || []).map(
+                    (destName, index) => {
+                      const destId = destinationNameToIdMap.get(destName)
+                      return (
+                        <DestinationNameCard
+                          key={`wishlist-${index}-${destId || destName}`}
+                          name={destName}
+                          destinationId={destId}
+                        />
+                      )
+                    }
+                  )}
                 </div>
               ) : (
-                <p className="text-muted-foreground">Your wishlist is empty. <Link href="/explore" className="text-primary hover:underline">Start exploring!</Link></p>
+                <p className="text-muted-foreground">
+                  Your wishlist is empty.{' '}
+                  <Link
+                    href="/explore"
+                    className="text-primary hover:underline"
+                  >
+                    Start exploring!
+                  </Link>
+                </p>
               )}
             </CardContent>
           </Card>
@@ -252,25 +317,35 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">My Travel History</CardTitle>
-              <CardDescription>Places I've explored and conquered.</CardDescription>
+              <CardDescription>
+                Places I've explored and conquered.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingDestinations ? <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" /> :
-              (currentUser.travelHistory || []).length > 0 ? (
+              {isLoadingDestinations ? (
+                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+              ) : (currentUser.travelHistory || []).length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                   {(currentUser.travelHistory || []).map((destName, index) => {
-                    const destId = destinationNameToIdMap.get(destName);
-                    return <DestinationNameCard key={`history-${index}-${destId || destName}`} name={destName} destinationId={destId} />;
+                  {(currentUser.travelHistory || []).map((destName, index) => {
+                    const destId = destinationNameToIdMap.get(destName)
+                    return (
+                      <DestinationNameCard
+                        key={`history-${index}-${destId || destName}`}
+                        name={destName}
+                        destinationId={destId}
+                      />
+                    )
                   })}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No travel history yet. Time to make some memories!</p>
+                <p className="text-muted-foreground">
+                  No travel history yet. Time to make some memories!
+                </p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }
-    

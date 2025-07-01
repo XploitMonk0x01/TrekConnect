@@ -1,40 +1,79 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
+import { getDb } from '../../../../lib/mongodb'
 import { ObjectId } from 'mongodb'
-import { verify } from 'jsonwebtoken' // For token validation
+import { verify } from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET
 
 interface JwtPayload {
   id: string
-  // other fields if present in your JWT
+}
+
+interface UserDocument {
+  _id: ObjectId
+  email: string
+  password: string
+  createdAt: Date
+  updatedAt?: Date
+  lastLoginAt?: Date
+}
+
+interface UpdateUserBody {
+  name?: string
+  bio?: string
+  avatar?: string
+  [key: string]: any
+}
+
+function validateUpdatePayload(updates: any): updates is UpdateUserBody {
+  if (typeof updates !== 'object' || updates === null) {
+    return false
+  }
+
+  const forbiddenFields = [
+    '_id',
+    'email',
+    'password',
+    'createdAt',
+    'lastLoginAt',
+  ]
+
+  for (const field of Object.keys(updates)) {
+    if (forbiddenFields.includes(field)) {
+      return false
+    }
+    if (updates[field] === undefined || updates[field] === null) {
+      return false
+    }
+  }
+
+  return true
 }
 
 export async function GET(
   request: Request,
-  context: { params: { userId: string } }
+  { params }: { params: { userId: string } }
 ) {
   try {
-    const { userId } = context.params
+    const { userId } = params
     if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
         { status: 400 }
       )
     }
-    const db = await getDb()
-    const usersCollection = db.collection('users')
 
-    const user = await usersCollection.findOne({ _id: new ObjectId(userId) })
+    const db = await getDb()
+    const user = await db.collection<UserDocument>('users').findOne({
+      _id: new ObjectId(userId),
+    })
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Remove sensitive data
-    const { password, ...userWithoutPassword } = user
-
-    return NextResponse.json(userWithoutPassword)
+    const { password, ...safeUser } = user
+    return NextResponse.json(safeUser)
   } catch (error) {
     console.error('Error fetching user:', error)
     return NextResponse.json(
@@ -46,81 +85,66 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  context: { params: { userId: string } }
+  { params }: { params: { userId: string } }
 ) {
-  if (!JWT_SECRET) {
-    console.error('JWT_SECRET not configured for PATCH /api/users/[userId]')
-    return NextResponse.json(
-      { error: 'Authentication configuration error' },
-      { status: 500 }
-    )
-  }
   try {
-    const token = request.headers.get('Authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized: No token provided' },
-        { status: 401 }
-      )
-    }
-
-    let decoded: JwtPayload
-    try {
-      decoded = verify(token, JWT_SECRET) as JwtPayload
-    } catch (err) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    const { userId: requestUserId } = context.params
-    if (decoded.id !== requestUserId) {
-      return NextResponse.json(
-        { error: 'Forbidden: You can only update your own profile' },
-        { status: 403 }
-      )
-    }
-
-    if (!ObjectId.isValid(requestUserId)) {
+    const { userId } = params
+    if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
         { status: 400 }
       )
     }
 
-    const updates = await request.json()
-
-    // Don't allow updating sensitive fields directly or critical identifiers
-    const { password, email, _id, createdAt, lastLoginAt, ...allowedUpdates } =
-      updates
-
-    const db = await getDb()
-    const usersCollection = db.collection('users')
-
-    const result = await usersCollection.findOneAndUpdate(
-      { _id: new ObjectId(requestUserId) },
-      {
-        $set: {
-          ...allowedUpdates,
-          updatedAt: new Date(),
-        },
-      },
-      { returnDocument: 'after', projection: { password: 0 } } // Exclude password
-    )
-
-    if (!result) {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'User not found or update failed' },
-        { status: 404 }
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
       )
     }
 
-    return NextResponse.json(result) // result is already userWithoutPassword due to projection
+    const token = authHeader.split(' ')[1]
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET is not configured')
+    }
+
+    const decoded = verify(token, JWT_SECRET) as JwtPayload
+    if (decoded.id !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized to update this user' },
+        { status: 403 }
+      )
+    }
+
+    const updates = await request.json()
+    if (!validateUpdatePayload(updates)) {
+      return NextResponse.json(
+        { error: 'Invalid update payload' },
+        { status: 400 }
+      )
+    }
+
+    const db = await getDb()
+    const result = await db.collection<UserDocument>('users').updateOne(
+      { _id: new ObjectId(userId) },
+      {
+        $set: {
+          ...updates,
+          updatedAt: new Date(),
+        },
+      }
+    )
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, updated: updates })
   } catch (error) {
     console.error('Error updating user:', error)
     return NextResponse.json(
-      { error: 'Internal server error during user update' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -128,96 +152,52 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  context: { params: { userId: string } }
+  { params }: { params: { userId: string } }
 ) {
-  if (!JWT_SECRET) {
-    console.error('JWT_SECRET not configured for DELETE /api/users/[userId]')
-    return NextResponse.json(
-      { error: 'Authentication configuration error' },
-      { status: 500 }
-    )
-  }
-
-  // Placeholder for DELETE functionality
-  // TODO: Implement proper user deletion logic
-  // 1. Verify JWT token to ensure the user is authorized to delete this account (usually only themselves).
-  // 2. Delete user from MongoDB.
-  // 3. Consider implications: what happens to their content (stories, photos)? Cascade delete or anonymize?
-
   try {
-    const token = request.headers.get('Authorization')?.split(' ')[1]
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized: No token provided' },
-        { status: 401 }
-      )
-    }
-
-    let decoded: JwtPayload
-    try {
-      decoded = verify(token, JWT_SECRET) as JwtPayload
-    } catch (err) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Invalid token' },
-        { status: 401 }
-      )
-    }
-
-    const { userId: userIdToDelete } = context.params
-
-    if (decoded.id !== userIdToDelete) {
-      return NextResponse.json(
-        { error: 'Forbidden: You can only delete your own account' },
-        { status: 403 }
-      )
-    }
-
-    if (!ObjectId.isValid(userIdToDelete)) {
+    const { userId } = params
+    if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
         { status: 400 }
       )
     }
 
-    //
-    // Actual deletion logic needs to be implemented here
-    // For example:
-    // const db = await getDb();
-    // const usersCollection = db.collection('users');
-    // const deleteResult = await usersCollection.deleteOne({ _id: new ObjectId(userIdToDelete) });
-    // if (deleteResult.deletedCount === 0) {
-    //   return NextResponse.json({ error: 'User not found or already deleted' }, { status: 404 });
-    // }
-    // Also, consider deleting related content (photos, stories, etc.) or anonymizing it.
-    //
-
-    // For now, returning a "Not Implemented" or a success to allow frontend testing
-    // console.warn(`DELETE /api/users/${userIdToDelete} - Backend not fully implemented.`);
-    // return NextResponse.json({ message: `Account deletion for user ${userIdToDelete} initiated (backend not fully implemented).` }, { status: 501 });
-
-    const db = await getDb()
-    const usersCollection = db.collection('users')
-    const deleteResult = await usersCollection.deleteOne({
-      _id: new ObjectId(userIdToDelete),
-    })
-
-    if (deleteResult.deletedCount === 0) {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'User not found or could not be deleted' },
-        { status: 404 }
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
       )
     }
 
-    // Optionally: Invalidate user's sessions/tokens if you have a session store
+    const token = authHeader.split(' ')[1]
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET is not configured')
+    }
 
-    return NextResponse.json(
-      { message: 'Account deleted successfully' },
-      { status: 200 }
-    )
+    const decoded = verify(token, JWT_SECRET) as JwtPayload
+    if (decoded.id !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized to delete this user' },
+        { status: 403 }
+      )
+    }
+
+    const db = await getDb()
+    const result = await db.collection<UserDocument>('users').deleteOne({
+      _id: new ObjectId(userId),
+    })
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting user account:', error)
+    console.error('Error deleting user:', error)
     return NextResponse.json(
-      { error: 'Internal server error during account deletion.' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

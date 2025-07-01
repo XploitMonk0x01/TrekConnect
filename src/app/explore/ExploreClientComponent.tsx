@@ -174,11 +174,12 @@ export default function ExploreClientComponent({
             isLoadingImg = false
           } else {
             try {
-              pexelsImageUrl = await searchPexelsImage(imageQuery, {
-                width: 600,
-                height: 400,
-                signal: abortController.signal,
-              })
+              pexelsImageUrl = await searchPexelsImage(
+                imageQuery,
+                600,
+                400,
+                abortController.signal
+              )
               if (isComponentMounted) {
                 imageCache.set(imageQuery, pexelsImageUrl)
                 setCache(imageCache) // Save to localStorage

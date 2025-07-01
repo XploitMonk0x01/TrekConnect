@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
-import { ObjectId } from 'mongodb'
+import { ObjectId, GridFSBucket } from 'mongodb'
 import type { PhotoDocument } from '@/services/photos'
 
 export async function POST(request: Request) {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     // Store the image in MongoDB GridFS
     const db = await getDb()
-    const bucket = new db.mongo.GridFSBucket(db)
+    const bucket = new GridFSBucket(db)
 
     const uploadStream = bucket.openUploadStream(file.name, {
       metadata: {

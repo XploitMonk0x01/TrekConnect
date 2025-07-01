@@ -37,8 +37,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function ConnectSpherePage() {
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
-  const { socket, messages, sendMessage, joinRoom, leaveRoom } =
-    useChat()
+  const { socket, messages, sendMessage, joinRoom, leaveRoom } = useChat()
   const { toast } = useToast()
   const router = useRouter()
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -68,7 +67,7 @@ export default function ConnectSpherePage() {
     setIsSendingMessage(true)
     try {
       const roomId = `chat_${currentUser.id}_${selectedChat.id}`
-      await sendMessage(roomId, messageInput.trim())
+      await sendMessage(roomId, messageInput.trim(), selectedChat.id)
       setMessageInput('')
     } catch (error) {
       console.error('Failed to send message:', error)
