@@ -2,9 +2,10 @@
   "rules": {
     "users": {
       "$uid": {
-        // Any authenticated user can read public profile data.
-        ".read": "auth != null",
-        // Only the owner of the profile can write to it.
+        // Public profile data is readable by anyone, which is necessary
+        // for features like the ConnectSphere and resolving profile info.
+        ".read": true,
+        // Only the authenticated owner of the profile can write to it.
         ".write": "auth != null && auth.uid === $uid"
       }
     },
