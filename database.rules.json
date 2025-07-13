@@ -1,0 +1,31 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        // Any authenticated user can read public profile data.
+        ".read": "auth != null",
+        // Only the owner of the profile can write to it.
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "messages": {
+      "$roomId": {
+        // Users can only read/write messages in rooms they are a part of.
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('chatRooms').hasChild($roomId) || data.child('senderId').val() === auth.uid)",
+        ".write": "auth != null && (!data.exists() || data.child('senderId').val() === auth.uid)"
+      }
+    },
+    "photos": {
+      "$photoId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+      }
+    },
+    "stories": {
+      "$storyId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+      }
+    }
+  }
+}

@@ -76,6 +76,7 @@ export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
   useEffect(() => {
     setIsLoading(true);
     const unsubscribe = onAuthChange(handleAuthChange);
+ validateSession(); // Call validateSession on initial mount
     return () => {
       unsubscribe();
     };
