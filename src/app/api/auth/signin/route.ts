@@ -1,113 +1,49 @@
-import { compare } from 'bcryptjs'
-import { SignJWT } from 'jose'
-import { NextResponse } from 'next/server'
-import type { UserProfile } from '@/lib/types' // Assuming UserProfile is adapted
-import { ObjectId } from 'mongodb'
 
-const JWT_SECRET = process.env.JWT_SECRET
+import {NextRequest, NextResponse} from 'next/server';
+import {signIn} from '@/lib/auth'; // Firebase sign-in from lib/auth
+import {FirebaseError} from 'firebase/app';
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET is not defined in the environment variables')
-}
-
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await req.json()
+    const {email, password} = await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Missing required fields: email and password' },
-        { status: 400 }
-      )
+        {error: 'Email and password are required.'},
+        {status: 400}
+      );
     }
 
-    const db = await getDb()
-    const usersCollection = db.collection('users')
+    const user = await signIn(email, password);
 
-    const userDoc = await usersCollection.findOne({ email })
-    if (!userDoc) {
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    const isValidPassword = await compare(password, userDoc.password)
-    if (!isValidPassword) {
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    // Update lastLoginAt - use a simpler approach to avoid validation issues
-    try {
-      await usersCollection.updateOne(
-        { _id: userDoc._id },
-        { $set: { lastLoginAt: new Date() } }
-      )
-    } catch (error) {
-      console.log(
-        'Failed to update lastLoginAt, continuing with signin:',
-        error
-      )
-      // Continue with signin even if update fails
-    }
-
-    const effectiveUserDoc = userDoc
-
-    const token = await new SignJWT({
-      id: effectiveUserDoc._id.toString(),
-      email: effectiveUserDoc.email,
-      name: effectiveUserDoc.name,
-    })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('7d')
-      .sign(new TextEncoder().encode(JWT_SECRET))
-
-    // Prepare user object for response (excluding password)
-    const { password: _, ...userSafeForResponse } = effectiveUserDoc
-
-    const userForResponse: UserProfile = {
-      id: effectiveUserDoc._id.toString(),
-      email: userSafeForResponse.email,
-      name: userSafeForResponse.name,
-      photoUrl: userSafeForResponse.photoUrl || null,
-      age: userSafeForResponse.age,
-      gender: userSafeForResponse.gender,
-      bio: userSafeForResponse.bio,
-      travelPreferences: userSafeForResponse.travelPreferences || {},
-      languagesSpoken: userSafeForResponse.languagesSpoken || [],
-      trekkingExperience: userSafeForResponse.trekkingExperience,
-      wishlistDestinations: userSafeForResponse.wishlistDestinations || [],
-      travelHistory: userSafeForResponse.travelHistory || [],
-      plannedTrips: userSafeForResponse.plannedTrips || [],
-      badges: userSafeForResponse.badges || [],
-      createdAt: userSafeForResponse.createdAt,
-      updatedAt: userSafeForResponse.updatedAt,
-      lastLoginAt: userSafeForResponse.lastLoginAt,
-    }
-
+    // On successful sign-in, prepare a response to set the session cookie
     const response = NextResponse.json({
-      user: userForResponse,
-      token,
-    })
+      id: user.uid,
+      email: user.email,
+      name: user.displayName,
+    });
 
-    response.cookies.set('authToken', token, {
+    // Set a cookie to indicate the user is logged in.
+    // This is a simple flag for the middleware.
+    // The actual auth state is managed by the Firebase SDK on the client.
+    response.cookies.set('isLoggedIn', 'true', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
-    })
+      path: '/',
+      sameSite: 'lax',
+    });
 
-    return response
+    return response;
   } catch (error) {
-    console.error('Signin error:', error)
+    if (error instanceof Error) {
+      // The error messages from lib/auth are user-friendly
+      return NextResponse.json({error: error.message}, {status: 401});
+    }
+    // Fallback for unexpected errors
     return NextResponse.json(
-      { error: 'Internal server error during signin' },
-      { status: 500 }
-    )
+      {error: 'An unexpected error occurred.'},
+      {status: 500}
+    );
   }
 }

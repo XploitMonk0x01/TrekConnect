@@ -1,9 +1,8 @@
-
 'use client'
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -23,12 +22,20 @@ import { useCustomAuth } from '@/contexts/CustomAuthContext'
 export default function SignUpPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { signUp: customSignUp, isLoading: authIsLoading } = useCustomAuth(); // Use custom hook
+  const { signUp: customSignUp, isLoading: authIsLoading, user } = useCustomAuth();
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // If user is already logged in, redirect them
+  useEffect(() => {
+    if (user && !authIsLoading) {
+      router.push('/profile/edit'); // New users should edit their profile
+    }
+  }, [user, authIsLoading, router]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,18 +53,21 @@ export default function SignUpPage() {
         return;
     }
 
-
     setIsSubmitting(true)
     const success = await customSignUp(fullName, email, password);
     if (success) {
-      toast({
-        title: 'Account Created!',
-        description: 'Welcome to TrekConnect! Please complete your profile.',
-      });
-      router.push('/profile/edit'); // Redirect to edit profile page
+      router.push('/profile/edit'); // Redirect to edit profile page after successful signup
     }
-    // Error toasts are handled within customSignUp
+    // Error toasts are handled within customSignUp (AuthContext)
     setIsSubmitting(false)
+  }
+
+  if (authIsLoading || user) {
+      return (
+          <div className="flex min-h-screen flex-col items-center justify-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
+      )
   }
 
   return (

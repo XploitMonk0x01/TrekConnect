@@ -1,29 +1,21 @@
-import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
+
+import {NextResponse} from 'next/server';
+import {getOtherUsers} from '@/services/users'; // Using the Firebase service
 
 export async function GET() {
   try {
-    const db = await getDb()
-    const usersCollection = db.collection('users')
+    // In Firebase, there's no single "current user" on the server without auth context.
+    // The service getOtherUsers requires a current user ID to exclude.
+    // For a generic "get all users" endpoint, we'll fetch all and let the client filter if needed.
+    // Assuming getOtherUsers with an empty string will fetch all users.
+    const users = await getOtherUsers(''); // The service needs to handle this case gracefully
 
-    const users = await usersCollection
-      .find({})
-      .project({ password: 0 }) // Exclude password field
-      .toArray()
-
-    // Convert MongoDB _id to string id
-    const formattedUsers = users.map((user) => ({
-      id: user._id.toString(),
-      ...user,
-      _id: undefined,
-    }))
-
-    return NextResponse.json(formattedUsers)
+    return NextResponse.json(users);
   } catch (error) {
-    console.error('Error fetching users:', error)
+    console.error('Error fetching users:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      {error: 'Internal server error'},
+      {status: 500}
+    );
   }
 }

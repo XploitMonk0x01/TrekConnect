@@ -1,225 +1,189 @@
-'use client'
 
-import type { UserProfile } from '@/lib/types'
-import { useToast } from '@/hooks/use-toast'
-import { useRouter } from 'next/navigation'
+'use client';
+
 import React, {
   createContext,
   useContext,
   useState,
   useEffect,
   ReactNode,
-} from 'react'
+} from 'react';
+import {useRouter} from 'next/navigation';
+import type {User} from 'firebase/auth';
+import {
+  onAuthChange,
+  signIn as firebaseSignIn,
+  signUp as firebaseSignUp,
+  logout as firebaseSignOut,
+  getUserProfileFromRTDB,
+  createUserProfileInRTDB,
+} from '@/lib/auth';
+import type {UserProfile} from '@/lib/types';
+import {useToast} from '@/hooks/use-toast';
 
 interface AuthContextType {
-  user: UserProfile | null
-  token: string | null
-  isLoading: boolean
-  signIn: (email_param: string, password_param: string) => Promise<boolean>
+  user: UserProfile | null;
+  firebaseUser: User | null;
+  isLoading: boolean;
+  signIn: (email_param: string, password_param: string) => Promise<boolean>;
   signUp: (
     name_param: string,
     email_param: string,
     password_param: string
-  ) => Promise<boolean>
-  signOut: () => void
-  validateSession: () => Promise<void>
-  updateUserInContext: (updatedUser: UserProfile) => void
+  ) => Promise<boolean>;
+  signOut: () => void;
+  updateUserInContext: (updatedUser: UserProfile) => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const CustomAuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<UserProfile | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const { toast } = useToast()
-  const router = useRouter()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const {toast} = useToast();
 
   useEffect(() => {
-    if (!mounted) return
-
-    const initializeAuth = async () => {
-      setIsLoading(true)
-      try {
-        // Check if user is authenticated by calling validate endpoint
-        const response = await fetch('/api/auth/validate', {
-          credentials: 'include', // Include cookies
-        })
-        if (response.ok) {
-          const userData: UserProfile = await response.json()
-          setUser(userData)
-          // Get token from cookies if needed for client-side operations
-          const cookies = document.cookie.split(';')
-          const authCookie = cookies.find((cookie) =>
-            cookie.trim().startsWith('authToken=')
-          )
-          if (authCookie) {
-            const tokenValue = authCookie.split('=')[1]
-            setToken(tokenValue)
+    const unsubscribe = onAuthChange(async userAuth => {
+      setIsLoading(true);
+      if (userAuth) {
+        setFirebaseUser(userAuth);
+        try {
+          // Fetch user profile from Realtime Database
+          const userProfile = await getUserProfileFromRTDB(userAuth.uid);
+          if (userProfile) {
+            setUser(userProfile);
+          } else {
+            // This case might happen if DB entry creation failed during signup.
+            // We can try to create it again.
+            const newProfile = await createUserProfileInRTDB(userAuth);
+            setUser(newProfile);
           }
-        } else {
-          setUser(null)
-          setToken(null)
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
+          setUser(null); // Or handle error appropriately
         }
-      } catch (error) {
-        console.error('Session validation error:', error)
-        setUser(null)
-        setToken(null)
+      } else {
+        setFirebaseUser(null);
+        setUser(null);
       }
-      setIsLoading(false)
-    }
-    initializeAuth()
-  }, [mounted])
+      setIsLoading(false);
+    });
 
-  const signIn = async (
-    email_param: string,
-    password_param: string
-  ): Promise<boolean> => {
-    setIsLoading(true)
+    return () => unsubscribe();
+  }, []);
+
+  const signIn = async (email: string, password: string): Promise<boolean> => {
+    setIsLoading(true);
     try {
       const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Include cookies
-        body: JSON.stringify({ email: email_param, password: password_param }),
-      })
-      const data = await response.json()
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Sign-in failed')
+          throw new Error(data.error || 'Sign-in failed');
       }
-      setUser(data.user)
-      setToken(data.token)
-      setIsLoading(false)
-      return true
+      toast({title: 'Signed In!', description: 'Welcome back!'});
+      // The onAuthChange listener will handle setting user state, but we can force a re-check
+      // Or rely on the cookie being set and a page reload. A router.refresh() might be good here.
+      router.refresh(); 
+      return true;
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Sign In Error',
         description: error.message,
-      })
-      setIsLoading(false)
-      return false
+      });
+      setIsLoading(false);
+      return false;
     }
-  }
+  };
 
   const signUp = async (
-    name_param: string,
-    email_param: string,
-    password_param: string
+    name: string,
+    email: string,
+    password: string
   ): Promise<boolean> => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Include cookies
-        body: JSON.stringify({
-          name: name_param,
-          email: email_param,
-          password: password_param,
-        }),
-      })
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Sign-up failed')
-      }
-      setUser(data.user)
-      setToken(data.token)
-      setIsLoading(false)
-      return true
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ name, email, password }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Sign-up failed');
+        }
+        toast({
+            title: 'Account Created!',
+            description: 'Welcome to TrekConnect! Please complete your profile.',
+        });
+        // onAuthChange will handle the rest.
+        router.refresh();
+        return true;
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Sign Up Error',
         description: error.message,
-      })
-      setIsLoading(false)
-      return false
+      });
+      setIsLoading(false);
+      return false;
     }
-  }
+  };
 
   const signOut = async () => {
     try {
-      // Call the logout API to clear the server-side cookie
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      })
-    } catch (error) {
-      console.error('Logout API error:', error)
-      // Continue with client-side logout even if API call fails
+      // Call the server endpoint to clear the HttpOnly cookie
+      await fetch('/api/auth/logout', { method: 'POST' });
+      // Sign out from Firebase client-side
+      await firebaseSignOut();
+      setUser(null);
+      setFirebaseUser(null);
+      // Redirect to sign-in page
+      router.push('/auth/signin');
+      toast({
+        title: 'Signed Out',
+        description: 'You have been successfully signed out.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Sign Out Failed',
+        description: error.message,
+      });
     }
-
-    setUser(null)
-    setToken(null)
-    router.push('/auth/signin')
-  }
-
-  const validateSession = async () => {
-    // Only run on client side after mounting
-    if (!mounted) return
-
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/auth/validate', {
-        credentials: 'include', // Include cookies
-      })
-      if (response.ok) {
-        const userData: UserProfile = await response.json()
-        setUser(userData)
-        // Get token from cookies if needed
-        const cookies = document.cookie.split(';')
-        const authCookie = cookies.find((cookie) =>
-          cookie.trim().startsWith('authToken=')
-        )
-        if (authCookie) {
-          const tokenValue = authCookie.split('=')[1]
-          setToken(tokenValue)
-        }
-      } else {
-        setUser(null)
-        setToken(null)
-      }
-    } catch (error) {
-      console.error('Manual session validation error:', error)
-      setUser(null)
-      setToken(null)
-    }
-    setIsLoading(false)
-  }
+  };
 
   const updateUserInContext = (updatedUser: UserProfile) => {
-    setUser(updatedUser)
-  }
+    setUser(updatedUser);
+  };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
+        firebaseUser,
         isLoading,
         signIn,
         signUp,
         signOut,
-        validateSession,
         updateUserInContext,
       }}
     >
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
 export const useCustomAuth = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useCustomAuth must be used within an AuthProvider')
+    throw new Error('useCustomAuth must be used within an AuthProvider');
   }
-  return context
-}
+  return context;
+};

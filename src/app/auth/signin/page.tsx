@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -14,40 +14,44 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/hooks/use-toast'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { Loader2 } from 'lucide-react'
 
 export default function SignInPage() {
   const router = useRouter()
-  const { toast } = useToast()
-  const { signIn: customSignIn, isLoading: authIsLoading } = useCustomAuth() // Use custom hook
+  const searchParams = useSearchParams()
+  const { signIn: customSignIn, isLoading: authIsLoading, user } = useCustomAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const redirectTo = searchParams.get('redirect') || '/'
+
+  // If user is already logged in, redirect them
+  useEffect(() => {
+    if (user && !authIsLoading) {
+      router.push(redirectTo)
+    }
+  }, [user, authIsLoading, router, redirectTo])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSubmitting(true)
     const success = await customSignIn(email, password)
     if (success) {
-      toast({
-        title: 'Signed In!',
-        description: 'Welcome back to TrekConnect!',
-      })
-
-      // Check for redirect parameter
-      const urlParams = new URLSearchParams(window.location.search)
-      const redirectTo = urlParams.get('redirect')
-
-      if (redirectTo && redirectTo.startsWith('/')) {
-        router.push(redirectTo)
-      } else {
-        router.push('/') // Default redirect to dashboard
-      }
+      router.push(redirectTo)
     }
-    // Error toasts are handled within customSignIn
+    // Error toasts are handled within customSignIn (AuthContext)
     setIsSubmitting(false)
+  }
+
+  // Prevent flash of sign-in form if loading or already logged in
+  if (authIsLoading || user) {
+      return (
+          <div className="flex min-h-screen flex-col items-center justify-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
+      )
   }
 
   return (
