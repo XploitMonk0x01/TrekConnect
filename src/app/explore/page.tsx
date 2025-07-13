@@ -17,8 +17,9 @@ export default async function ExplorePage() {
             dest.coordinates.lat,
             dest.coordinates.lng
           )
-        } catch (e: any) {
-          weatherError = e?.message || 'Failed to fetch weather.'
+        } catch (e) {
+          weatherError =
+            e instanceof Error ? e.message : 'Failed to fetch weather.'
         }
       }
       return {

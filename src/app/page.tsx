@@ -161,6 +161,7 @@ export default function DashboardPage() {
                 Start Exploring <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
+            {/* GraphQL Hello Test removed */}
           </div>
         </CardContent>
       </Card>

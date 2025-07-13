@@ -1,3 +1,19 @@
+import { Server as NetServer, Socket } from 'net'
+import { NextApiResponse } from 'next'
+import { Server as SocketIOServer } from 'socket.io'
+
+export interface SocketServer extends NetServer {
+  io?: SocketIOServer
+}
+
+export interface SocketWithIO extends Socket {
+  server: SocketServer
+}
+
+export interface NextApiResponseServerIO extends NextApiResponse {
+  socket: SocketWithIO
+}
+
 export interface UserProfile {
   id: string // MongoDB _id (string representation of ObjectId for new users)
   name: string | null
@@ -140,8 +156,8 @@ export interface Message {
   id: string
   roomId: string
   senderId: string
-  receiverId: string
+  recipientId: string // Changed from receiverId to match the rest of the codebase
   content: string
-  timestamp: Date
-  read?: boolean
+  timestamp: string // ISO string format
+  read: boolean
 }

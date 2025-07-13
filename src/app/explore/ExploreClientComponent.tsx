@@ -26,7 +26,7 @@ import {
   XCircle,
   Wand2,
 } from 'lucide-react'
-import type { Destination } from '@/lib/types'
+import type { Destination, WeatherInfo } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { searchPexelsImage } from '@/services/pexels'
 import { searchYouTubeVideoId } from '@/services/youtube'
@@ -53,7 +53,7 @@ type DestinationWithMedia = Destination & {
   fetchedImageUrl?: string
   isLoadingYouTubeVideoId?: boolean
   youtubeVideoId: string | null
-  weather?: any
+  weather?: WeatherInfo | null
   isLoadingWeather?: boolean
   weatherError?: string | null
 }

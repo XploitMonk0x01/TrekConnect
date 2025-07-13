@@ -6,254 +6,169 @@ import {
   useEffect,
   useState,
   useCallback,
-  useRef,
   ReactNode,
 } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { ref, onValue, off, push, serverTimestamp } from 'firebase/database'
+import { realtimeDb } from '@/lib/firebase'
 import { useCustomAuth } from './CustomAuthContext'
 import type { Message } from '@/lib/types'
 
 interface ChatContextType {
-  socket: Socket | null
-  isConnected: boolean
   messages: Message[]
-  sendMessage: (roomId: string, content: string, receiverUserId: string) => void
+  sendMessage: (roomId: string, content: string, recipientId: string) => void
   joinRoom: (roomId: string) => void
   leaveRoom: (roomId: string) => void
-  isLoading: boolean // For initial socket connection attempt
+  isLoading: boolean
   error: string | null
 }
 
 const ChatContext = createContext<ChatContextType>({
-  socket: null,
-  isConnected: false,
   messages: [],
   sendMessage: () => {},
   joinRoom: () => {},
   leaveRoom: () => {},
-  isLoading: true,
+  isLoading: false,
   error: null,
 })
 
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [socket, setSocket] = useState<Socket | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [isLoading, setIsLoading] = useState(true) // Tracks initial connection attempt
+  const [currentRoomRef, setCurrentRoomRef] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user } = useCustomAuth()
-  const socketRef = useRef<Socket | null>(null)
-
-  const handleConnect = useCallback(() => {
-    console.log('ChatContext: Socket connected!', socketRef.current?.id)
-    setIsConnected(true)
-    setError(null)
-    setIsLoading(false) // Connected, so no longer initially loading
-  }, [])
-
-  const handleDisconnect = useCallback((reason: Socket.DisconnectReason) => {
-    console.log('ChatContext: Socket disconnected.', reason)
-    setIsConnected(false)
-    // No longer setting isLoading to true on disconnect, as it's for initial load
-    if (
-      reason === 'io server disconnect' ||
-      reason === 'io client disconnect' ||
-      reason === 'transport error'
-    ) {
-      setError('Chat disconnected. Please refresh or try again later.')
-    } else {
-      setError('Chat connection lost. Attempting to reconnect...')
-    }
-  }, [])
-
-  const handleConnectError = useCallback((err: Error) => {
-    console.error('ChatContext: Socket connection error:', err.message)
-    setIsConnected(false)
-    setError(`Chat connection failed: ${err.message}. Retrying...`)
-    setIsLoading(false) // Connection attempt (even if failed) is over for initial load
-  }, [])
-
-  const handleReceiveMessage = useCallback((message: Message) => {
-    console.log('ChatContext: Received message:', message)
-    setMessages((prev) => [...prev, message])
-  }, [])
-
-  const handleLoadMessages = useCallback((loadedMessages: Message[]) => {
-    console.log('ChatContext: Loaded messages:', loadedMessages)
-    setMessages(loadedMessages)
-  }, [])
-
-  const handleErrorEvent = useCallback((errorMessage: string) => {
-    console.error('ChatContext: Socket error event received:', errorMessage)
-    setError(errorMessage)
-    setIsConnected(false)
-  }, [])
-
-  useEffect(() => {
-    if (!user) {
-      console.log(
-        'ChatContext: User not authenticated, cleaning up existing socket if any.'
-      )
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-        socketRef.current = null
-      }
-      setSocket(null)
-      setIsConnected(false)
-      setIsLoading(false) // Not loading if no user
-      setError(null)
-      return
-    }
-
-    // If socket exists and is for the current user, do nothing.
-    if (
-      socketRef.current &&
-      socketRef.current.auth?.userId === user.id &&
-      socketRef.current.connected
-    ) {
-      console.log('ChatContext: Socket already connected for this user.')
-      setIsConnected(true)
-      setIsLoading(false) // Already loaded
-      setError(null)
-      return
-    }
-
-    // If socket exists but for a different user or disconnected, clean it up.
-    if (socketRef.current) {
-      console.log(
-        'ChatContext: Cleaning up old socket instance before new initialization.'
-      )
-      socketRef.current.disconnect()
-      socketRef.current = null
-    }
-
-    console.log(
-      'ChatContext: Initializing new socket connection for user:',
-      user.id
-    )
-    setIsLoading(true) // Start loading for new connection attempt
-    setError(null)
-    setIsConnected(false)
-
-    // The client directly attempts to connect.
-    // The server-side logic at /api/socket should handle the Socket.IO server setup.
-    const socketInstance = io({
-      path: '/api/socket',
-      addTrailingSlash: false,
-      auth: { userId: user.id },
-      reconnectionAttempts: 5,
-      reconnectionDelay: 3000, // Increased delay
-      timeout: 10000,
-    })
-    console.log('ChatContext: Socket instance created, attempting to connect.')
-
-    socketInstance.on('connect', handleConnect)
-    socketInstance.on('disconnect', handleDisconnect)
-    socketInstance.on('connect_error', handleConnectError)
-    socketInstance.on('receive-message', handleReceiveMessage)
-    socketInstance.on('load-messages', handleLoadMessages)
-    socketInstance.on('error', handleErrorEvent) // Generic error handler from server
-
-    socketRef.current = socketInstance
-    setSocket(socketInstance)
-
-    // setIsLoading(false) will be handled by connect/connect_error handlers
-
-    return () => {
-      if (socketInstance) {
-        console.log(
-          `ChatContext: Cleaning up socket ${socketInstance.id} on component unmount or user change.`
-        )
-        socketInstance.off('connect', handleConnect)
-        socketInstance.off('disconnect', handleDisconnect)
-        socketInstance.off('connect_error', handleConnectError)
-        socketInstance.off('receive-message', handleReceiveMessage)
-        socketInstance.off('load-messages', handleLoadMessages)
-        socketInstance.off('error', handleErrorEvent)
-        socketInstance.disconnect()
-      }
-      socketRef.current = null
-      setSocket(null)
-      setIsConnected(false)
-      // Reset loading state if user changes and causes cleanup, next effect run will set it.
-      if (user) setIsLoading(true)
-      else setIsLoading(false)
-    }
-  }, [
-    user,
-    handleConnect,
-    handleDisconnect,
-    handleConnectError,
-    handleReceiveMessage,
-    handleLoadMessages,
-    handleErrorEvent,
-  ])
 
   const sendMessage = useCallback(
-    (roomId: string, content: string, receiverUserId: string) => {
-      if (!socketRef.current || !user || !isConnected) {
-        console.error(
-          'Socket not connected or user not authenticated, cannot send message.'
-        )
-        setError('Cannot send message: Chat not connected.')
+    async (roomId: string, content: string, recipientId: string) => {
+      if (!user) {
+        setError('Must be logged in to send messages')
         return
       }
-      console.log('ChatContext: Sending message:', {
-        roomId,
-        content,
-        senderId: user.id,
-        receiverUserId,
-      })
-      const message: Message = {
-        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        roomId,
-        senderId: user.id,
-        receiverId: receiverUserId, // Correctly using receiverUserId
-        content,
-        timestamp: new Date(),
-        read: false,
+
+      try {
+        const messagesRef = ref(realtimeDb, 'messages')
+        const newMessageRef = push(messagesRef)
+
+        const message = {
+          id: newMessageRef.key,
+          roomId,
+          content,
+          senderId: user.id,
+          recipientId,
+          timestamp: serverTimestamp(),
+          read: false,
+        }
+
+        await push(messagesRef, message)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to send message')
+        console.error('Error sending message:', err)
       }
-      socketRef.current.emit('send-message', { roomId, message })
     },
-    [user, isConnected, setError] // Added setError to dependencies
+    [user]
   )
 
   const joinRoom = useCallback(
     (roomId: string) => {
-      if (!socketRef.current || !user || !isConnected) {
-        console.error(
-          'Socket not connected or user not authenticated for joinRoom'
-        )
-        setError('Cannot join room: Chat not connected.')
+      if (!user) {
+        setError('Must be logged in to join a chat room')
         return
       }
-      console.log('ChatContext: Joining room:', roomId)
-      setMessages([])
-      socketRef.current.emit('join-room', roomId)
+
+      setIsLoading(true)
+
+      try {
+        // Leave current room if exists
+        if (currentRoomRef) {
+          const prevRef = ref(realtimeDb, `messages/${currentRoomRef}`)
+          off(prevRef)
+        }
+
+        // Subscribe to new room's messages
+        const roomRef = ref(realtimeDb, 'messages')
+
+        // Handle connection states
+        pusherClient.connection.bind(
+          'state_change',
+          (states: { previous: string; current: string }) => {
+            console.log('Pusher connection state:', states.current)
+            if (states.current === 'connected') {
+              setError(null)
+            } else if (states.current === 'connecting') {
+              setError('Connecting to chat...')
+            } else if (
+              states.current === 'disconnected' ||
+              states.current === 'failed'
+            ) {
+              setError('Chat disconnected. Attempting to reconnect...')
+              // Attempt to reconnect
+              pusherClient.connect()
+            }
+          }
+        )
+
+        onValue(
+          roomRef,
+          (snapshot) => {
+            const messagesData = snapshot.val()
+            if (messagesData) {
+              const roomMessages = Object.values(messagesData)
+                .filter((msg: any) => msg.roomId === roomId)
+                .sort((a: any, b: any) => a.timestamp - b.timestamp)
+
+              setMessages(roomMessages as Message[])
+            } else {
+              setMessages([])
+            }
+            setIsLoading(false)
+            setError(null)
+          },
+          (error) => {
+            console.error('Error fetching messages:', error)
+            setError('Failed to fetch messages: ' + error.message)
+            setIsLoading(false)
+          }
+        )
+
+        // Save the room reference
+        setCurrentRoomRef(roomId)
+      } catch (err) {
+        console.error('Error joining room:', err)
+        setError(err instanceof Error ? err.message : 'Failed to join room')
+        setIsLoading(false)
+      }
     },
-    [user, isConnected, setError] // Added setError
+    [user]
   )
 
   const leaveRoom = useCallback(
     (roomId: string) => {
-      if (!socketRef.current || !isConnected) {
-        // Check isConnected directly
-        console.error('Socket not connected for leaveRoom')
-        setError('Cannot leave room: Chat not connected.')
-        return
+      if (currentRoomRef) {
+        const roomRef = ref(realtimeDb, `messages/${currentRoomRef}`)
+        off(roomRef)
+        setCurrentRoomRef(null)
+        setMessages([])
+        console.log('Left room:', roomId)
       }
-      console.log('ChatContext: Leaving room:', roomId)
-      socketRef.current.emit('leave-room', roomId)
-      setMessages([])
     },
-    [isConnected, setError]
-  ) // Added isConnected, setError
+    [currentRoomRef]
+  )
+
+  // Cleanup on unmount or user change
+  useEffect(() => {
+    return () => {
+      if (currentRoomRef) {
+        const roomRef = ref(realtimeDb, `messages/${currentRoomRef}`)
+        off(roomRef)
+        setCurrentRoomRef(null)
+        setMessages([])
+      }
+    }
+  }, [currentRoomRef, user])
 
   return (
     <ChatContext.Provider
       value={{
-        socket,
-        isConnected,
         messages,
         sendMessage,
         joinRoom,

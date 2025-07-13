@@ -18,7 +18,7 @@ import {
   TrendingUp,
   Briefcase,
 } from 'lucide-react'
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
+import { useState } from 'react'
 
 interface UserProfileCardProps {
   user: UserProfile
@@ -26,16 +26,44 @@ interface UserProfileCardProps {
 }
 
 export function UserProfileCard({ user }: UserProfileCardProps) {
-  let photoUrl = user.photoUrl || PLACEHOLDER_IMAGE_URL(400, 400)
+  const [imageError, setImageError] = useState(false)
+  const fallbackImageUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+    user.name || 'trekker'
+  )}`
+
+  let photoUrl = user.photoUrl || fallbackImageUrl
   let photoAiHint = 'person portrait'
-  if (user.photoUrl && user.photoUrl.includes('?ai_hint=')) {
-    const parts = user.photoUrl.split('?ai_hint=')
-    photoUrl = parts[0]
-    if (parts[1]) {
-      photoAiHint = decodeURIComponent(parts[1])
+
+  try {
+    if (photoUrl.includes('?ai_hint=')) {
+      const parts = photoUrl.split('?ai_hint=')
+      photoUrl = parts[0]
+      if (parts[1]) {
+        photoAiHint = decodeURIComponent(parts[1])
+      }
+    } else if (user.name) {
+      photoAiHint = `person ${user.name.split(' ')[0]}`
     }
-  } else if (user.name) {
-    photoAiHint = `person ${user.name.split(' ')[0]}`
+
+    // Handle base64 images
+    if (photoUrl.startsWith('data:image')) {
+      try {
+        // Test if the base64 string is valid
+        const base64Content = photoUrl.split(',')[1]
+        atob(base64Content)
+
+        // If the base64 string is too long, use fallback
+        if (photoUrl.length > 524288) {
+          // 512KB limit
+          photoUrl = fallbackImageUrl
+        }
+      } catch {
+        // If base64 is invalid, use fallback
+        photoUrl = fallbackImageUrl
+      }
+    }
+  } catch (error) {
+    photoUrl = fallbackImageUrl
   }
 
   const displayNameAge = `${user.name || 'Trekker'}${
@@ -64,19 +92,24 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
 
   return (
     <Card className="w-full max-w-sm rounded-xl overflow-hidden shadow-xl transform transition-all duration-300 hover:scale-105 bg-card">
-      <div className="relative h-72">
+      <div className="relative w-full h-72 aspect-[4/3]">
         <Image
           src={photoUrl}
           alt={user.name || 'User profile'}
           fill
           sizes="(max-width: 768px) 100vw, 400px"
           className="rounded-t-xl object-cover"
+          style={{
+            objectFit: 'cover',
+            width: '100%',
+            height: '100%',
+          }}
           data-ai-hint={photoAiHint}
           onError={(e) => {
-            ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
-              400,
-              400
-            )
+            if (!imageError) {
+              setImageError(true)
+              ;(e.target as HTMLImageElement).src = fallbackImageUrl
+            }
           }}
         />
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
