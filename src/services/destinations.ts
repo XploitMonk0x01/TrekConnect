@@ -1,8 +1,9 @@
+
 'use server'
 
 import type { Db, WithId, Document } from 'mongodb'
 import { ObjectId } from 'mongodb'
-import { getDestinationsDb } from '@/lib/destinations-db'
+import { getDb } from '@/lib/mongodb' // Use the new central MongoDB connection
 import type { Destination } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 
@@ -25,7 +26,7 @@ function mapDocToDestination(doc: WithId<Document>): Destination {
 
 export async function getAllDestinations(): Promise<Destination[]> {
   try {
-    const db: Db = await getDestinationsDb()
+    const db: Db = await getDb()
     const destinationsCollection =
       db.collection<WithId<Document>>('destinations')
     const destinationDocs = await destinationsCollection
@@ -47,7 +48,7 @@ export async function getDestinationById(
   id: string
 ): Promise<Destination | null> {
   try {
-    const db: Db = await getDestinationsDb()
+    const db: Db = await getDb()
     const destinationsCollection = db.collection('destinations')
 
     if (!ObjectId.isValid(id)) {

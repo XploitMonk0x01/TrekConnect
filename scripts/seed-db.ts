@@ -4,7 +4,7 @@ config(); // Load environment variables from .env file
 
 import { getDb } from '@/lib/mongodb';
 import clientPromise from '@/lib/mongodb'; // Import the clientPromise for closing the connection
-import type { Destination } from '@/lib/types'; // Photo and Story types removed as they are no longer seeded here
+import type { Destination } from '@/lib/types'; 
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 
@@ -43,44 +43,31 @@ const TREK_DESTINATIONS_SEED_DATA: Omit<Destination, 'id'>[] = [
   { name: "Auden's Col Trek", description: "An extremely challenging and technical high-altitude pass connecting Gangotri valley with Kedarnath valley. Considered one of the toughest treks in India.", imageUrl: PLACEHOLDER_IMAGE_URL(1200,600), country: "India", region: "Uttarakhand, Garhwal Himalayas", attractions: ["Auden's Col (5490m)", "Khatling Glacier", "Views of Gangotri and Jogin group of peaks", "Mayali Pass"], travelTips: "Highly strenuous and technical, requires mountaineering skills, equipment, and experienced guides. For expert trekkers only. Best season: May-June, September.", averageRating: 4.9, coordinates: { lat: 30.845, lng: 78.817 }, aiHint: "audens col trek" }
 ];
 
-// PHOTO_FEED_SEED_DATA and STORY_SEED_DATA are removed as per user request
-// const PHOTO_FEED_SEED_DATA: Omit<Photo, 'id'>[] = [ ... ];
-// const STORY_SEED_DATA: Omit<Story, 'id' | 'createdAt' | 'updatedAt'>[] = [ ... ];
-
-
 async function seedDatabase() {
   let mongoClient;
   try {
     const db = await getDb();
     mongoClient = await clientPromise; 
     const destinationsCollection = db.collection('destinations');
-    const photosCollection = db.collection('photos');
-    const storiesCollection = db.collection('stories');
+    
+    // As per request, photos and stories are in Firebase, so we don't interact with them here.
+    // const photosCollection = db.collection('photos');
+    // const storiesCollection = db.collection('stories');
 
+    console.log('Successfully connected to MongoDB for destination seeding.');
 
-    console.log('Successfully connected to MongoDB.');
-
-    // Seed Destinations
-    console.log('Clearing existing data from "destinations" collection...');
+    // Seed Destinations to MongoDB
+    console.log('Clearing existing data from "destinations" collection in MongoDB...');
     await destinationsCollection.deleteMany({});
-    console.log('Existing destination data cleared.');
-    console.log(`Inserting ${TREK_DESTINATIONS_SEED_DATA.length} trek destinations...`);
+    console.log('Existing destination data cleared from MongoDB.');
+    console.log(`Inserting ${TREK_DESTINATIONS_SEED_DATA.length} trek destinations into MongoDB...`);
     const destResult = await destinationsCollection.insertMany(TREK_DESTINATIONS_SEED_DATA);
-    console.log(`${destResult.insertedCount} destinations successfully inserted.`);
+    console.log(`${destResult.insertedCount} destinations successfully inserted into MongoDB.`);
 
-    // Clear Photos (but do not insert new seed data)
-    console.log('Clearing existing data from "photos" collection...');
-    await photosCollection.deleteMany({});
-    console.log('Existing photo data cleared. No new photo seed data will be inserted.');
-
-    // Clear Stories (but do not insert new seed data)
-    console.log('Clearing existing data from "stories" collection...');
-    await storiesCollection.deleteMany({});
-    console.log('Existing story data cleared. No new story seed data will be inserted.');
-
+    console.log('Database seeding for MongoDB destinations complete. Photos and stories are managed in Firebase.');
 
   } catch (error) {
-    console.error('Error during database seeding:', error);
+    console.error('Error during MongoDB database seeding:', error);
     process.exit(1); 
   } finally {
     if (mongoClient) {
@@ -92,4 +79,3 @@ async function seedDatabase() {
 }
 
 seedDatabase();
-
