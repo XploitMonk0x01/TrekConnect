@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import {useRouter} from 'next/navigation';
 import type {User} from 'firebase/auth';
+import { auth } from '@/lib/firebase'; // Correctly import auth from firebase
 import {
   onAuthChange,
   signIn as firebaseSignIn,
@@ -146,9 +147,14 @@ export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
   };
 
   const validateSession = async () => {
-    const user = auth.currentUser;
-    if (user) {
-      await handleAuthChange(user);
+    setIsLoading(true);
+    try {
+      const currentUser = auth.currentUser;
+      await handleAuthChange(currentUser);
+    } catch (error) {
+      console.error('Error during session validation:', error);
+    } finally {
+        setIsLoading(false);
     }
   };
 
