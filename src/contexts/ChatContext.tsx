@@ -8,12 +8,12 @@ import {
   useCallback,
   ReactNode,
 } from 'react'
-import { ref, onValue, off, push, serverTimestamp } from 'firebase/database'
-import { realtimeDb } from '@/lib/firebase'
+import { io, Socket } from 'socket.io-client'
 import { useCustomAuth } from './CustomAuthContext'
 import type { Message } from '@/lib/types'
 
 interface ChatContextType {
+  isConnected: boolean
   messages: Message[]
   sendMessage: (roomId: string, content: string, recipientId: string) => void
   joinRoom: (roomId: string) => void
@@ -22,167 +22,131 @@ interface ChatContextType {
   error: string | null
 }
 
-const ChatContext = createContext<ChatContextType>({
-  messages: [],
-  sendMessage: () => {},
-  joinRoom: () => {},
-  leaveRoom: () => {},
-  isLoading: false,
-  error: null,
-})
+const ChatContext = createContext<ChatContextType | undefined>(undefined)
 
 export function ChatProvider({ children }: { children: ReactNode }) {
+  const { user } = useCustomAuth()
+  const [socket, setSocket] = useState<Socket | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [currentRoomRef, setCurrentRoomRef] = useState<string | null>(null)
+  const [activeRoom, setActiveRoom] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { user } = useCustomAuth()
 
-  const sendMessage = useCallback(
-    async (roomId: string, content: string, recipientId: string) => {
-      if (!user) {
-        setError('Must be logged in to send messages')
-        return
+  useEffect(() => {
+    if (user?.id && !socket) {
+      setIsLoading(true)
+      const newSocket = io({
+        path: '/api/socket',
+        auth: { userId: user.id },
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 2000,
+        transports: ['websocket'],
+        autoConnect: true,
+      })
+
+      newSocket.on('connect', () => {
+        console.log('Chat socket connected:', newSocket.id)
+        setSocket(newSocket)
+        setIsConnected(true)
+        setError(null)
+        setIsLoading(false)
+      })
+
+      newSocket.on('disconnect', (reason) => {
+        console.log('Chat socket disconnected:', reason)
+        setIsConnected(false)
+        setError('Chat disconnected. Reconnecting...')
+      })
+
+      newSocket.on('connect_error', (err) => {
+        console.error('Chat connection error:', err)
+        setError(`Connection failed: ${err.message}`)
+        setIsLoading(false)
+      })
+      
+      newSocket.on('messages', (roomMessages: Message[]) => {
+          setMessages(roomMessages);
+      });
+
+      newSocket.on('message', (newMessage: Message) => {
+        setMessages((prevMessages) => [...prevMessages, newMessage])
+      })
+
+      newSocket.on('error', (errorMessage: string) => {
+        setError(errorMessage)
+      })
+
+      // Cleanup on component unmount
+      return () => {
+        newSocket.disconnect()
+        setSocket(null)
       }
-
-      try {
-        const messagesRef = ref(realtimeDb, 'messages')
-        const newMessageRef = push(messagesRef)
-
-        const message = {
-          id: newMessageRef.key,
-          roomId,
-          content,
-          senderId: user.id,
-          recipientId,
-          timestamp: serverTimestamp(),
-          read: false,
-        }
-
-        await push(messagesRef, message)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to send message')
-        console.error('Error sending message:', err)
-      }
-    },
-    [user]
-  )
+    } else if (!user && socket) {
+      socket.disconnect()
+      setSocket(null)
+    }
+  }, [user, socket])
 
   const joinRoom = useCallback(
     (roomId: string) => {
-      if (!user) {
-        setError('Must be logged in to join a chat room')
-        return
-      }
-
-      setIsLoading(true)
-
-      try {
-        // Leave current room if exists
-        if (currentRoomRef) {
-          const prevRef = ref(realtimeDb, `messages/${currentRoomRef}`)
-          off(prevRef)
+      if (socket && isConnected) {
+        if (activeRoom && activeRoom !== roomId) {
+          socket.emit('leave-room', activeRoom)
         }
-
-        // Subscribe to new room's messages
-        const roomRef = ref(realtimeDb, 'messages')
-
-        // Handle connection states
-        pusherClient.connection.bind(
-          'state_change',
-          (states: { previous: string; current: string }) => {
-            console.log('Pusher connection state:', states.current)
-            if (states.current === 'connected') {
-              setError(null)
-            } else if (states.current === 'connecting') {
-              setError('Connecting to chat...')
-            } else if (
-              states.current === 'disconnected' ||
-              states.current === 'failed'
-            ) {
-              setError('Chat disconnected. Attempting to reconnect...')
-              // Attempt to reconnect
-              pusherClient.connect()
-            }
-          }
-        )
-
-        onValue(
-          roomRef,
-          (snapshot) => {
-            const messagesData = snapshot.val()
-            if (messagesData) {
-              const roomMessages = Object.values(messagesData)
-                .filter((msg: any) => msg.roomId === roomId)
-                .sort((a: any, b: any) => a.timestamp - b.timestamp)
-
-              setMessages(roomMessages as Message[])
-            } else {
-              setMessages([])
-            }
-            setIsLoading(false)
-            setError(null)
-          },
-          (error) => {
-            console.error('Error fetching messages:', error)
-            setError('Failed to fetch messages: ' + error.message)
-            setIsLoading(false)
-          }
-        )
-
-        // Save the room reference
-        setCurrentRoomRef(roomId)
-      } catch (err) {
-        console.error('Error joining room:', err)
-        setError(err instanceof Error ? err.message : 'Failed to join room')
-        setIsLoading(false)
+        socket.emit('join-room', roomId)
+        setActiveRoom(roomId)
+        setMessages([]) // Clear messages from old room
       }
     },
-    [user]
+    [socket, isConnected, activeRoom]
   )
 
   const leaveRoom = useCallback(
     (roomId: string) => {
-      if (currentRoomRef) {
-        const roomRef = ref(realtimeDb, `messages/${currentRoomRef}`)
-        off(roomRef)
-        setCurrentRoomRef(null)
+      if (socket && isConnected) {
+        socket.emit('leave-room', roomId)
+        setActiveRoom(null)
         setMessages([])
-        console.log('Left room:', roomId)
       }
     },
-    [currentRoomRef]
+    [socket, isConnected]
   )
 
-  // Cleanup on unmount or user change
-  useEffect(() => {
-    return () => {
-      if (currentRoomRef) {
-        const roomRef = ref(realtimeDb, `messages/${currentRoomRef}`)
-        off(roomRef)
-        setCurrentRoomRef(null)
-        setMessages([])
+  const sendMessage = useCallback(
+    (roomId: string, content: string, recipientId: string) => {
+      if (socket && isConnected && user) {
+        const message: Partial<Message> = {
+          roomId,
+          content,
+          senderId: user.id,
+          recipientId,
+          timestamp: new Date().toISOString(),
+          read: false,
+        }
+        socket.emit('message', { roomId, message })
+      } else {
+        setError('Cannot send message. Not connected to chat.')
       }
-    }
-  }, [currentRoomRef, user])
-
-  return (
-    <ChatContext.Provider
-      value={{
-        messages,
-        sendMessage,
-        joinRoom,
-        leaveRoom,
-        isLoading,
-        error,
-      }}
-    >
-      {children}
-    </ChatContext.Provider>
+    },
+    [socket, isConnected, user]
   )
+
+  const contextValue = {
+    isConnected,
+    messages,
+    sendMessage,
+    joinRoom,
+    leaveRoom,
+    isLoading,
+    error,
+  }
+
+  return <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>
 }
 
-export const useChat = () => {
+export const useChat = (): ChatContextType => {
   const context = useContext(ChatContext)
   if (!context) {
     throw new Error('useChat must be used within a ChatProvider')

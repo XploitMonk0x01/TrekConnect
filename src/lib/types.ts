@@ -14,10 +14,11 @@ export interface NextApiResponseServerIO extends NextApiResponse {
   socket: SocketWithIO
 }
 
+// UserProfile as it is stored in Firebase RTDB
 export interface UserProfile {
-  id: string // MongoDB _id (string representation of ObjectId for new users)
+  id: string // Firebase Auth UID
+  email: string | null
   name: string | null
-  email: string | null // Email will be primary identifier for login with custom auth
   photoUrl: string | null
   age?: number
   gender?:
@@ -26,23 +27,24 @@ export interface UserProfile {
     | 'Non-binary'
     | 'Other'
     | 'Prefer not to say'
-    | string // Allow string for flexibility
+    | string
   bio?: string | null
   travelPreferences: {
     soloOrGroup?: 'Solo' | 'Group' | 'Flexible'
     budget?: 'Budget' | 'Mid-range' | 'Luxury' | 'Flexible'
-    style?: string // e.g., Adventure, Relaxing, Cultural
+    style?: string
   }
   languagesSpoken?: string[]
   trekkingExperience?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'
-  wishlistDestinations?: string[] // Array of destination names or IDs
-  travelHistory?: string[] // Array of destination names or IDs
+  wishlistDestinations?: string[] // Array of destination names
+  travelHistory?: string[] // Array of destination names
   plannedTrips?: PlannedTrip[]
   badges?: Badge[]
-  createdAt?: Date
-  updatedAt?: Date
-  lastLoginAt?: Date // For custom auth
+  createdAt?: string | object // Can be ISO string or Firebase ServerValue
+  updatedAt?: string | object
+  lastLoginAt?: string | object
 }
+
 
 export interface Destination {
   id: string
@@ -60,7 +62,7 @@ export interface Destination {
 
 export interface PlannedTrip {
   id: string
-  destinationId: string // Could be destination name if IDs are not stable
+  destinationId: string
   destinationName: string
   startDate: string
   endDate: string
@@ -75,53 +77,49 @@ export interface Badge {
 }
 
 export interface Photo {
-  id: string // MongoDB _id
-  userId: string // MongoDB user _id (who uploaded)
-  userName: string // Denormalized for easier display
-  userAvatarUrl?: string | null // Denormalized
+  id: string
+  userId: string
+  userName: string
+  userAvatarUrl?: string | null
   imageUrl: string
-  destinationId?: string
+  destinationId?: string // Kept for potential linking
   destinationName?: string
   caption?: string
   tags?: string[]
-  uploadedAt: string
+  uploadedAt: string // ISO string
   likesCount: number
   commentsCount: number
-  likes?: string[] // Array of user IDs who liked
+  likes?: string[]
 }
 
 export type CreatePhotoInput = Pick<
   Photo,
-  'imageUrl' | 'caption' | 'destinationId' | 'destinationName' | 'tags'
-> & { userId: string; userName: string; userAvatarUrl?: string | null } // Add user info for creation
+  'imageUrl' | 'caption' | 'destinationName' | 'tags'
+> & { userId: string; userName: string; userAvatarUrl?: string | null }
+
 
 export interface Story {
-  id: string // MongoDB _id
-  userId: string // MongoDB user _id (author)
-  userName: string // Denormalized
-  userAvatarUrl?: string | null // Denormalized
+  id: string
+  userId: string
+  userName: string
+  userAvatarUrl?: string | null
   title: string
   content: string
   imageUrl?: string | null
-  destinationId?: string
   destinationName?: string
   tags?: string[]
-  createdAt: string
-  updatedAt: string
+  createdAt: string // ISO string
+  updatedAt: string // ISO string
   likesCount: number
   commentsCount: number
-  likes?: string[] // Array of user IDs who liked
+  likes?: string[]
 }
 
 export type CreateStoryInput = Pick<
   Story,
-  | 'title'
-  | 'content'
-  | 'imageUrl'
-  | 'destinationId'
-  | 'destinationName'
-  | 'tags'
-> & { userId: string; userName: string; userAvatarUrl?: string | null } // Add user info for creation
+  'title' | 'content' | 'imageUrl' | 'destinationName' | 'tags'
+> & { userId: string; userName: string; userAvatarUrl?: string | null }
+
 
 export interface WeatherInfo {
   temperature: string
@@ -156,8 +154,8 @@ export interface Message {
   id: string
   roomId: string
   senderId: string
-  recipientId: string // Changed from receiverId to match the rest of the codebase
+  recipientId: string
   content: string
-  timestamp: string // ISO string format
+  timestamp: string | object // ISO string or Firebase ServerValue
   read: boolean
 }
