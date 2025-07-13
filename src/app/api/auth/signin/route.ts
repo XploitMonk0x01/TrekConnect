@@ -1,37 +1,13 @@
-import {NextRequest, NextResponse} from 'next/server';
-import {signIn} from '@/lib/auth'; // Firebase sign-in from lib/auth
+// This file is no longer needed as sign-in is handled on the client-side
+// by the CustomAuthContext. It can be safely deleted.
+// We are keeping it here but empty to avoid breaking any potential lingering references,
+// but it should be removed in a future cleanup.
 
-export async function POST(request: NextRequest) {
-  try {
-    const {email, password} = await request.json();
+import {NextResponse} from 'next/server';
 
-    if (!email || !password) {
-      return NextResponse.json(
-        {error: 'Email and password are required.'},
-        {status: 400}
-      );
-    }
-
-    const user = await signIn(email, password);
-
-    // The client-side Firebase SDK will handle auth persistence.
-    // The API response just confirms success.
-    const response = NextResponse.json({
-      id: user.uid,
-      email: user.email,
-      name: user.displayName,
-    });
-
-    return response;
-  } catch (error) {
-    if (error instanceof Error) {
-      // The error messages from lib/auth are user-friendly
-      return NextResponse.json({error: error.message}, {status: 401});
-    }
-    // Fallback for unexpected errors
-    return NextResponse.json(
-      {error: 'An unexpected error occurred.'},
-      {status: 500}
-    );
-  }
+export async function POST() {
+  return NextResponse.json(
+    {error: 'This API route is deprecated. Use the client-side auth context.'},
+    {status: 410} // 410 Gone
+  );
 }

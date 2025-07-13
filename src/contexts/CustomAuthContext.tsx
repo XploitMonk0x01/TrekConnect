@@ -31,8 +31,9 @@ interface AuthContextType {
     email_param: string,
     password_param: string
   ) => Promise<boolean>;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   updateUserInContext: (updatedUser: UserProfile) => void;
+  validateSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,52 +45,47 @@ export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
   const router = useRouter();
   const {toast} = useToast();
 
-  useEffect(() => {
-    const unsubscribe = onAuthChange(async userAuth => {
-      setIsLoading(true);
-      if (userAuth) {
-        setFirebaseUser(userAuth);
-        try {
-          // Fetch user profile from Realtime Database
-          const userProfile = await getUserProfileFromRTDB(userAuth.uid);
-          if (userProfile) {
-            setUser(userProfile);
-          } else {
-            // This case might happen if DB entry creation failed during signup.
-            // We can try to create it again.
-            const newProfile = await createUserProfileInRTDB(userAuth);
-            setUser(newProfile);
-          }
-        } catch (error) {
-          console.error('Failed to fetch user profile:', error);
-          setUser(null); // Or handle error appropriately
+  const handleAuthChange = async (userAuth: User | null) => {
+    if (userAuth) {
+      setFirebaseUser(userAuth);
+      try {
+        const userProfile = await getUserProfileFromRTDB(userAuth.uid);
+        if (userProfile) {
+          setUser(userProfile);
+        } else {
+          // This case handles a user who authenticated but doesn't have a DB profile yet.
+          // This can happen if the signup process was interrupted.
+          const newProfile = await createUserProfileInRTDB(userAuth);
+          setUser(newProfile);
         }
-      } else {
-        setFirebaseUser(null);
+      } catch (error) {
+        console.error('Failed to fetch or create user profile:', error);
+        // Signing out to prevent being in a broken state
+        await firebaseSignOut();
         setUser(null);
+        setFirebaseUser(null);
       }
-      setIsLoading(false);
-    });
+    } else {
+      setFirebaseUser(null);
+      setUser(null);
+    }
+    setIsLoading(false);
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    setIsLoading(true);
+    const unsubscribe = onAuthChange(handleAuthChange);
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/signin', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-          throw new Error(data.error || 'Sign-in failed');
-      }
+      await firebaseSignIn(email, password);
+      // The onAuthChange listener will handle setting user state and loading state.
       toast({title: 'Signed In!', description: 'Welcome back!'});
-      // The onAuthChange listener will handle setting user state, but we can force a re-check
-      // Or rely on the cookie being set and a page reload. A router.refresh() might be good here.
-      router.refresh(); 
       return true;
     } catch (error: any) {
       toast({
@@ -109,22 +105,13 @@ export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
   ): Promise<boolean> => {
     setIsLoading(true);
     try {
-        const response = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ name, email, password }),
-        });
-        const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.error || 'Sign-up failed');
-        }
-        toast({
-            title: 'Account Created!',
-            description: 'Welcome to TrekConnect! Please complete your profile.',
-        });
-        // onAuthChange will handle the rest.
-        router.refresh();
-        return true;
+      await firebaseSignUp(name, email, password);
+      // The onAuthChange listener will handle setting the new user's state.
+      toast({
+        title: 'Account Created!',
+        description: 'Welcome to TrekConnect! Please complete your profile.',
+      });
+      return true;
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -138,13 +125,8 @@ export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
 
   const signOut = async () => {
     try {
-      // Call the server endpoint to clear the HttpOnly cookie
-      await fetch('/api/auth/logout', { method: 'POST' });
-      // Sign out from Firebase client-side
       await firebaseSignOut();
-      setUser(null);
-      setFirebaseUser(null);
-      // Redirect to sign-in page
+      // onAuthChange will clear user state.
       router.push('/auth/signin');
       toast({
         title: 'Signed Out',
@@ -163,6 +145,14 @@ export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
     setUser(updatedUser);
   };
 
+  const validateSession = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      await handleAuthChange(user);
+    }
+  };
+
+
   return (
     <AuthContext.Provider
       value={{
@@ -173,6 +163,7 @@ export const CustomAuthProvider = ({children}: {children: ReactNode}) => {
         signUp,
         signOut,
         updateUserInContext,
+        validateSession,
       }}
     >
       {children}
