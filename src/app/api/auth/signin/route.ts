@@ -1,7 +1,6 @@
 import { compare } from 'bcryptjs'
 import { SignJWT } from 'jose'
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
 import type { UserProfile } from '@/lib/types' // Assuming UserProfile is adapted
 import { ObjectId } from 'mongodb'
 

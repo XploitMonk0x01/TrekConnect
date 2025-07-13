@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '../../../../lib/mongodb'
 import { ObjectId } from 'mongodb'
 import { verify } from 'jsonwebtoken'
@@ -37,7 +37,6 @@ function validateUpdatePayload(updates: any): updates is UpdateUserBody {
     'createdAt',
     'lastLoginAt',
   ]
-
   for (const field of Object.keys(updates)) {
     if (forbiddenFields.includes(field)) {
       return false
@@ -46,16 +45,15 @@ function validateUpdatePayload(updates: any): updates is UpdateUserBody {
       return false
     }
   }
-
   return true
 }
 
 export async function GET(
-  request: Request,
-  { params }: { params: { userId: string } }
+  request: NextRequest,
+  context: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
+    const { userId } = context.params
     if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
@@ -84,11 +82,11 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { userId: string } }
+  request: NextRequest,
+  context: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
+    const { userId } = context.params
     if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
@@ -151,11 +149,11 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { userId: string } }
+  request: NextRequest,
+  context: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
+    const { userId } = context.params
     if (!ObjectId.isValid(userId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },

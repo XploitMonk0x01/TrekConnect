@@ -1,21 +1,47 @@
+import { io, Socket } from 'socket.io-client'
 
-// This file is largely deprecated for server initialization as that logic has moved to src/app/api/socket/route.ts
-// It can be kept for shared types or client-side helper functions if needed in the future,
-// or removed if no longer used.
+let socket: Socket
 
-// Example of what might remain or be added here (e.g., client-side helper types if any)
-// export interface ClientSocketEventHandlers {
-//   onConnect?: () => void;
-//   onDisconnect?: (reason: string) => void;
-//   onConnectError?: (error: Error) => void;
-//   onReceiveMessage?: (message: Message) => void;
-//   // ... other client-side event handlers
-// }
+export const initSocket = (userId: string) => {
+  if (!socket) {
+    socket = io({
+      path: '/api/socket',
+      auth: {
+        userId,
+      },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      autoConnect: false,
+      timeout: 10000,
+    })
 
-// No server-side initSocket function here anymore.
-// The Socket.IO server instance is now managed and attached directly within the
-// API route handler at /src/app/api/socket/route.ts
-// This is to better align with Next.js App Router patterns where direct HTTP server
-// access from a generic library function is less straightforward.
+    socket.on('connect', () => {
+      console.log('Socket connected successfully')
+    })
 
-console.log("[Socket Lib] src/lib/socket.ts is now minimal. Server initialization is in /api/socket/route.ts");
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error.message)
+    })
+
+    socket.on('error', (error: string) => {
+      console.error('Socket error:', error)
+    })
+  }
+  return socket
+}
+
+export const getSocket = () => {
+  if (!socket) {
+    throw new Error('Socket not initialized. Call initSocket first.')
+  }
+  return socket
+}
+
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect()
+  }
+}

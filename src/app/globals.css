@@ -46,35 +46,34 @@ body {
   }
 
   .dark {
-    /* Define dark theme colors if needed, or adjust existing ones. For now, keeping light theme focus. */
-    --background: 49 15% 10%; /* Dark warm charcoal */
-    --foreground: 49 30% 90%; /* Light warm gray for text */
-    --card: 49 15% 15%; /* Darker card background */
-    --card-foreground: 49 30% 90%;
-    --popover: 49 15% 15%;
-    --popover-foreground: 49 30% 90%;
-    --primary: 49 100% 50%; /* Gold, slightly lighter for dark mode */
-    --primary-foreground: 49 25% 10%; /* Dark text on primary */
-    --secondary: 49 20% 25%; /* Muted dark gold/brown */
-    --secondary-foreground: 49 30% 85%; /* Lighter text for secondary */
-    --muted: 49 15% 20%; /* Dark subtle warm gray */
-    --muted-foreground: 49 20% 60%; /* Readable gray on dark muted */
-    --accent: 30 100% 55%; /* Orange, slightly lighter for dark mode */
-    --accent-foreground: 49 25% 10%; /* Dark text on accent */
-    --destructive: 0 70% 50%;
+    --background: 49 20% 14%; /* Slightly lighter, warm dark */
+    --foreground: 49 35% 92%; /* Brighter warm gray for text */
+    --card: 49 22% 18%; /* Slightly lighter card for contrast */
+    --card-foreground: 49 35% 92%;
+    --popover: 49 22% 18%;
+    --popover-foreground: 49 35% 92%;
+    --primary: 49 95% 55%; /* Vibrant gold */
+    --primary-foreground: 49 100% 96%; /* Light text on gold */
+    --secondary: 49 40% 32%; /* More saturated dark gold */
+    --secondary-foreground: 49 35% 92%;
+    --muted: 49 18% 22%; /* Slightly lighter muted */
+    --muted-foreground: 49 25% 70%;
+    --accent: 30 100% 60%; /* Brighter orange accent */
+    --accent-foreground: 49 100% 96%;
+    --destructive: 0 80% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 49 15% 30%; /* Dark subtle warm border */
-    --input: 49 15% 25%; /* Darker input background */
-    --ring: 30 100% 65%; /* Lighter accent for focus rings in dark */
+    --border: 49 18% 28%;
+    --input: 49 18% 24%;
+    --ring: 30 100% 70%;
 
-    --sidebar-background: 49 15% 12%;
-    --sidebar-foreground: 49 30% 85%;
-    --sidebar-primary: 49 100% 50%;
-    --sidebar-primary-foreground: 49 25% 10%;
-    --sidebar-accent: 30 100% 55%;
-    --sidebar-accent-foreground: 49 25% 10%;
-    --sidebar-border: 49 15% 25%;
-    --sidebar-ring: 30 100% 65%;
+    --sidebar-background: 49 20% 16%;
+    --sidebar-foreground: 49 35% 92%;
+    --sidebar-primary: 49 95% 55%;
+    --sidebar-primary-foreground: 49 100% 96%;
+    --sidebar-accent: 30 100% 60%;
+    --sidebar-accent-foreground: 49 100% 96%;
+    --sidebar-border: 49 18% 28%;
+    --sidebar-ring: 30 100% 70%;
   }
 }
 

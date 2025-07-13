@@ -1,252 +1,484 @@
+'use client'
 
-'use client';
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Bell, Lock, Palette, UserCircle, ShieldQuestion, Save, Loader2, AlertTriangle, Trash2 } from "lucide-react";
-import { ThemeToggleSwitch } from "@/components/settings/ThemeToggleSwitch";
-import { useCustomAuth } from '@/contexts/CustomAuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { updateUserProfile } from '@/services/users';
-import type { UserProfile } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useRouter } from 'next/navigation';
-
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Separator } from '@/components/ui/separator'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import {
+  Bell,
+  Lock,
+  Palette,
+  UserCircle,
+  ShieldQuestion,
+  Save,
+  Loader2,
+  AlertTriangle,
+  Trash2,
+} from 'lucide-react'
+import { ThemeToggleSwitch } from '@/components/settings/ThemeToggleSwitch'
+import { useCustomAuth } from '@/contexts/CustomAuthContext'
+import { useToast } from '@/hooks/use-toast'
+import { updateUserProfile } from '@/services/users'
+import type { UserProfile } from '@/lib/types'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { useRouter } from 'next/navigation'
 
 const accountFormSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }).max(50, { message: "Name must not exceed 50 characters."}),
-  bio: z.string().max(500, { message: "Bio must not exceed 500 characters." }).optional(),
-});
+  name: z
+    .string()
+    .min(2, { message: 'Name must be at least 2 characters.' })
+    .max(50, { message: 'Name must not exceed 50 characters.' }),
+  bio: z
+    .string()
+    .max(500, { message: 'Bio must not exceed 500 characters.' })
+    .optional(),
+})
 
-type AccountFormValues = z.infer<typeof accountFormSchema>;
+type AccountFormValues = z.infer<typeof accountFormSchema>
 
-const passwordFormSchema = z.object({
-  currentPassword: z.string().min(1, { message: "Current password is required." }),
-  newPassword: z.string().min(6, { message: "New password must be at least 6 characters." }),
-  confirmPassword: z.string().min(1, { message: "Please confirm your new password." }),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "New passwords don't match",
-  path: ["confirmPassword"], // path of error
-});
+const passwordFormSchema = z
+  .object({
+    currentPassword: z
+      .string()
+      .min(1, { message: 'Current password is required.' }),
+    newPassword: z
+      .string()
+      .min(6, { message: 'New password must be at least 6 characters.' }),
+    confirmPassword: z
+      .string()
+      .min(1, { message: 'Please confirm your new password.' }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New passwords don't match",
+    path: ['confirmPassword'], // path of error
+  })
 
-type PasswordFormValues = z.infer<typeof passwordFormSchema>;
-
+type PasswordFormValues = z.infer<typeof passwordFormSchema>
 
 export default function SettingsPage() {
-  const { user: currentUser, isLoading: authIsLoading, validateSession, signOut } = useCustomAuth();
-  const { toast } = useToast();
-  const router = useRouter();
-  const [isLoadingForm, setIsLoadingForm] = useState(true);
-  const [isSavingAccount, setIsSavingAccount] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const {
+    user: currentUser,
+    isLoading: authIsLoading,
+    validateSession,
+    signOut,
+  } = useCustomAuth()
+  const { toast } = useToast()
+  const router = useRouter()
+  const [isLoadingForm, setIsLoadingForm] = useState(true)
+  const [isSavingAccount, setIsSavingAccount] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   const accountForm = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: { name: '', bio: '' },
-  });
+  })
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordFormSchema),
-    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
-  });
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+  })
 
   useEffect(() => {
     if (currentUser && !authIsLoading) {
       accountForm.reset({
         name: currentUser.name || '',
         bio: currentUser.bio || '',
-      });
-      setIsLoadingForm(false);
+      })
+      setIsLoadingForm(false)
     } else if (!currentUser && !authIsLoading) {
-      setIsLoadingForm(false);
+      setIsLoadingForm(false)
     }
-  }, [currentUser, authIsLoading, accountForm]);
+  }, [currentUser, authIsLoading, accountForm])
 
   async function onAccountSubmit(data: AccountFormValues) {
     if (!currentUser || !currentUser.id) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
-      return;
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You are not logged in.',
+      })
+      return
     }
-    setIsSavingAccount(true);
+    setIsSavingAccount(true)
 
     const profileUpdateData: Partial<Pick<UserProfile, 'name' | 'bio'>> = {
-        name: data.name,
-        bio: data.bio || null,
-    };
+      name: data.name,
+      bio: data.bio || null,
+    }
 
     try {
-      const updatedUser = await updateUserProfile(currentUser.id, profileUpdateData);
+      const updatedUser = await updateUserProfile(
+        currentUser.id,
+        profileUpdateData
+      )
       if (updatedUser) {
-        toast({ title: 'Account Info Updated', description: 'Your account information has been saved.' });
-        await validateSession();
+        toast({
+          title: 'Account Info Updated',
+          description: 'Your account information has been saved.',
+        })
+        await validateSession()
       } else {
-        throw new Error('Failed to update account information.');
+        throw new Error('Failed to update account information.')
       }
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Update Failed', description: error.message || 'Could not save your account information.' });
+    } catch (error) {
+      console.error('Error updating account:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description:
+          error instanceof Error ? error.message : 'Could not update account.',
+      })
     } finally {
-      setIsSavingAccount(false);
+      setIsSavingAccount(false)
     }
   }
 
   async function onChangePasswordSubmit(data: PasswordFormValues) {
     if (!currentUser || !currentUser.id) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
-      return;
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You are not logged in.',
+      })
+      return
     }
-    setIsChangingPassword(true);
+    setIsChangingPassword(true)
     try {
       const response = await fetch(`/api/auth/change-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
         body: JSON.stringify({
           userId: currentUser.id,
           currentPassword: data.currentPassword,
           newPassword: data.newPassword,
         }),
-      });
+      })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to change password.');
+        throw new Error(result.error || 'Failed to change password.')
       }
-      toast({ title: 'Password Changed', description: 'Your password has been successfully updated.' });
-      passwordForm.reset();
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Password Change Failed', description: error.message || 'Could not change your password.' });
+      toast({
+        title: 'Password Changed',
+        description: 'Your password has been successfully updated.',
+      })
+      passwordForm.reset()
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Password Change Failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Could not change your password.',
+      })
     } finally {
-      setIsChangingPassword(false);
+      setIsChangingPassword(false)
     }
   }
 
   async function handleDeleteAccount() {
     if (!currentUser || !currentUser.id) {
-      toast({ variant: 'destructive', title: 'Error', description: 'You are not logged in.' });
-      return;
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'You are not logged in.',
+      })
+      return
     }
-    setIsDeletingAccount(true);
+    setIsDeletingAccount(true)
     try {
       const response = await fetch(`/api/users/${currentUser.id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
-      });
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      })
 
       if (!response.ok) {
-        const result = await response.json().catch(() => ({ error: 'Failed to delete account.' }));
-        throw new Error(result.error || 'Failed to delete account.');
+        const result = await response
+          .json()
+          .catch(() => ({ error: 'Failed to delete account.' }))
+        throw new Error(result.error || 'Failed to delete account.')
       }
-      toast({ title: 'Account Deleted', description: 'Your account has been permanently deleted.' });
-      signOut(); // This will clear local storage and redirect
-      router.push('/auth/signup'); // Fallback redirect
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Deletion Failed', description: error.message || 'Could not delete your account.' });
+      toast({
+        title: 'Account Deleted',
+        description: 'Your account has been permanently deleted.',
+      })
+      signOut() // This will clear local storage and redirect
+      router.push('/auth/signup') // Fallback redirect
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Deletion Failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Could not delete your account.',
+      })
     } finally {
-      setIsDeletingAccount(false);
+      setIsDeletingAccount(false)
     }
   }
-
 
   const renderAccountForm = () => {
     if (authIsLoading || isLoadingForm) {
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><Skeleton className="h-4 w-1/4 mb-2" /><Skeleton className="h-10 w-full" /></div>
-            <div><Skeleton className="h-4 w-1/4 mb-2" /><Skeleton className="h-10 w-full" /></div>
+            <div>
+              <Skeleton className="h-4 w-1/4 mb-2" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div>
+              <Skeleton className="h-4 w-1/4 mb-2" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           </div>
-          <div><Skeleton className="h-4 w-1/4 mb-2" /><Skeleton className="h-20 w-full" /></div>
+          <div>
+            <Skeleton className="h-4 w-1/4 mb-2" />
+            <Skeleton className="h-20 w-full" />
+          </div>
           <Skeleton className="h-10 w-24" />
         </div>
-      );
+      )
     }
 
     if (!currentUser && !authIsLoading) {
-        return (
-            <div className="text-center p-4 text-muted-foreground">
-                <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
-                <p>Please <Link href="/auth/signin?redirect=/settings" className="text-primary underline">sign in</Link> to manage your account settings.</p>
-            </div>
-        );
+      return (
+        <div className="text-center p-4 text-muted-foreground">
+          <AlertTriangle className="mx-auto h-8 w-8 text-destructive mb-2" />
+          <p>
+            Please{' '}
+            <Link
+              href="/auth/signin?redirect=/settings"
+              className="text-primary underline"
+            >
+              sign in
+            </Link>{' '}
+            to manage your account settings.
+          </p>
+        </div>
+      )
     }
 
     return (
       <Form {...accountForm}>
-        <form onSubmit={accountForm.handleSubmit(onAccountSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField control={accountForm.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} placeholder="Your full name" disabled={isSavingAccount} /></FormControl><FormMessage /></FormItem> )} />
+        <form
+          onSubmit={accountForm.handleSubmit(onAccountSubmit)}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={accountForm.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Your full name"
+                      disabled={isSavingAccount}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div>
-                <Label htmlFor="email">Email Address</Label>
-                <Input id="email" type="email" value={currentUser?.email || ''} placeholder="your@example.com" disabled />
-                <p className="text-xs text-muted-foreground mt-1">Email cannot be changed here.</p>
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={currentUser?.email || ''}
+                placeholder="your@example.com"
+                disabled
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Email cannot be changed here.
+              </p>
             </div>
-            </div>
-            <FormField control={accountForm.control} name="bio" render={({ field }) => ( <FormItem><FormLabel>Bio</FormLabel><FormControl><Textarea {...field} placeholder="A short bio about yourself (optional)" rows={3} disabled={isSavingAccount} /></FormControl><FormMessage /></FormItem> )} />
+          </div>
+          <FormField
+            control={accountForm.control}
+            name="bio"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Bio</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    placeholder="A short bio about yourself (optional)"
+                    rows={3}
+                    disabled={isSavingAccount}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <Button type="submit" disabled={isSavingAccount || authIsLoading || isLoadingForm}>
-            {isSavingAccount ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          <Button
+            type="submit"
+            disabled={isSavingAccount || authIsLoading || isLoadingForm}
+          >
+            {isSavingAccount ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             Save Account Changes
-            </Button>
+          </Button>
         </form>
       </Form>
-    );
+    )
   }
 
   const renderPasswordForm = () => {
-    if (authIsLoading || isLoadingForm) return null; // Don't show password form if initial user load is pending
-    if (!currentUser) return null; // No form if not logged in
+    if (authIsLoading || isLoadingForm) return null // Don't show password form if initial user load is pending
+    if (!currentUser) return null // No form if not logged in
 
     return (
       <Form {...passwordForm}>
-        <form onSubmit={passwordForm.handleSubmit(onChangePasswordSubmit)} className="space-y-4">
-          <FormField control={passwordForm.control} name="currentPassword" render={({ field }) => ( <FormItem><FormLabel>Current Password</FormLabel><FormControl><Input type="password" {...field} disabled={isChangingPassword} /></FormControl><FormMessage /></FormItem> )} />
-          <FormField control={passwordForm.control} name="newPassword" render={({ field }) => ( <FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} disabled={isChangingPassword} /></FormControl><FormMessage /></FormItem> )} />
-          <FormField control={passwordForm.control} name="confirmPassword" render={({ field }) => ( <FormItem><FormLabel>Confirm New Password</FormLabel><FormControl><Input type="password" {...field} disabled={isChangingPassword} /></FormControl><FormMessage /></FormItem> )} />
+        <form
+          onSubmit={passwordForm.handleSubmit(onChangePasswordSubmit)}
+          className="space-y-4"
+        >
+          <FormField
+            control={passwordForm.control}
+            name="currentPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Current Password</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    {...field}
+                    disabled={isChangingPassword}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={passwordForm.control}
+            name="newPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>New Password</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    {...field}
+                    disabled={isChangingPassword}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={passwordForm.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirm New Password</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    {...field}
+                    disabled={isChangingPassword}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <Button type="submit" disabled={isChangingPassword}>
-            {isChangingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {isChangingPassword ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
             Change Password
           </Button>
         </form>
       </Form>
-    );
+    )
   }
-
 
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="font-headline text-3xl text-primary">Settings</CardTitle>
-          <CardDescription>Manage your account preferences and settings.</CardDescription>
+          <CardTitle className="font-headline text-3xl text-primary">
+            Settings
+          </CardTitle>
+          <CardDescription>
+            Manage your account preferences and settings.
+          </CardDescription>
         </CardHeader>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center"><UserCircle className="mr-2 h-5 w-5" /> Account Information</CardTitle>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <UserCircle className="mr-2 h-5 w-5" /> Account Information
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          {renderAccountForm()}
-        </CardContent>
+        <CardContent>{renderAccountForm()}</CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center"><Lock className="mr-2 h-5 w-5" /> Security</CardTitle>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Lock className="mr-2 h-5 w-5" /> Security
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {renderPasswordForm()}
@@ -258,82 +490,128 @@ export default function SettingsPage() {
                 Add an extra layer of security to your account. (Coming Soon)
               </span>
             </Label>
-            <Switch id="twoFactorAuth" aria-label="Toggle Two-Factor Authentication" disabled />
+            <Switch
+              id="twoFactorAuth"
+              aria-label="Toggle Two-Factor Authentication"
+              disabled
+            />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center"><Bell className="mr-2 h-5 w-5" /> Notifications</CardTitle>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Bell className="mr-2 h-5 w-5" /> Notifications
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <Label htmlFor="matchNotifications">New Match Notifications</Label>
-            <Switch id="matchNotifications" defaultChecked disabled={!currentUser}/>
+            <Switch
+              id="matchNotifications"
+              defaultChecked
+              disabled={!currentUser}
+            />
           </div>
           <div className="flex items-center justify-between">
-            <Label htmlFor="messageNotifications">New Message Notifications</Label>
-            <Switch id="messageNotifications" defaultChecked disabled={!currentUser}/>
+            <Label htmlFor="messageNotifications">
+              New Message Notifications
+            </Label>
+            <Switch
+              id="messageNotifications"
+              defaultChecked
+              disabled={!currentUser}
+            />
           </div>
-           {!currentUser && <p className="text-xs text-muted-foreground">Sign in to manage notifications.</p>}
+          {!currentUser && (
+            <p className="text-xs text-muted-foreground">
+              Sign in to manage notifications.
+            </p>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center"><Palette className="mr-2 h-5 w-5" /> Appearance</CardTitle>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <Palette className="mr-2 h-5 w-5" /> Appearance
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-            <ThemeToggleSwitch />
+          <ThemeToggleSwitch />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center"><ShieldQuestion className="mr-2 h-5 w-5" /> Privacy & Data</CardTitle>
+          <CardTitle className="font-headline text-xl flex items-center">
+            <ShieldQuestion className="mr-2 h-5 w-5" /> Privacy & Data
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-                <Label htmlFor="profileVisibility" className="flex flex-col space-y-1">
-                    <span>Profile Visibility</span>
-                    <span className="font-normal leading-snug text-muted-foreground">
-                        Control who can see your profile. (Coming Soon)
-                    </span>
-                </Label>
-                <Button variant="outline" size="sm" disabled>Manage Visibility</Button>
-            </div>
-            <Button variant="link" className="p-0 h-auto text-primary">View Privacy Policy</Button>
-            <Separator />
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full sm:w-auto" disabled={!currentUser || isDeletingAccount}>
-                  {isDeletingAccount ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                  Delete Account
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your
-                    account and remove your data from our servers.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeletingAccount}>
-                    {isDeletingAccount ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Yes, delete account
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            {!currentUser && <p className="text-xs text-muted-foreground mt-1">Sign in to manage your account data.</p>}
+          <div className="flex items-center justify-between">
+            <Label
+              htmlFor="profileVisibility"
+              className="flex flex-col space-y-1"
+            >
+              <span>Profile Visibility</span>
+              <span className="font-normal leading-snug text-muted-foreground">
+                Control who can see your profile. (Coming Soon)
+              </span>
+            </Label>
+            <Button variant="outline" size="sm" disabled>
+              Manage Visibility
+            </Button>
+          </div>
+          <Button variant="link" className="p-0 h-auto text-primary">
+            View Privacy Policy
+          </Button>
+          <Separator />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                className="w-full sm:w-auto"
+                disabled={!currentUser || isDeletingAccount}
+              >
+                {isDeletingAccount ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Delete Account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete
+                  your account and remove your data from our servers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                >
+                  {isDeletingAccount ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Yes, delete account
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          {!currentUser && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Sign in to manage your account data.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
-
-    
