@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, ChangeEvent } from 'react';
@@ -14,17 +13,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, BookOpen, Loader2, Save, ImagePlus, AlertTriangle, Sparkles } from 'lucide-react'; // Added Sparkles
+import { ArrowLeft, BookOpen, Loader2, Save, ImagePlus, AlertTriangle, Sparkles } from 'lucide-react';
 import { createStory } from '@/services/stories';
-import type { CreateStoryInput } from '@/lib/types'; 
-import NextImage from 'next/image'; // For preview
-import { suggestStoryTags } from '@/ai/flows/suggest-story-tags-flow'; // Import the new AI flow
+import type { CreateStoryInput } from '@/lib/types';
+import NextImage from 'next/image';
+import { suggestStoryTags } from '@/ai/flows/suggest-story-tags-flow';
 
 const storyFormSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
   content: z.string().min(50, "Story content must be at least 50 characters.").max(10000, "Story content is too long."),
-  coverImageFile: z.any().optional(), 
-  imageUrl: z.string().url("Please enter a valid URL for the image.").or(z.literal('')).optional(), 
+  coverImageFile: z.any().optional(),
+  imageUrl: z.string().url("Please enter a valid URL for the image.").or(z.literal('')).optional(),
   destinationName: z.string().max(100).optional(),
   tags: z.string().max(200).optional(),
 });
@@ -37,7 +36,7 @@ export default function NewStoryPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
-  const [isSuggestingTags, setIsSuggestingTags] = useState(false); // State for AI tag suggestion
+  const [isSuggestingTags, setIsSuggestingTags] = useState(false);
 
   const form = useForm<StoryFormValues>({
     resolver: zodResolver(storyFormSchema),
@@ -60,11 +59,11 @@ export default function NewStoryPage() {
       reader.onloadend = () => {
         const result = reader.result as string;
         setCoverImagePreview(result);
-        form.setValue('imageUrl', result, { shouldValidate: true }); 
+        form.setValue('imageUrl', result, { shouldValidate: true });
       };
       reader.readAsDataURL(file);
     } else {
-      setCoverImagePreview(null); 
+      setCoverImagePreview(null);
       if(form.getValues('imageUrl')?.startsWith('data:image')) {
         form.setValue('imageUrl', '');
       }
@@ -111,16 +110,16 @@ export default function NewStoryPage() {
     const storyInputData: CreateStoryInput = {
       title: data.title,
       content: data.content,
-      imageUrl: data.imageUrl || null, 
+      imageUrl: data.imageUrl || null,
       destinationName: data.destinationName || undefined,
       tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
-      userId: currentUser.id, 
-      userName: currentUser.name || 'Anonymous Author', 
-      userAvatarUrl: currentUser.photoUrl || null, 
+      userId: currentUser.id,
+      userName: currentUser.name || 'Anonymous Author',
+      userAvatarUrl: currentUser.photoUrl || null,
     };
 
     try {
-      const newStory = await createStory(storyInputData); 
+      const newStory = await createStory(storyInputData);
       if (newStory && newStory.id) {
         toast({ title: 'Story Published!', description: 'Your adventure has been shared with the community.' });
         router.push(`/stories/${newStory.id}`);
@@ -135,11 +134,11 @@ export default function NewStoryPage() {
     }
   }
 
-  if (authIsLoading) { 
+  if (authIsLoading) {
     return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /><span className="ml-2">Loading...</span></div>;
   }
 
-  if (!currentUser && !authIsLoading) { 
+  if (!currentUser && !authIsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
@@ -171,20 +170,20 @@ export default function NewStoryPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField control={form.control} name="title" render={({ field }) => ( <FormItem><FormLabel>Title*</FormLabel><FormControl><Input placeholder="My Epic Journey to the Valley of Flowers" {...field} /></FormControl><FormMessage /></FormItem> )} />
               <FormField control={form.control} name="content" render={({ field }) => ( <FormItem><FormLabel>Your Story*</FormLabel><FormControl><Textarea placeholder="Describe your adventure in detail..." {...field} rows={15} /></FormControl><FormMessage /></FormItem> )} />
-              
+
               <FormField control={form.control} name="coverImageFile" render={({ field: { onChange, ...rest }}) => (
                 <FormItem>
                   <FormLabel htmlFor="cover-image-upload">Cover Image (Optional)</FormLabel>
                   <div className="flex items-start gap-4">
-                    <Input 
-                      id="cover-image-upload" 
-                      type="file" 
-                      accept="image/jpeg,image/png,image/webp,image/gif" 
+                    <Input
+                      id="cover-image-upload"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
                       onChange={(e) => {
-                        handleCoverImageChange(e); 
-                        onChange(e.target.files); 
-                      }} 
-                      className="hidden" 
+                        handleCoverImageChange(e);
+                        onChange(e.target.files);
+                      }}
+                      className="hidden"
                       {...rest}
                     />
                     <Button type="button" variant="outline" onClick={() => document.getElementById('cover-image-upload')?.click()}>
@@ -197,20 +196,20 @@ export default function NewStoryPage() {
                <FormField control={form.control} name="imageUrl" render={({ field }) => (
                   <FormItem className="mt-2">
                       <FormLabel className="text-xs text-muted-foreground">Or paste image URL (if not uploading)</FormLabel>
-                      <FormControl><Input type="url" placeholder="https://example.com/image.jpg" {...field} 
+                      <FormControl><Input type="url" placeholder="https://example.com/image.jpg" {...field}
                         onChange={(e) => {
                             field.onChange(e);
-                            if(!e.target.value.startsWith('data:image')) { 
+                            if(!e.target.value.startsWith('data:image')) {
                                 setCoverImagePreview(null);
                             }
                         }}
                       /></FormControl>
                       <FormMessage />
-                  </FormItem> 
+                  </FormItem>
               )} />
 
               <FormField control={form.control} name="destinationName" render={({ field }) => ( <FormItem><FormLabel>Destination (Optional)</FormLabel><FormControl><Input placeholder="Hampta Pass, Himachal Pradesh" {...field} /></FormControl><FormMessage /></FormItem> )} />
-              
+
               <div className="space-y-2">
                 <FormField control={form.control} name="tags" render={({ field }) => ( <FormItem><FormLabel>Tags (Optional, comma-separated)</FormLabel><FormControl><Input placeholder="himalayas, adventure, solo travel" {...field} /></FormControl><FormMessage /></FormItem> )} />
                 <Button type="button" variant="outline" size="sm" onClick={handleSuggestTags} disabled={isSuggestingTags || authIsLoading || !form.watch('title') || !form.watch('content')}>
@@ -218,7 +217,7 @@ export default function NewStoryPage() {
                   Suggest Tags with AI
                 </Button>
               </div>
-              
+
               <Button type="submit" disabled={isSubmitting || authIsLoading} className="w-full sm:w-auto bg-accent hover:bg-accent/90">
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} Publish Story
               </Button>

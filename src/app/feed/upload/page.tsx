@@ -31,7 +31,6 @@ import {
   UploadCloud,
   Loader2,
   Save,
-  Image as ImageIcon,
   AlertTriangle,
 } from 'lucide-react'
 import { createPhoto } from '@/services/photos'
@@ -39,8 +38,7 @@ import type { CreatePhotoInput } from '@/lib/types'
 import NextImage from 'next/image'
 
 const photoFormSchema = z.object({
-  image: z.instanceof(FileList).optional(), // More specific than z.any()
-  imageDataUri: z.string().optional(),
+  image: z.any().refine(files => files?.length > 0, 'Image is required.'),
   caption: z.string().max(500).optional(),
   destinationName: z.string().max(100).optional(),
   tags: z.string().max(200).optional(),
@@ -54,6 +52,7 @@ export default function UploadPhotoPage() {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imageDataUri, setImageDataUri] = useState<string | null>(null);
 
   const form = useForm<PhotoFormValues>({
     resolver: zodResolver(photoFormSchema),
@@ -61,7 +60,6 @@ export default function UploadPhotoPage() {
       caption: '',
       destinationName: '',
       tags: '',
-      imageDataUri: '',
     },
   })
 
@@ -75,7 +73,7 @@ export default function UploadPhotoPage() {
           message: 'Max file size is 5MB.',
         })
         setImagePreview(null)
-        form.setValue('imageDataUri', '')
+        setImageDataUri(null)
         return
       }
       if (
@@ -88,21 +86,20 @@ export default function UploadPhotoPage() {
           message: 'Invalid file type. Use JPG, PNG, WEBP, or GIF.',
         })
         setImagePreview(null)
-        form.setValue('imageDataUri', '')
+        setImageDataUri(null)
         return
       }
       form.clearErrors('image') // Clear previous errors on new valid file
       const reader = new FileReader()
       reader.onloadend = () => {
-        setImagePreview(reader.result as string)
-        form.setValue('imageDataUri', reader.result as string, {
-          shouldValidate: true,
-        })
+        const result = reader.result as string;
+        setImagePreview(result);
+        setImageDataUri(result);
       }
       reader.readAsDataURL(file)
     } else {
       setImagePreview(null)
-      form.setValue('imageDataUri', '')
+      setImageDataUri(null)
     }
   }
 
@@ -115,22 +112,17 @@ export default function UploadPhotoPage() {
       })
       return
     }
-    if (!data.imageDataUri) {
+    if (!imageDataUri) {
       form.setError('image', {
         type: 'manual',
         message: 'Please select an image.',
-      })
-      toast({
-        variant: 'destructive',
-        title: 'Image Required',
-        description: 'Please select an image file.',
       })
       return
     }
     setIsSubmitting(true)
 
     const photoData: CreatePhotoInput = {
-      imageUrl: data.imageDataUri,
+      imageUrl: imageDataUri,
       caption: data.caption,
       destinationName: data.destinationName || undefined,
       tags: data.tags
@@ -221,7 +213,7 @@ export default function UploadPhotoPage() {
               <FormField
                 control={form.control}
                 name="image"
-                render={({ field: { onChange, value, ...restField } }) => (
+                render={({ field }) => (
                   <FormItem>
                     <FormLabel>Select Image*</FormLabel>
                     <FormControl>
@@ -230,9 +222,8 @@ export default function UploadPhotoPage() {
                         accept="image/jpeg,image/png,image/webp,image/gif"
                         onChange={(e) => {
                           handleImageChange(e)
-                          onChange(e.target.files)
+                          field.onChange(e.target.files)
                         }}
-                        {...restField}
                       />
                     </FormControl>
                     <FormMessage />
@@ -246,14 +237,12 @@ export default function UploadPhotoPage() {
                     <NextImage
                       src={imagePreview}
                       alt="Image preview"
-                      layout="fill"
-                      objectFit="contain"
+                      fill
+                      style={{ objectFit: 'contain' }}
                     />
                   </div>
                 </div>
               )}
-              {/* imageDataUri is populated by handleImageChange, no direct user input */}
-              {/* <FormField control={form.control} name="imageDataUri" render={({ field }) => <Input type="hidden" {...field} />} /> */}
               <FormField
                 control={form.control}
                 name="caption"

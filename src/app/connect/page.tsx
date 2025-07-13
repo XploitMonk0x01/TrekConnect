@@ -5,16 +5,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { SwipeableCard } from '@/components/SwipeableCard'
-import type { UserProfile, Message } from '@/lib/types'
+import type { UserProfile } from '@/lib/types'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
 } from '@/components/ui/card'
 import {
   Heart,
@@ -25,22 +23,18 @@ import {
   MessageSquare,
   Loader2,
   AlertTriangle,
-  Send,
 } from 'lucide-react'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { getOtherUsers } from '@/services/users'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
-import { useChat } from '@/contexts/ChatContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
 
 export default function ConnectSpherePage() {
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
-  const { socket, messages, sendMessage, joinRoom, leaveRoom } = useChat()
   const { toast } = useToast()
   const router = useRouter()
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [profiles, setProfiles] = useState<UserProfile[]>([])
@@ -51,59 +45,15 @@ export default function ConnectSpherePage() {
   const [matchAnimationTimeoutId, setMatchAnimationTimeoutId] =
     useState<NodeJS.Timeout | null>(null)
   const [shouldReloadProfiles, setShouldReloadProfiles] = useState(false)
-  const [selectedChat, setSelectedChat] = useState<UserProfile | null>(null)
-  const [messageInput, setMessageInput] = useState('')
-  const [isSendingMessage, setIsSendingMessage] = useState(false)
 
-  // Scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // Cleanup timeouts
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedChat || !currentUser) return
-
-    setIsSendingMessage(true)
-    try {
-      const roomId = `chat_${currentUser.id}_${selectedChat.id}`
-      await sendMessage(roomId, messageInput.trim(), selectedChat.id)
-      setMessageInput('')
-    } catch (error) {
-      console.error('Failed to send message:', error)
-      toast({
-        title: 'Error',
-        description: 'Failed to send message. Please try again.',
-        variant: 'destructive',
-      })
-    } finally {
-      setIsSendingMessage(false)
-    }
-  }
-
-  const handleChatSelect = (profile: UserProfile) => {
-    if (selectedChat?.id === profile.id) return
-
-    if (selectedChat && currentUser) {
-      leaveRoom(`chat_${currentUser.id}_${selectedChat.id}`)
-    }
-
-    setSelectedChat(profile)
-    if (currentUser) {
-      joinRoom(`chat_${currentUser.id}_${profile.id}`)
-    }
-  }
-
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (matchAnimationTimeoutId) {
         clearTimeout(matchAnimationTimeoutId)
       }
-      if (selectedChat && currentUser) {
-        leaveRoom(`chat_${currentUser.id}_${selectedChat.id}`)
-      }
     }
-  }, [matchAnimationTimeoutId, selectedChat, currentUser, leaveRoom])
+  }, [matchAnimationTimeoutId])
 
   const loadProfiles = useCallback(async () => {
     if (!currentUser?.id) {
@@ -115,15 +65,22 @@ export default function ConnectSpherePage() {
     setIsLoadingProfiles(true)
     try {
       const fetchedProfiles = await getOtherUsers(currentUser.id)
-      setProfiles(fetchedProfiles || [])
+      // Basic profile validation
+      const validProfiles = fetchedProfiles.filter(p => p && p.id && p.name);
+      setProfiles(validProfiles || [])
       setCurrentIndex(0)
     } catch (error) {
       console.error('Failed to load profiles:', error)
+      toast({
+        variant: 'destructive',
+        title: 'Error Loading Profiles',
+        description: 'Could not fetch trekker profiles. Please try again later.',
+      });
       setProfiles([])
     } finally {
       setIsLoadingProfiles(false)
     }
-  }, [currentUser?.id])
+  }, [currentUser?.id, toast])
 
   useEffect(() => {
     if (!authIsLoading && currentUser?.id) {
@@ -142,31 +99,25 @@ export default function ConnectSpherePage() {
     }
   }, [shouldReloadProfiles, loadProfiles])
 
-  useEffect(() => {
-    if (profiles.length > 0 && currentIndex >= profiles.length) {
-      setCurrentIndex(profiles.length > 0 ? profiles.length - 1 : 0)
-    } else if (profiles.length === 0 && currentIndex !== 0) {
-      setCurrentIndex(0)
-    }
-  }, [profiles, currentIndex])
-
   const advanceToNextProfile = () => {
-    setLastSwipedProfile(null)
     if (showMatchAnimation && matchAnimationTimeoutId) {
       clearTimeout(matchAnimationTimeoutId)
       setMatchAnimationTimeoutId(null)
-      setShowMatchAnimation(false)
     }
-
-    setCurrentIndex((prevIndex) => {
-      const newIndex = prevIndex + 1
-      if (newIndex >= profiles.length) {
-        setShouldReloadProfiles(true)
-        return 0
-      }
-      return newIndex
-    })
+    setShowMatchAnimation(false)
+    setLastSwipedProfile(null)
+    
+    setCurrentIndex((prevIndex) => prevIndex + 1)
   }
+
+  // Check if we need to reload profiles when we run out
+  useEffect(() => {
+    if (!isLoadingProfiles && profiles.length > 0 && currentIndex >= profiles.length) {
+      setShouldReloadProfiles(true);
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, profiles.length, isLoadingProfiles]);
+
 
   const handleSwipe = (direction: 'left' | 'right') => {
     if (!currentUser || profiles.length === 0 || !profiles[currentIndex]) return
@@ -178,7 +129,6 @@ export default function ConnectSpherePage() {
 
     if (matchAnimationTimeoutId) {
       clearTimeout(matchAnimationTimeoutId)
-      setMatchAnimationTimeoutId(null)
     }
 
     const swipedProfile = profiles[currentIndex]
@@ -187,9 +137,7 @@ export default function ConnectSpherePage() {
     if (direction === 'right') {
       setShowMatchAnimation(true)
       const timeoutId = setTimeout(() => {
-        setShowMatchAnimation(false)
         advanceToNextProfile()
-        setMatchAnimationTimeoutId(null)
       }, 3500) // Extended to allow clicking chat button
       setMatchAnimationTimeoutId(timeoutId)
     } else {
@@ -198,31 +146,27 @@ export default function ConnectSpherePage() {
   }
 
   const handleUndo = () => {
-    if (!currentUser) return
+    if (!currentUser || currentIndex === 0) return;
     if (showMatchAnimation && matchAnimationTimeoutId) {
       clearTimeout(matchAnimationTimeoutId)
-      setMatchAnimationTimeoutId(null)
       setShowMatchAnimation(false)
     }
-
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1)
-      setLastSwipedProfile(null)
-    }
+    setCurrentIndex(currentIndex - 1)
+    setLastSwipedProfile(null)
   }
 
   const handleStartChat = (matchProfileId: string) => {
-    console.log('Attempting to start chat with profile ID:', matchProfileId)
     if (matchAnimationTimeoutId) {
       clearTimeout(matchAnimationTimeoutId) // Clear the auto-advance timeout
-      setMatchAnimationTimeoutId(null)
     }
     setShowMatchAnimation(false) // Hide match animation
     router.push(`/chat/${matchProfileId}`)
   }
-
+  
   const currentProfileForCard =
-    profiles.length > 0 ? profiles[currentIndex] : null
+    !isLoadingProfiles && profiles.length > 0 && currentIndex < profiles.length
+      ? profiles[currentIndex]
+      : null
 
   if (authIsLoading) {
     return (
@@ -251,7 +195,7 @@ export default function ConnectSpherePage() {
           <p className="text-gray-600 text-center">
             Please sign in to access the Connect feature
           </p>
-          <Button onClick={() => router.push('/auth/signin')} className="mt-4">
+          <Button onClick={() => router.push('/auth/signin?redirect=/connect')} className="mt-4">
             Sign In
           </Button>
         </div>
@@ -259,33 +203,13 @@ export default function ConnectSpherePage() {
     )
   }
 
-  if (isLoadingProfiles && currentUser) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center space-y-6 p-4 h-full">
-          <Skeleton className="h-32 w-full max-w-md" />
-          <div className="relative w-full max-w-sm h-[calc(100vh-20rem)] min-h-[480px] flex items-center justify-center">
-            <div className="text-center">
-              <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
-              <p className="mt-2 text-muted-foreground">Finding trekkers...</p>
-            </div>
-          </div>
-          <div className="flex space-x-4 items-center">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-16 w-16 rounded-full" />
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   if (showMatchAnimation && lastSwipedProfile && currentUser) {
     const currentUserPhoto =
       currentUser?.photoUrl || PLACEHOLDER_IMAGE_URL(100, 100)
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center h-screen text-center p-4 bg-background">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4 bg-background">
           <Heart className="w-24 h-24 text-pink-500 animate-ping mb-4" />
           <h2 className="text-3xl font-headline text-primary">It's a Match!</h2>
           <p className="text-xl text-muted-foreground mt-2">
@@ -335,14 +259,7 @@ export default function ConnectSpherePage() {
           <Button
             variant="link"
             className="mt-2 text-primary"
-            onClick={() => {
-              if (matchAnimationTimeoutId) {
-                clearTimeout(matchAnimationTimeoutId)
-                setMatchAnimationTimeoutId(null)
-              }
-              setShowMatchAnimation(false)
-              advanceToNextProfile()
-            }}
+            onClick={advanceToNextProfile}
           >
             Continue Swiping
           </Button>
@@ -372,118 +289,49 @@ export default function ConnectSpherePage() {
         </Card>
 
         <div className="relative w-full max-w-sm h-[calc(100vh-22rem)] min-h-[480px] flex items-center justify-center">
-          {!isLoadingProfiles &&
-          profiles.length === 0 &&
-          !shouldReloadProfiles ? (
-            <div className="text-center p-8 bg-card rounded-xl shadow-lg">
-              <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-headline text-xl">No More Profiles</h3>
-              <p className="text-muted-foreground">
-                Check back later or adjust your filters!
-              </p>
-              <Button
-                onClick={() => setShouldReloadProfiles(true)}
-                className="mt-4"
-                disabled={isLoadingProfiles || authIsLoading}
-              >
-                {isLoadingProfiles ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  'Reload Profiles'
-                )}
-              </Button>
-            </div>
-          ) : profiles.length > 0 ? (
-            <div className="relative w-full h-full">
-              <AnimatePresence>
-                {/* Show next 3 cards in stack */}
-                {profiles
-                  .slice(currentIndex, currentIndex + 3)
-                  .map((profile, index) => {
-                    const isActive = index === 0
-                    const stackIndex = index
-
+          <AnimatePresence>
+            {isLoadingProfiles ? (
+                 <div className="text-center p-8 bg-card rounded-xl shadow-lg">
+                    <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
+                    <p className="mt-2 text-muted-foreground">Finding trekkers...</p>
+                 </div>
+            ) : profiles.length > 0 && currentIndex < profiles.length ? (
+                profiles.slice(currentIndex, currentIndex + 3).reverse().map((profile, index) => {
+                    const isTop = index === (profiles.slice(currentIndex, currentIndex + 3).length - 1);
                     return (
-                      <motion.div
-                        key={`${profile.id}-${currentIndex + index}`}
-                        initial={{
-                          scale: 0.8,
-                          opacity: 0,
-                          y: 50,
-                          rotateY: -15,
-                        }}
-                        animate={{
-                          scale: 1 - stackIndex * 0.05,
-                          opacity: 1 - stackIndex * 0.3,
-                          y: stackIndex * 8,
-                          rotateY: 0,
-                          zIndex: 10 - stackIndex,
-                        }}
-                        exit={{
-                          x:
-                            stackIndex === 0
-                              ? lastSwipedProfile
-                                ? 300
-                                : -300
-                              : 0,
-                          y: stackIndex === 0 ? -100 : 0,
-                          rotate: stackIndex === 0 ? 15 : 0,
-                          opacity: 0,
-                          scale: 0.8,
-                        }}
-                        transition={{
-                          type: 'spring',
-                          stiffness: 300,
-                          damping: 30,
-                          duration: 0.3,
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                        }}
-                      >
-                        <SwipeableCard
-                          user={profile}
-                          onSwipe={handleSwipe}
-                          isActive={isActive}
-                        />
-                      </motion.div>
-                    )
-                  })}
-              </AnimatePresence>
-            </div>
-          ) : (
-            <div className="text-center p-8 bg-card rounded-xl shadow-lg">
-              {isLoadingProfiles || authIsLoading || shouldReloadProfiles ? (
-                <>
-                  <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
-                  <p className="mt-2 text-muted-foreground">
-                    Finding trekkers...
-                  </p>
-                </>
-              ) : (
-                <>
-                  <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-headline text-xl">No Profiles Found</h3>
-                  <p className="text-muted-foreground">
-                    Try reloading or check back later.
-                  </p>
-                  <Button
-                    onClick={() => setShouldReloadProfiles(true)}
-                    className="mt-4"
-                    disabled={isLoadingProfiles || authIsLoading}
-                  >
-                    Reload Profiles
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
+                        <motion.div
+                            key={profile.id}
+                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                            animate={{ 
+                                scale: 1 - (profiles.slice(currentIndex, currentIndex + 3).length - 1 - index) * 0.05, 
+                                y: (profiles.slice(currentIndex, currentIndex + 3).length - 1 - index) * -8, 
+                                opacity: 1 
+                            }}
+                            exit={{ x: 300, opacity: 0, scale: 0.9 }}
+                            transition={{ duration: 0.3 }}
+                            className="absolute w-full h-full"
+                        >
+                            <SwipeableCard
+                                user={profile}
+                                onSwipe={handleSwipe}
+                                isActive={isTop}
+                            />
+                        </motion.div>
+                    );
+                })
+            ) : (
+                <div className="text-center p-8 bg-card rounded-xl shadow-lg">
+                    <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-headline text-xl">No More Profiles</h3>
+                    <p className="text-muted-foreground">Check back later or adjust your filters!</p>
+                    <Button onClick={() => setShouldReloadProfiles(true)} className="mt-4" disabled={isLoadingProfiles || authIsLoading}>
+                        {isLoadingProfiles ? (<Loader2 className="mr-2 h-4 w-4 animate-spin" />) : ('Reload Profiles')}
+                    </Button>
+                </div>
+            )}
+           </AnimatePresence>
         </div>
-
+        
         {currentProfileForCard && (
           <div className="flex space-x-4 items-center">
             <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
@@ -505,7 +353,7 @@ export default function ConnectSpherePage() {
                 className="rounded-full p-2 border-muted-foreground text-muted-foreground hover:bg-muted-foreground/10"
                 onClick={handleUndo}
                 aria-label="Undo"
-                disabled={currentIndex === 0 && !lastSwipedProfile}
+                disabled={currentIndex === 0}
               >
                 <RotateCcw className="h-5 w-5" />
               </Button>

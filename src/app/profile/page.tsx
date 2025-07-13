@@ -73,7 +73,6 @@ function DestinationNameCard({
 
 export default function ProfilePage() {
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
-  const [allDestinations, setAllDestinations] = useState<Destination[]>([])
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(true)
   const [destinationNameToIdMap, setDestinationNameToIdMap] = useState<
     Map<string, string>
@@ -86,7 +85,6 @@ export default function ProfilePage() {
         setIsLoadingDestinations(true)
         try {
           const destinations = await getAllDestinations()
-          setAllDestinations(destinations)
           const nameToIdMap = new Map<string, string>()
           destinations.forEach((dest) => {
             nameToIdMap.set(dest.name, dest.id)
@@ -139,14 +137,15 @@ export default function ProfilePage() {
   }
 
   if (!currentUser) {
+    // This state should ideally not be reached due to the checks above, but it's a good fallback.
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-xl text-red-500">
-          Access Denied: User not found or not logged in.
-        </p>
-      </div>
-    )
-  }
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+            <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+            <h1 className="text-2xl font-semibold">An Error Occurred</h1>
+            <p className="text-muted-foreground">Could not load user profile data.</p>
+        </div>
+    );
+}
 
   const travelPreferencesParts: string[] = []
   if (currentUser?.travelPreferences?.soloOrGroup) {
