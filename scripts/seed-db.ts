@@ -51,9 +51,7 @@ async function seedDatabase() {
     const destinationsCollection = db.collection('destinations');
     
     // As per request, photos and stories are in Firebase, so we don't interact with them here.
-    // const photosCollection = db.collection('photos');
-    // const storiesCollection = db.collection('stories');
-
+    
     console.log('Successfully connected to MongoDB for destination seeding.');
 
     // Seed Destinations to MongoDB

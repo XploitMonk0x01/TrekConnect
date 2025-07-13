@@ -3,7 +3,7 @@
 
 import type { Db, WithId, Document } from 'mongodb'
 import { ObjectId } from 'mongodb'
-import { getDb } from '@/lib/mongodb' // Use the new central MongoDB connection
+import { getDb } from '@/lib/mongodb' 
 import type { Destination } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 

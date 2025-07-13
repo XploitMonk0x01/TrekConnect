@@ -12,27 +12,18 @@ if (!MONGODB_DB_NAME) {
   throw new Error('Please define the MONGODB_DB_NAME environment variable inside .env');
 }
 
-let cachedClient: MongoClient | null = null;
-let cachedDb: Db | null = null;
+const options: MongoClientOptions = {
+    maxPoolSize: 10,
+    minPoolSize: 1,
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
+    retryWrites: true,
+    retryReads: true,
+    writeConcern: { w: 'majority' },
+};
 
-export async function getDb(): Promise<Db> {
-  if (cachedDb) {
-    return cachedDb;
-  }
 
-  const options: MongoClientOptions = {};
-
-  const client = new MongoClient(MONGODB_URI, options);
-  await client.connect();
-  const db = client.db(MONGODB_DB_NAME);
-
-  cachedClient = client;
-  cachedDb = db;
-
-  return db;
-}
-
-// Export a client promise for seeding and other scripts if needed
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
 
@@ -53,4 +44,17 @@ if (process.env.NODE_ENV === 'development') {
   client = new MongoClient(MONGODB_URI, options)
   clientPromise = client.connect()
 }
+
+export async function getDb(): Promise<Db> {
+  try {
+    const connectedClient = await clientPromise;
+    const db = connectedClient.db(MONGODB_DB_NAME);
+    return db;
+  } catch (error) {
+    console.error('❌ MongoDB connection error in getDb():', error);
+    throw new Error('Failed to connect to database');
+  }
+}
+
+// Export a client promise for seeding and other scripts if needed
 export default clientPromise;
