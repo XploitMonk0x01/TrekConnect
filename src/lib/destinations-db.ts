@@ -1,4 +1,3 @@
-'use server'
 
 import { MongoClient, MongoClientOptions, Db } from 'mongodb'
 
