@@ -36,18 +36,16 @@ export async function updateUserProfile(
     // Directly assign fields if they exist in the input, allowing null to clear them.
     Object.keys(dataToUpdate).forEach(key => {
       const typedKey = key as keyof typeof dataToUpdate;
-      if (typedKey !== 'travelPreferences') {
+      // Handle nested travelPreferences object by merging
+      if (typedKey === 'travelPreferences' && dataToUpdate.travelPreferences) {
+         updatePayload.travelPreferences = {
+          ...(existingData.travelPreferences || {}),
+          ...dataToUpdate.travelPreferences,
+        };
+      } else {
         updatePayload[typedKey] = dataToUpdate[typedKey];
       }
     });
-
-    // Handle nested travelPreferences object by merging
-    if (dataToUpdate.travelPreferences) {
-      updatePayload.travelPreferences = {
-        ...existingData.travelPreferences,
-        ...dataToUpdate.travelPreferences,
-      };
-    }
 
     // If no actual data is being changed besides the timestamp, don't run the update.
     if (Object.keys(updatePayload).length === 0) {
