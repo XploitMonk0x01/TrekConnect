@@ -4,7 +4,6 @@
 import { ref, set, get, push, query, orderByChild, equalTo } from 'firebase/database';
 import { realtimeDb } from '@/lib/firebase';
 import type { Story, CreateStoryInput } from '@/lib/types';
-import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
 
 
 const STORIES_PATH = 'stories';
@@ -27,7 +26,7 @@ export async function createStory(storyInput: CreateStoryInput): Promise<Story> 
       title: storyInput.title,
       content: storyInput.content,
       imageUrl: storyInput.imageUrl || null, // Ensure null if undefined/empty
-      destinationName: storyInput.destinationName,
+      destinationName: storyInput.destinationName || '', // Use empty string for consistency
       tags: storyInput.tags || [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
