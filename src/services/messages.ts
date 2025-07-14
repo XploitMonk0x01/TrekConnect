@@ -7,6 +7,9 @@ import {
   query,
   orderByChild,
   equalTo,
+  onValue,
+  off,
+  DataSnapshot,
 } from 'firebase/database'
 import { realtimeDb } from '@/lib/firebase'
 import type { Message } from '@/lib/types'
@@ -116,4 +119,41 @@ export async function deleteMessage(
 
   await update(ref(realtimeDb, MESSAGES_REF), { [messageId]: null })
   return true
+}
+
+export function listenForMessages(
+  roomId: string,
+  callback: (messages: Message[]) => void
+) {
+  const roomRef = ref(realtimeDb, `messages/${roomId}`)
+  const handler = (snapshot: DataSnapshot) => {
+    const data = snapshot.val()
+    const messages: Message[] = data
+      ? Object.entries(data).map(([id, msg]: [string, any]) => ({
+          ...msg,
+          id,
+        }))
+      : []
+    callback(
+      messages.sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      )
+    )
+  }
+  onValue(roomRef, handler)
+  return () => off(roomRef, 'value', handler) // Unsubscribe function
+}
+
+export async function sendMessage(
+  roomId: string,
+  message: Omit<Message, 'id'>
+) {
+  const roomRef = ref(realtimeDb, `messages/${roomId}`)
+  const newMsgRef = push(roomRef)
+  await set(newMsgRef, {
+    ...message,
+    timestamp: new Date().toISOString(),
+    read: false,
+  })
 }

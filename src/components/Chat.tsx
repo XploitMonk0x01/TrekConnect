@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { initSocket, getSocket, disconnectSocket } from '@/lib/socket'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { Message } from '@/lib/types'
 

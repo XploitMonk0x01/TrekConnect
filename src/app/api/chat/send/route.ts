@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { pusherServer } from '@/lib/pusher'
 import { saveMessageToDatabase } from '@/lib/messages'
 import { Message } from '@/lib/types'
 import { z } from 'zod'
@@ -39,11 +38,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger the message event in the specific room
-    await pusherServer.trigger(
-      `presence-room-${message.roomId}`,
-      'message',
-      message
-    )
+    // await pusherServer.trigger(
+    //   `presence-room-${message.roomId}`,
+    //   'message',
+    //   message
+    // )
+    // Removed Pusher trigger logic
 
     return NextResponse.json({ success: true, message })
   } catch (error) {
