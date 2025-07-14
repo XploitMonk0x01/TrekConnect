@@ -26,7 +26,7 @@ export async function createStory(storyInput: CreateStoryInput): Promise<Story> 
       userAvatarUrl: storyInput.userAvatarUrl || null,
       title: storyInput.title,
       content: storyInput.content,
-      imageUrl: storyInput.imageUrl,
+      imageUrl: storyInput.imageUrl || null, // Ensure null if undefined/empty
       destinationName: storyInput.destinationName,
       tags: storyInput.tags || [],
       createdAt: new Date().toISOString(),
