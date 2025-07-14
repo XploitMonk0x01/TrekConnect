@@ -123,6 +123,12 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: 'destructive', title: 'Error', description: err });
       throw new Error(err)
     }
+    if (!recipientId) {
+      const err = 'Recipient not found. Cannot send message.'
+      setError(err)
+      toast({ variant: 'destructive', title: 'Error', description: err });
+      throw new Error(err);
+    }
 
     const messagePayload: Omit<Message, 'id' | 'timestamp'> = {
       roomId,

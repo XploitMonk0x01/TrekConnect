@@ -8,14 +8,13 @@
     },
     "messages": {
       "$roomId": {
-        // A user can read a room's messages if their auth.uid is part of the roomId string.
-        // Room IDs are generated as 'uid1_uid2', so this is a secure way to check for membership.
-        ".read": "auth != null && $roomId.contains(auth.uid)",
+        // A user can read a room's messages if their auth.uid is one of the members.
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
         "$messageId": {
           // A user can write a new message if they are a member of the room
           // and the message they are writing is from them.
-          ".write": "auth != null && !data.exists() && newData.exists() && $roomId.contains(auth.uid)",
-           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp']) && newData.child('senderId').val() === auth.uid"
+          ".write": "auth != null && !data.exists() && newData.exists() && newData.child('members').child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp', 'members']) && newData.child('senderId').val() === auth.uid && newData.child('members').hasChildren([newData.child('senderId').val(), newData.child('recipientId').val()])"
         }
       }
     },

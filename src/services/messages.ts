@@ -17,6 +17,7 @@ const MESSAGES_PATH = 'messages'
 
 /**
  * Sends a message to a specific room in Firebase Realtime Database.
+ * This function is now designed to work with the updated security rules.
  * @param roomId The ID of the chat room.
  * @param message The message object to send, without an ID or timestamp.
  */
@@ -32,10 +33,18 @@ export async function sendMessage(
         throw new Error("Failed to generate a message key from Firebase.");
     }
 
+    // Prepare the members object for security rule validation.
+    // The keys are the user IDs, and the value can be a simple boolean.
+    const members = {
+      [message.senderId]: true,
+      [message.recipientId]: true,
+    };
+
     await set(newMessageRef, {
       ...message,
       id: newMessageRef.key, // Save the generated key as the message ID
       timestamp: serverTimestamp(), // Use server-side timestamp for consistency
+      members: members, // Add members object for security rules
     })
   } catch (error) {
     console.error('Error sending message to Firebase:', error)
@@ -57,7 +66,6 @@ export async function getMessages(
   const messagesQuery = query(
     roomRef,
     orderByChild('timestamp')
-    // limitToLast(limit) // Firebase RTDB queries can be complex, simple sort for now
   );
 
   const snapshot = await get(messagesQuery);
