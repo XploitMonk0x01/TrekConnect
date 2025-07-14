@@ -16,7 +16,7 @@ if (!io) {
     addTrailingSlash: false,
     transports: ['websocket', 'polling'],
     cors: {
-      origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002',
       credentials: true,
       methods: ['GET', 'POST'],
     },
