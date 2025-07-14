@@ -24,7 +24,7 @@ export async function createPhoto(photoInput: CreatePhotoInput): Promise<Photo> 
       userName: photoInput.userName,
       userAvatarUrl: photoInput.userAvatarUrl || null,
       imageUrl: photoInput.imageUrl || PLACEHOLDER_IMAGE_URL(600, 600),
-      destinationId: photoInput.destinationId || undefined,
+      destinationId: photoInput.destinationId || null,
       destinationName: photoInput.destinationName || '', // Use empty string for consistency
       caption: photoInput.caption || '', // Use empty string for consistency
       tags: photoInput.tags || [],
