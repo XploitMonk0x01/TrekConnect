@@ -1,0 +1,37 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "messages": {
+      "$roomId": {
+        // A user can read a room's messages if their auth.uid is part of the roomId string.
+        // Room IDs are generated as 'uid1_uid2', so this is a secure way to check for membership.
+        ".read": "auth != null && $roomId.contains(auth.uid)",
+        // A user can write a new message if they are a member of the room
+        // and the message they are writing is from them.
+        ".write": "auth != null && $roomId.contains(auth.uid)",
+        "$messageId": {
+           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp']) && newData.child('senderId').val() === auth.uid"
+        }
+      }
+    },
+    "photos": {
+      ".read": "auth != null",
+      ".indexOn": "uploadedAt",
+      "$photoId": {
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+      }
+    },
+    "stories": {
+      ".read": "auth != null",
+      ".indexOn": "createdAt",
+      "$storyId": {
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+      }
+    }
+  }
+}

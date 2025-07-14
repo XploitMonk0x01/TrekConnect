@@ -1,8 +1,7 @@
 
 'use client'
 
-import React,
-{
+import React, {
   createContext,
   useContext,
   useState,
@@ -11,15 +10,19 @@ import React,
   useCallback,
   useRef,
 } from 'react'
-import { io, Socket } from 'socket.io-client'
 import type { Message } from '@/lib/types'
 import { useCustomAuth } from './CustomAuthContext'
+import {
+  listenForMessages,
+} from '@/services/messages.client'
+import { sendMessage as firebaseSendMessage } from '@/services/messages'
+import { useToast } from '@/hooks/use-toast'
 
 interface ChatContextType {
   messages: Message[]
-  sendMessage: (roomId: string, content: string, recipientId: string) => void
+  sendMessage: (roomId: string, content: string, recipientId: string) => Promise<void>
   joinRoom: (roomId: string) => void
-  leaveRoom: (roomId: string) => void
+  leaveRoom: () => void
   isConnected: boolean
   isLoading: boolean
   error: string | null
@@ -29,106 +32,115 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined)
 
 export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const { user, isLoading: authIsLoading } = useCustomAuth()
-  const socketRef = useRef<Socket | null>(null)
+  const { toast } = useToast()
   const [messages, setMessages] = useState<Message[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const currentRoomId = useRef<string | null>(null)
+  const unsubscribeCallback = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
-    if (authIsLoading) {
-      return // Wait for auth to complete
-    }
+  const handleMessagesUpdate = useCallback((newMessages: Message[]) => {
+    setMessages(newMessages)
+    setIsLoading(false)
+    setIsConnected(true)
+    setError(null)
+  }, [])
 
-    if (!user) {
-      setIsLoading(false)
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-        socketRef.current = null
+  const handleError = useCallback((err: Error) => {
+    setError(err.message)
+    setIsLoading(false)
+    setIsConnected(false)
+    toast({
+        variant: 'destructive',
+        title: 'Chat Error',
+        description: err.message,
+    });
+  }, [toast])
+
+  const joinRoom = useCallback(
+    (roomId: string) => {
+      if (currentRoomId.current === roomId && unsubscribeCallback.current) {
+        return; // Already in the room and listening
       }
-      return
-    }
-
-    // Initialize socket connection
-    const initSocket = async () => {
-      // Ensure existing socket is disconnected before creating a new one
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-      }
-
-      await fetch('/api/socket')
-      const newSocket = io({
-        path: '/api/socket',
-        query: { userId: user.id },
-      })
-      socketRef.current = newSocket
-
-      newSocket.on('connect', () => {
-        setIsConnected(true)
-        setIsLoading(false)
-        setError(null)
-      })
-
-      newSocket.on('connect_error', (err) => {
-        setError(err.message)
-        setIsConnected(false)
-        setIsLoading(false)
-      })
-
-      newSocket.on('disconnect', () => {
-        setIsConnected(false)
-      })
-
-      newSocket.on('receive_message', (message: Message) => {
-        setMessages((prevMessages) => [...prevMessages, message])
-      })
       
-      newSocket.on('load_messages', (loadedMessages: Message[]) => {
-          setMessages(loadedMessages)
-      })
-    }
-
-    initSocket()
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect()
-        socketRef.current = null
+      // Leave previous room if there was one
+      if (unsubscribeCallback.current) {
+        unsubscribeCallback.current();
+        unsubscribeCallback.current = null;
       }
-    }
-  }, [user, authIsLoading])
 
-  const sendMessage = useCallback(
-    (roomId: string, content: string, recipientId: string) => {
-      if (socketRef.current && user) {
-        const messagePayload: Omit<Message, 'id'> = {
-          roomId,
-          content,
-          senderId: user.id,
-          recipientId,
-          timestamp: new Date().toISOString(),
-          read: false,
-        }
-        socketRef.current.emit('send_message', messagePayload)
-        // Optimistically update UI
-        setMessages((prev) => [...prev, { ...messagePayload, id: `temp-${Date.now()}` }])
-      }
+      setIsLoading(true)
+      setMessages([])
+      setError(null)
+      currentRoomId.current = roomId
+      
+      // Start listening to the new room
+      unsubscribeCallback.current = listenForMessages(roomId, handleMessagesUpdate, handleError);
     },
-    [user]
+    [handleMessagesUpdate, handleError]
   )
 
-  const joinRoom = useCallback((roomId: string) => {
-    if (socketRef.current) {
-      setMessages([]); // Clear messages from previous room
-      socketRef.current.emit('join_room', roomId)
+  const leaveRoom = useCallback(() => {
+    if (unsubscribeCallback.current) {
+      unsubscribeCallback.current()
+      unsubscribeCallback.current = null;
+    }
+    currentRoomId.current = null;
+    setMessages([]);
+    setIsConnected(false);
+  }, [])
+
+  // Cleanup on unmount or user change
+  useEffect(() => {
+    return () => {
+      if (unsubscribeCallback.current) {
+        unsubscribeCallback.current()
+      }
     }
   }, [])
 
-  const leaveRoom = useCallback((roomId: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit('leave_room', roomId)
+  useEffect(() => {
+    // When auth is loading or no user, we are not connected.
+    if(authIsLoading || !user) {
+        setIsLoading(authIsLoading);
+        setIsConnected(false);
+        if (currentRoomId.current) {
+            leaveRoom();
+        }
     }
-  }, [])
+  }, [user, authIsLoading, leaveRoom])
+
+
+  const sendMessage = async (
+    roomId: string,
+    content: string,
+    recipientId: string
+  ) => {
+    if (!user) {
+      const err = 'You must be logged in to send messages.'
+      setError(err)
+      toast({ variant: 'destructive', title: 'Error', description: err });
+      throw new Error(err)
+    }
+
+    const messagePayload: Omit<Message, 'id' | 'timestamp'> = {
+      roomId,
+      content,
+      senderId: user.id,
+      recipientId,
+      read: false,
+    }
+
+    try {
+      await firebaseSendMessage(roomId, messagePayload)
+    } catch (err: any) {
+      setError(err.message)
+      toast({ variant: 'destructive', title: 'Send Error', description: err.message });
+      console.error('Failed to send message:', err)
+      throw err
+    }
+  }
 
   const value = {
     messages,
@@ -136,7 +148,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     joinRoom,
     leaveRoom,
     isConnected,
-    isLoading,
+    isLoading: isLoading && !error,
     error,
   }
 

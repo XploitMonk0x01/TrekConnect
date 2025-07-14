@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useEffect, useState, useRef, FormEvent } from 'react' // Added FormEvent
+import { useEffect, useState, useRef, FormEvent } from 'react'
 import { useParams } from 'next/navigation'
 import { useChat } from '@/contexts/ChatContext'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
@@ -14,7 +14,7 @@ import { getUserProfile } from '@/services/users'
 import type { UserProfile } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import Image from 'next/image'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert' // Added Alert components
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 // Helper function to generate consistent room ID between two users
 function generateRoomId(userId1: string, userId2: string): string {
@@ -23,16 +23,15 @@ function generateRoomId(userId1: string, userId2: string): string {
 
 export default function ChatPage() {
   const params = useParams();
-  const otherUserIdFromParams = params.userId as string; 
+  const otherUserIdFromParams = params.userId as string;
 
   const {
-    // socket, // Keep if direct socket access is needed for other things
-    isConnected, // Use this for UI state
     messages,
     sendMessage,
     joinRoom,
     leaveRoom,
-    isLoading: chatContextIsLoading, // This is for socket *initialization*
+    isLoading: chatContextIsLoading,
+    isConnected,
     error: chatContextError,
   } = useChat()
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
@@ -51,7 +50,7 @@ export default function ChatPage() {
           setOtherUser(userData)
         } catch (error) {
           console.error('Failed to fetch other user profile:', error)
-          setOtherUser(null); 
+          setOtherUser(null);
         } finally {
           setIsLoadingOtherUser(false)
         }
@@ -65,22 +64,18 @@ export default function ChatPage() {
   }, [otherUserIdFromParams])
 
   useEffect(() => {
-    if (currentUser && otherUserIdFromParams) {
-      const newRoomId = generateRoomId(currentUser.id, otherUserIdFromParams)
+    if (currentUser && otherUser) {
+      const newRoomId = generateRoomId(currentUser.id, otherUser.id)
       setRoomId(newRoomId)
     }
-  }, [currentUser, otherUserIdFromParams])
+  }, [currentUser, otherUser])
 
   useEffect(() => {
-    if (roomId && isConnected) { // Rely on isConnected from context
+    if (roomId) {
       joinRoom(roomId)
-      return () => {
-        if (isConnected) { 
-          leaveRoom(roomId)
-        }
-      }
+      // The leaveRoom logic is now handled in the ChatContext on unmount or user change
     }
-  }, [roomId, isConnected, joinRoom, leaveRoom])
+  }, [roomId, joinRoom])
 
 
   useEffect(() => {
@@ -89,23 +84,28 @@ export default function ChatPage() {
     }
   }, [messages])
 
-  const handleSendMessage = (e: FormEvent) => { // Use FormEvent
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault()
     if (!messageInput.trim() || !roomId || !otherUser || !currentUser || !isConnected) return
 
-    sendMessage(roomId, messageInput.trim(), otherUser.id) 
-    setMessageInput('')
+    try {
+        await sendMessage(roomId, messageInput.trim(), otherUser.id)
+        setMessageInput('')
+    } catch (error) {
+        console.error("Error sending message from page:", error);
+        // Toast is handled in context or service layer
+    }
   }
 
   if (authIsLoading || isLoadingOtherUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading chat participant...</span>
+        <span className="ml-2">Loading chat...</span>
       </div>
     )
   }
-  
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -125,7 +125,7 @@ export default function ChatPage() {
       </div>
     )
   }
-  
+
   if (!otherUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -145,19 +145,6 @@ export default function ChatPage() {
       </div>
     )
   }
-
-
-  if (chatContextIsLoading) { // This is for the initial socket setup phase
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Initializing chat connection...</span>
-      </div>
-    )
-  }
-  
-  // chatContextError can now indicate ongoing connection issues too
-  // isConnected is false if there's an error or not yet connected after initial load
 
   return (
     <div className="flex flex-col h-screen">
@@ -190,21 +177,25 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Display connection status/error if not loading but not connected */}
-       {(!chatContextIsLoading && !isConnected) && (
+       {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
         <div className="p-4">
             <Alert variant={chatContextError ? "destructive" : "default"}>
                 <AlertTitle>{chatContextError ? "Chat Connection Error" : "Chat Disconnected"}</AlertTitle>
                 <AlertDescription>
-                {chatContextError || "Attempting to reconnect. Please wait or try refreshing the page."}
+                {chatContextError || "Connecting to chat..."}
                 </AlertDescription>
             </Alert>
         </div>
       )}
 
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-16"> 
-        {messages.length === 0 && isConnected ? (
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
+        {chatContextIsLoading ? (
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <p className="ml-2 text-muted-foreground">Loading messages...</p>
+            </div>
+        ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-muted-foreground">
               No messages yet. Start the conversation!
@@ -229,7 +220,7 @@ export default function ChatPage() {
               >
                 <p className="whitespace-pre-wrap break-words">{message.content}</p>
                 <p className="text-xs opacity-70 mt-1 text-right">
-                  {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(message.timestamp as number).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
             </div>
@@ -245,7 +236,7 @@ export default function ChatPage() {
             onChange={(e) => setMessageInput(e.target.value)}
             placeholder={isConnected ? "Type a message..." : "Connecting to chat..."}
             className="flex-1"
-            disabled={!isConnected} 
+            disabled={!isConnected}
           />
           <Button type="submit" size="icon" disabled={!isConnected || !messageInput.trim()}>
             <Send className="h-4 w-4" />
@@ -255,5 +246,3 @@ export default function ChatPage() {
     </div>
   )
 }
-
-    
