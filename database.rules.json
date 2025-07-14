@@ -14,14 +14,14 @@
     },
     "photos": {
       ".read": "auth != null",
-      ".write": "auth != null",
+      ".indexOn": "uploadedAt",
       "$photoId": {
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
       }
     },
     "stories": {
       ".read": "auth != null",
-      ".write": "auth != null",
+      ".indexOn": "createdAt",
       "$storyId": {
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
       }
