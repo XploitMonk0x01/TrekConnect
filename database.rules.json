@@ -2,29 +2,25 @@
   "rules": {
     "users": {
       "$uid": {
-        // Public profile data is readable by anyone, which is necessary
-        // for features like the ConnectSphere and resolving profile info.
         ".read": true,
-        // Only the authenticated owner of the profile can write to it.
         ".write": "auth != null && auth.uid === $uid"
       }
     },
     "messages": {
       "$roomId": {
-        // Users can only read/write messages in rooms they are a part of.
         ".read": "auth != null && (root.child('users').child(auth.uid).child('chatRooms').hasChild($roomId) || data.child('senderId').val() === auth.uid)",
         ".write": "auth != null && (!data.exists() || data.child('senderId').val() === auth.uid)"
       }
     },
     "photos": {
+      ".read": "auth != null",
       "$photoId": {
-        ".read": "auth != null",
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
       }
     },
     "stories": {
+      ".read": "auth != null",
       "$storyId": {
-        ".read": "auth != null",
         ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
       }
     }
