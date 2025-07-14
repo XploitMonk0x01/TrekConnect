@@ -8,12 +8,10 @@
     },
     "messages": {
       "$roomId": {
-        // A user can read or write if their UID is one of the two UIDs in the room's key.
         ".read": "auth != null && ($roomId.split('_')[0] === auth.uid || $roomId.split('_')[1] === auth.uid)",
-        ".write": "auth != null && ($roomId.split('_')[0] === auth.uid || $roomId.split('_')[1] === auth.uid)",
         "$messageId": {
-          // Validate that the senderId of the new message matches the authenticated user.
-           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp']) && newData.child('senderId').val() === auth.uid"
+          ".write": "auth != null && (!data.exists() && newData.exists()) && ($roomId.split('_')[0] === auth.uid || $roomId.split('_')[1] === auth.uid)",
+          ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp']) && newData.child('senderId').val() === auth.uid"
         }
       }
     },
