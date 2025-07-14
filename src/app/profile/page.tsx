@@ -227,14 +227,14 @@ export default function ProfilePage() {
                 {currentUser.languagesSpoken &&
                 currentUser.languagesSpoken.length > 0
                   ? currentUser.languagesSpoken.join(', ')
-                  : 'N/A'}
+                  : 'Not specified'}
               </div>
             </div>
             <div className="flex items-center p-3 bg-background rounded-lg border">
               <Mountain className="h-5 w-5 mr-3 text-primary" />
               <div>
                 <strong>Trekking:</strong>{' '}
-                {currentUser.trekkingExperience || 'N/A'}
+                {currentUser.trekkingExperience || 'Not specified'}
               </div>
             </div>
           </div>

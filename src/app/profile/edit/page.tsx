@@ -35,8 +35,8 @@ const profileFormSchema = z.object({
     .optional()
     .or(z.literal('')),
   gender: z
-    .enum(['Male', 'Female', 'Other', 'Prefer not to say', 'Non-binary'])
-    .optional(), // Added Non-binary
+    .enum(['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'])
+    .optional(),
   bio: z.string().max(500, 'Bio cannot exceed 500 characters.').optional(),
   profileImageDataUri: z.string().optional(), // This will hold the base64 string for new uploads
   travelPreferences_soloOrGroup: z
