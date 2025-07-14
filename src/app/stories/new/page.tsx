@@ -171,7 +171,7 @@ export default function NewStoryPage() {
               <FormField control={form.control} name="title" render={({ field }) => ( <FormItem><FormLabel>Title*</FormLabel><FormControl><Input placeholder="My Epic Journey to the Valley of Flowers" {...field} /></FormControl><FormMessage /></FormItem> )} />
               <FormField control={form.control} name="content" render={({ field }) => ( <FormItem><FormLabel>Your Story*</FormLabel><FormControl><Textarea placeholder="Describe your adventure in detail..." {...field} rows={15} /></FormControl><FormMessage /></FormItem> )} />
 
-              <FormField control={form.control} name="coverImageFile" render={({ field: { onChange, ...rest }}) => (
+              <FormField control={form.control} name="coverImageFile" render={({ field: { onChange, onBlur, name, ref }}) => (
                 <FormItem>
                   <FormLabel htmlFor="cover-image-upload">Cover Image (Optional)</FormLabel>
                   <div className="flex items-start gap-4">
@@ -183,8 +183,10 @@ export default function NewStoryPage() {
                         handleCoverImageChange(e);
                         onChange(e.target.files);
                       }}
+                      onBlur={onBlur}
+                      name={name}
+                      ref={ref}
                       className="hidden"
-                      {...rest}
                     />
                     <Button type="button" variant="outline" onClick={() => document.getElementById('cover-image-upload')?.click()}>
                         <ImagePlus className="mr-2 h-4 w-4"/> Select Image
