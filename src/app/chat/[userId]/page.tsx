@@ -229,7 +229,7 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSendMessage} className="border-t p-4 bg-background fixed bottom-0 left-0 right-0 md:ml-[var(--sidebar-width-icon)] group-data-[state=expanded]/sidebar-wrapper:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear">
+      <form onSubmit={handleSendMessage} className="border-t p-4 bg-background fixed bottom-0 w-full">
         <div className="flex gap-2 max-w-3xl mx-auto">
           <Input
             value={messageInput}

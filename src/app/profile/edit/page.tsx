@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect, ChangeEvent } from 'react'
@@ -23,6 +24,7 @@ import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { updateUserProfile } from '@/services/users'
 import type { UserProfile } from '@/lib/types'
+import { Card } from '@/components/ui/card'
 
 const profileFormSchema = z.object({
   name: z
@@ -280,7 +282,7 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl p-4 sm:p-6 lg:p-8 space-y-8">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline" size="sm">
           <Link href="/profile">
@@ -292,254 +294,256 @@ export default function EditProfilePage() {
         </h1>
       </div>
 
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 bg-card p-6 rounded-lg shadow-xl"
-      >
-        <div className="space-y-2">
-          <Label>Profile Picture</Label>
-          <div className="flex items-center gap-4">
-            <NextImage
-              src={
-                profileImagePreview ||
-                currentPhotoUrlForPreview ||
-                PLACEHOLDER_IMAGE_URL(80, 80)
-              }
-              alt="Profile"
-              width={80}
-              height={80}
-              className="rounded-full border-2 border-primary object-cover"
-              data-ai-hint="person current profile"
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
-                  80,
-                  80
-                )
-              }}
-            />
-            <Input
-              id="profile-image-upload"
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              onChange={handleProfileImageChange} // This will set profileImageDataUri in the form
-              className="hidden"
-              disabled={inputsDisabled}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                document.getElementById('profile-image-upload')?.click()
-              }
-              disabled={inputsDisabled}
-            >
-              <ImageUp className="mr-2 h-4 w-4" />{' '}
-              {currentPhotoUrlForPreview || profileImagePreview
-                ? 'Change Image'
-                : 'Upload Image'}
-            </Button>
-          </div>
-          {form.formState.errors.profileImageDataUri && (
-            <p className="text-sm text-destructive mt-1">
-              {form.formState.errors.profileImageDataUri.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <Label htmlFor="name">Full Name*</Label>
-          <Input
-            id="name"
-            {...form.register('name')}
-            required
-            disabled={inputsDisabled}
-          />
-          {form.formState.errors.name && (
-            <p className="text-sm text-destructive mt-1">
-              {form.formState.errors.name.message}
-            </p>
-          )}
-        </div>
-        <div>
-          <Label htmlFor="bio">Bio</Label>
-          <Textarea
-            id="bio"
-            {...form.register('bio')}
-            rows={4}
-            placeholder="Tell us a bit about your trekking adventures..."
-            disabled={inputsDisabled}
-          />
-          {form.formState.errors.bio && (
-            <p className="text-sm text-destructive mt-1">
-              {form.formState.errors.bio.message}
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label htmlFor="age">Age</Label>
-            <Input
-              id="age"
-              type="number"
-              {...form.register('age')}
-              disabled={inputsDisabled}
-            />
-            {form.formState.errors.age && (
+      <Card>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6 p-6"
+        >
+          <div className="space-y-2">
+            <Label>Profile Picture</Label>
+            <div className="flex items-center gap-4">
+              <NextImage
+                src={
+                  profileImagePreview ||
+                  currentPhotoUrlForPreview ||
+                  PLACEHOLDER_IMAGE_URL(80, 80)
+                }
+                alt="Profile"
+                width={80}
+                height={80}
+                className="rounded-full border-2 border-primary object-cover"
+                data-ai-hint="person current profile"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
+                    80,
+                    80
+                  )
+                }}
+              />
+              <Input
+                id="profile-image-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handleProfileImageChange} // This will set profileImageDataUri in the form
+                className="hidden"
+                disabled={inputsDisabled}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  document.getElementById('profile-image-upload')?.click()
+                }
+                disabled={inputsDisabled}
+              >
+                <ImageUp className="mr-2 h-4 w-4" />{' '}
+                {currentPhotoUrlForPreview || profileImagePreview
+                  ? 'Change Image'
+                  : 'Upload Image'}
+              </Button>
+            </div>
+            {form.formState.errors.profileImageDataUri && (
               <p className="text-sm text-destructive mt-1">
-                {form.formState.errors.age.message}
+                {form.formState.errors.profileImageDataUri.message}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="name">Full Name*</Label>
+            <Input
+              id="name"
+              {...form.register('name')}
+              required
+              disabled={inputsDisabled}
+            />
+            {form.formState.errors.name && (
+              <p className="text-sm text-destructive mt-1">
+                {form.formState.errors.name.message}
               </p>
             )}
           </div>
           <div>
-            <Label htmlFor="gender">Gender</Label>
-            <Select
-              onValueChange={(value) =>
-                form.setValue('gender', value as ProfileFormValues['gender'])
-              }
-              value={form.watch('gender')}
+            <Label htmlFor="bio">Bio</Label>
+            <Textarea
+              id="bio"
+              {...form.register('bio')}
+              rows={4}
+              placeholder="Tell us a bit about your trekking adventures..."
               disabled={inputsDisabled}
-            >
-              <SelectTrigger id="gender">
-                <SelectValue placeholder="Select gender" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
-                <SelectItem value="Non-binary">Non-binary</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-                <SelectItem value="Prefer not to say">
-                  Prefer not to say
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {form.formState.errors.gender && (
+            />
+            {form.formState.errors.bio && (
               <p className="text-sm text-destructive mt-1">
-                {form.formState.errors.gender.message}
+                {form.formState.errors.bio.message}
               </p>
             )}
           </div>
-        </div>
 
-        <div>
-          <h2 className="text-lg font-semibold mb-2 mt-4 border-b pb-1">
-            Travel Preferences
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="travelPreferences_soloOrGroup">
-                Travel Style
+              <Label htmlFor="age">Age</Label>
+              <Input
+                id="age"
+                type="number"
+                {...form.register('age')}
+                disabled={inputsDisabled}
+              />
+              {form.formState.errors.age && (
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.age.message}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="gender">Gender</Label>
+              <Select
+                onValueChange={(value) =>
+                  form.setValue('gender', value as ProfileFormValues['gender'])
+                }
+                value={form.watch('gender')}
+                disabled={inputsDisabled}
+              >
+                <SelectTrigger id="gender">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Non-binary">Non-binary</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                  <SelectItem value="Prefer not to say">
+                    Prefer not to say
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.gender && (
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.gender.message}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-2 mt-4 border-b pb-1">
+              Travel Preferences
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div>
+                <Label htmlFor="travelPreferences_soloOrGroup">
+                  Travel Style
+                </Label>
+                <Select
+                  onValueChange={(value) =>
+                    form.setValue(
+                      'travelPreferences_soloOrGroup',
+                      value as ProfileFormValues['travelPreferences_soloOrGroup']
+                    )
+                  }
+                  value={form.watch('travelPreferences_soloOrGroup')}
+                  disabled={inputsDisabled}
+                >
+                  <SelectTrigger id="travelPreferences_soloOrGroup">
+                    <SelectValue placeholder="Solo or Group?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Solo">Solo</SelectItem>
+                    <SelectItem value="Group">Group</SelectItem>
+                    <SelectItem value="Flexible">Flexible</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="travelPreferences_budget">Budget Level</Label>
+                <Select
+                  onValueChange={(value) =>
+                    form.setValue(
+                      'travelPreferences_budget',
+                      value as ProfileFormValues['travelPreferences_budget']
+                    )
+                  }
+                  value={form.watch('travelPreferences_budget')}
+                  disabled={inputsDisabled}
+                >
+                  <SelectTrigger id="travelPreferences_budget">
+                    <SelectValue placeholder="Budget level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Budget">Budget</SelectItem>
+                    <SelectItem value="Mid-range">Mid-range</SelectItem>
+                    <SelectItem value="Luxury">Luxury</SelectItem>
+                    <SelectItem value="Flexible">Flexible</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="travelPreferences_style">
+                Preferred Activities/Style
               </Label>
-              <Select
-                onValueChange={(value) =>
-                  form.setValue(
-                    'travelPreferences_soloOrGroup',
-                    value as ProfileFormValues['travelPreferences_soloOrGroup']
-                  )
-                }
-                value={form.watch('travelPreferences_soloOrGroup')}
+              <Input
+                id="travelPreferences_style"
+                {...form.register('travelPreferences_style')}
+                placeholder="e.g., Challenging treks, Photography, Cultural immersion"
                 disabled={inputsDisabled}
-              >
-                <SelectTrigger id="travelPreferences_soloOrGroup">
-                  <SelectValue placeholder="Solo or Group?" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Solo">Solo</SelectItem>
-                  <SelectItem value="Group">Group</SelectItem>
-                  <SelectItem value="Flexible">Flexible</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="travelPreferences_budget">Budget Level</Label>
-              <Select
-                onValueChange={(value) =>
-                  form.setValue(
-                    'travelPreferences_budget',
-                    value as ProfileFormValues['travelPreferences_budget']
-                  )
-                }
-                value={form.watch('travelPreferences_budget')}
-                disabled={inputsDisabled}
-              >
-                <SelectTrigger id="travelPreferences_budget">
-                  <SelectValue placeholder="Budget level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Budget">Budget</SelectItem>
-                  <SelectItem value="Mid-range">Mid-range</SelectItem>
-                  <SelectItem value="Luxury">Luxury</SelectItem>
-                  <SelectItem value="Flexible">Flexible</SelectItem>
-                </SelectContent>
-              </Select>
+              />
             </div>
           </div>
-          <div className="mt-4">
-            <Label htmlFor="travelPreferences_style">
-              Preferred Activities/Style
+
+          <div>
+            <Label htmlFor="languagesSpoken">
+              Languages Spoken (comma-separated)
             </Label>
             <Input
-              id="travelPreferences_style"
-              {...form.register('travelPreferences_style')}
-              placeholder="e.g., Challenging treks, Photography, Cultural immersion"
+              id="languagesSpoken"
+              {...form.register('languagesSpoken')}
+              placeholder="e.g., English, Hindi, Local dialects"
               disabled={inputsDisabled}
             />
+            {form.formState.errors.languagesSpoken && (
+              <p className="text-sm text-destructive mt-1">
+                {form.formState.errors.languagesSpoken.message}
+              </p>
+            )}
           </div>
-        </div>
+          <div>
+            <Label htmlFor="trekkingExperience">Trekking Experience</Label>
+            <Select
+              onValueChange={(value) =>
+                form.setValue(
+                  'trekkingExperience',
+                  value as ProfileFormValues['trekkingExperience']
+                )
+              }
+              value={form.watch('trekkingExperience')}
+              disabled={inputsDisabled}
+            >
+              <SelectTrigger id="trekkingExperience">
+                <SelectValue placeholder="Select experience level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Beginner">Beginner</SelectItem>
+                <SelectItem value="Intermediate">Intermediate</SelectItem>
+                <SelectItem value="Advanced">Advanced</SelectItem>
+                <SelectItem value="Expert">Expert</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div>
-          <Label htmlFor="languagesSpoken">
-            Languages Spoken (comma-separated)
-          </Label>
-          <Input
-            id="languagesSpoken"
-            {...form.register('languagesSpoken')}
-            placeholder="e.g., English, Hindi, Local dialects"
-            disabled={inputsDisabled}
-          />
-          {form.formState.errors.languagesSpoken && (
-            <p className="text-sm text-destructive mt-1">
-              {form.formState.errors.languagesSpoken.message}
-            </p>
-          )}
-        </div>
-        <div>
-          <Label htmlFor="trekkingExperience">Trekking Experience</Label>
-          <Select
-            onValueChange={(value) =>
-              form.setValue(
-                'trekkingExperience',
-                value as ProfileFormValues['trekkingExperience']
-              )
-            }
-            value={form.watch('trekkingExperience')}
-            disabled={inputsDisabled}
+          <Button
+            type="submit"
+            disabled={inputsDisabled || !form.formState.isDirty}
+            className="w-full sm:w-auto"
           >
-            <SelectTrigger id="trekkingExperience">
-              <SelectValue placeholder="Select experience level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Beginner">Beginner</SelectItem>
-              <SelectItem value="Intermediate">Intermediate</SelectItem>
-              <SelectItem value="Advanced">Advanced</SelectItem>
-              <SelectItem value="Expert">Expert</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button
-          type="submit"
-          disabled={inputsDisabled || !form.formState.isDirty}
-          className="w-full sm:w-auto"
-        >
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Save Changes
-        </Button>
-      </form>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Save Changes
+          </Button>
+        </form>
+      </Card>
     </div>
   )
 }

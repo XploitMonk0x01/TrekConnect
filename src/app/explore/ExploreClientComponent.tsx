@@ -1,3 +1,4 @@
+
 'use client'
 
 import {
@@ -501,7 +502,7 @@ export default function ExploreClientComponent({
               loading="lazy"
             ></iframe>
           ) : (
-            <div className="h-96 w-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
+            <div className="h-[400px] w-full bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading map...
             </div>
           )}
@@ -523,9 +524,8 @@ export default function ExploreClientComponent({
                 <Skeleton className="h-4 w-full mb-1" />
                 <Skeleton className="h-4 w-2/3" />
               </CardContent>
-              <CardFooter className="p-4 border-t grid grid-cols-3 gap-2 items-center">
+              <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
                 <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-8 w-full" />
               </CardFooter>
             </Card>
@@ -565,9 +565,8 @@ export default function ExploreClientComponent({
                 <Skeleton className="h-4 w-full mb-1" />
                 <Skeleton className="h-4 w-2/3" />
               </CardContent>
-              <CardFooter className="p-4 border-t grid grid-cols-3 gap-2 items-center">
+              <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
                 <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-8 w-full" />
                 <Skeleton className="h-8 w-full" />
               </CardFooter>
             </Card>
@@ -677,28 +676,30 @@ export default function ExploreClientComponent({
                 >
                   <Link href={`/explore/${destination.id}`}>View Details</Link>
                 </Button>
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="border-accent text-accent hover:bg-accent/5 col-span-full mt-2"
-                >
-                  <Link
-                    href={`/explore/routes/new?destinationId=${destination.id}`}
-                  >
-                    <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
-                  </Link>
-                </Button>
-                {destination.youtubeVideoId && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-accent text-accent hover:bg-accent/10 col-span-full mt-2"
-                    onClick={() => openVideoModal(destination.youtubeVideoId!)}
-                  >
-                    <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
-                  </Button>
-                )}
+                <div className="col-span-full mt-2 grid grid-cols-2 gap-2">
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="border-accent text-accent hover:bg-accent/5"
+                    >
+                      <Link
+                        href={`/explore/routes/new?destinationId=${destination.id}`}
+                      >
+                        <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
+                      </Link>
+                    </Button>
+                    {destination.youtubeVideoId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-accent text-accent hover:bg-accent/10"
+                        onClick={() => openVideoModal(destination.youtubeVideoId!)}
+                      >
+                        <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
+                      </Button>
+                    )}
+                </div>
               </CardFooter>
             </Card>
           )

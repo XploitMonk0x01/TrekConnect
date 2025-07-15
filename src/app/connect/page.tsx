@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -170,13 +171,13 @@ export default function ConnectSpherePage() {
 
   if (authIsLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center space-y-6 p-4 h-full">
-          <Skeleton className="h-32 w-full max-w-md" />
-          <div className="relative w-full max-w-sm h-[calc(100vh-20rem)] min-h-[480px] flex items-center justify-center">
+      <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-full">
+        <div className="w-full max-w-md space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <div className="relative w-full h-[480px] flex items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
           </div>
-          <div className="flex space-x-4 items-center">
+          <div className="flex space-x-4 items-center justify-center">
             <Skeleton className="h-16 w-16 rounded-full" />
             <Skeleton className="h-10 w-10 rounded-full" />
             <Skeleton className="h-16 w-16 rounded-full" />
@@ -188,11 +189,11 @@ export default function ConnectSpherePage() {
 
   if (!currentUser) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-          <AlertTriangle className="w-12 h-12 text-yellow-500" />
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto" />
           <h2 className="text-2xl font-semibold">Authentication Required</h2>
-          <p className="text-gray-600 text-center">
+          <p className="text-gray-600">
             Please sign in to access the Connect feature
           </p>
           <Button onClick={() => router.push('/auth/signin?redirect=/connect')} className="mt-4">
@@ -269,9 +270,9 @@ export default function ConnectSpherePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-col items-center space-y-6 p-4 h-full">
-        <Card className="w-full max-w-md text-center shadow-lg">
+    <div className="container mx-auto px-4 py-8 flex flex-col items-center h-full">
+      <div className="w-full max-w-md space-y-6">
+        <Card className="text-center shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline text-3xl text-primary">
               ConnectSphere
@@ -288,7 +289,7 @@ export default function ConnectSpherePage() {
           </CardContent>
         </Card>
 
-        <div className="relative w-full max-w-sm h-[calc(100vh-22rem)] min-h-[480px] flex items-center justify-center">
+        <div className="relative w-full h-[480px] flex items-center justify-center">
           <AnimatePresence>
             {isLoadingProfiles ? (
                  <div className="text-center p-8 bg-card rounded-xl shadow-lg">
@@ -333,7 +334,7 @@ export default function ConnectSpherePage() {
         </div>
         
         {currentProfileForCard && (
-          <div className="flex space-x-4 items-center">
+          <div className="flex space-x-4 items-center justify-center">
             <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
               <Button
                 variant="outline"

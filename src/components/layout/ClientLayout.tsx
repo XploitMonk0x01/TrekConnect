@@ -18,8 +18,10 @@ export function ClientLayout({ children }: { children: ReactNode }) {
           <AppSidebar />
           <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[state=expanded]/sidebar-wrapper:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear">
             <AppHeader />
-            <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-background">
-              {children}
+            <main className="flex-1 bg-background">
+              <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+                {children}
+              </div>
             </main>
             <Footer />
           </div>

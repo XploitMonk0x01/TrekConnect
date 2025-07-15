@@ -1,3 +1,4 @@
+
 'use client'
 
 import Link from 'next/link'
@@ -299,7 +300,7 @@ export default function ProfilePage() {
                   )}
                 </div>
               ) : (
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-center">
                   Your wishlist is empty.{' '}
                   <Link
                     href="/explore"
@@ -337,7 +338,7 @@ export default function ProfilePage() {
                   })}
                 </div>
               ) : (
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground text-center">
                   No travel history yet. Time to make some memories!
                 </p>
               )}

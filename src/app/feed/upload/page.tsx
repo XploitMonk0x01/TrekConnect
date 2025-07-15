@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, ChangeEvent } from 'react'
@@ -191,7 +192,7 @@ export default function UploadPhotoPage() {
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       <div className="flex items-center">
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm">
           <Link href="/feed">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Feed
           </Link>

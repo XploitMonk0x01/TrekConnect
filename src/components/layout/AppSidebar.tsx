@@ -17,7 +17,6 @@ import {
 import { SiteLogo } from '@/components/SiteLogo';
 import { NAV_ITEMS, SETTINGS_NAV_ITEM, AUTH_SIGNIN_NAV_ITEM, AUTH_SIGNOUT_NAV_ITEM, NavItem } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 import { useCustomAuth } from '@/contexts/CustomAuthContext'; // Use custom hook
 import { useToast } from '@/hooks/use-toast'; // For sign out toast
 import { Loader2, UserCircle, LogOut as LogOutIcon } from 'lucide-react'; 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, ChangeEvent } from 'react';
@@ -154,14 +155,15 @@ export default function NewStoryPage() {
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <div className="flex items-center">
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm">
           <Link href="/stories"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Stories</Link>
         </Button>
       </div>
       <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="font-headline text-3xl text-primary flex items-center">
-            <BookOpen className="mr-3 h-8 w-8" /> Write Your Travel Story
+        <CardHeader className="text-center">
+          <BookOpen className="mx-auto h-12 w-12 text-primary mb-3" />
+          <CardTitle className="font-headline text-3xl text-primary">
+            Write Your Travel Story
           </CardTitle>
           <CardDescription>Share experiences from your Indian treks. Describe the journey, sights, and tips!</CardDescription>
         </CardHeader>
