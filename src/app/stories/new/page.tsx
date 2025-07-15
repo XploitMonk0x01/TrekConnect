@@ -24,7 +24,7 @@ const storyFormSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters.").max(100, "Title cannot exceed 100 characters."),
   content: z.string().min(50, "Story content must be at least 50 characters.").max(10000, "Story content is too long."),
   coverImageFile: z.any().optional(),
-  imageUrl: z.string().url("Please enter a valid URL for the image.").or(z.literal('')).optional(),
+  imageUrl: z.string().optional(), // Can be a data URI from upload or an external URL. Validation happens on submit.
   destinationName: z.string().max(100).optional(),
   tags: z.string().max(200).optional(),
 });
@@ -47,7 +47,7 @@ export default function NewStoryPage() {
   const handleCoverImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5000000) { // 5MB
+      if (file.size > 5 * 1024 * 1024) { // 5MB
           form.setError("imageUrl", { type: "manual", message: "Max file size is 5MB." });
           setCoverImagePreview(null); form.setValue("imageUrl", ""); return;
       }

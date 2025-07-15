@@ -67,7 +67,7 @@ export default function UploadPhotoPage() {
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      if (file.size > 5000000) {
+      if (file.size > 5 * 1024 * 1024) {
         // 5MB limit
         form.setError('image', {
           type: 'manual',

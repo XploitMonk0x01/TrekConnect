@@ -129,7 +129,7 @@ export default function EditProfilePage() {
   const handleProfileImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      if (file.size > 5000000) {
+      if (file.size > 5 * 1024 * 1024) {
         // 5MB
         toast({
           variant: 'destructive',
@@ -188,23 +188,19 @@ export default function EditProfilePage() {
     }
     setIsSaving(true)
 
-    // The data object from the form already has the correct shape.
-    // The photoUrl field will either be an empty string or a new base64 data URI.
-    // The service layer will handle the logic of whether to update the photoUrl or not.
-
     try {
-      const updatedMongoDBProfile = await updateUserProfile(
+      const updatedUser = await updateUserProfile(
         currentUser.id,
         data
       )
 
-      if (updatedMongoDBProfile) {
-        updateUserInContext(updatedMongoDBProfile)
+      if (updatedUser) {
+        updateUserInContext(updatedUser)
         toast({
           title: 'Profile Updated',
           description: 'Your profile has been successfully saved.',
         })
-        setCurrentPhotoUrlForPreview(updatedMongoDBProfile.photoUrl) // Update preview with potentially new URL from server
+        setCurrentPhotoUrlForPreview(updatedUser.photoUrl) // Update preview with potentially new URL from server
         setProfileImagePreview(null) // Clear temporary client-side preview
         form.setValue('photoUrl', '') // Clear the file input field state in form
       } else {

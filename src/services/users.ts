@@ -3,8 +3,10 @@
 
 import type { UserProfile } from '@/lib/types'
 import { ref, get, update, remove } from 'firebase/database'
-import { realtimeDb } from '@/lib/firebase'
+import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
+import { realtimeDb, storage } from '@/lib/firebase'
 import { getUserProfileFromRTDB } from '@/lib/auth'
+import { v4 as uuidv4 } from 'uuid';
 
 export async function getUserProfile(
   userId: string
@@ -44,44 +46,41 @@ export async function updateUserProfile(
       return null // User not found, cannot update
     }
 
-    // Create a payload with only the fields that are being updated.
     const updatePayload: Partial<UserProfile> = {}
 
-    // Map form data to the UserProfile structure
+    // Handle new photo upload
+    if (dataToUpdate.photoUrl && dataToUpdate.photoUrl.startsWith('data:image')) {
+        const imageRef = storageRef(storage, `images/${userId}/${uuidv4()}`);
+        const uploadResult = await uploadString(imageRef, dataToUpdate.photoUrl, 'data_url');
+        updatePayload.photoUrl = await getDownloadURL(uploadResult.ref);
+    }
+
     if (dataToUpdate.name) updatePayload.name = dataToUpdate.name;
     if (dataToUpdate.age) updatePayload.age = Number(dataToUpdate.age);
     if (dataToUpdate.gender) updatePayload.gender = dataToUpdate.gender;
     if (dataToUpdate.bio !== undefined) updatePayload.bio = dataToUpdate.bio || null;
     
-    // Specifically handle the new photo upload
-    if (dataToUpdate.photoUrl && dataToUpdate.photoUrl.startsWith('data:image')) {
-        updatePayload.photoUrl = dataToUpdate.photoUrl;
-    }
-
     if (dataToUpdate.languagesSpoken !== undefined) {
         updatePayload.languagesSpoken = dataToUpdate.languagesSpoken.split(',').map(s => s.trim()).filter(s => s);
     }
     if (dataToUpdate.trekkingExperience) updatePayload.trekkingExperience = dataToUpdate.trekkingExperience;
 
-    // Handle nested travelPreferences object
     const existingPrefs = snapshot.val().travelPreferences || {};
-    const newPrefs = {
-        soloOrGroup: dataToUpdate.travelPreferences_soloOrGroup,
-        budget: dataToUpdate.travelPreferences_budget,
-        style: dataToUpdate.travelPreferences_style,
-    };
-    // Only include travelPreferences in payload if there are changes
-    if (Object.values(newPrefs).some(v => v !== undefined)) {
-        updatePayload.travelPreferences = { ...existingPrefs, ...newPrefs };
+    const prefsToUpdate: Partial<UserProfile['travelPreferences']> = {};
+    if (dataToUpdate.travelPreferences_soloOrGroup) prefsToUpdate.soloOrGroup = dataToUpdate.travelPreferences_soloOrGroup;
+    if (dataToUpdate.travelPreferences_budget) prefsToUpdate.budget = dataToUpdate.travelPreferences_budget;
+    if (dataToUpdate.travelPreferences_style !== undefined) prefsToUpdate.style = dataToUpdate.travelPreferences_style;
+    
+    if (Object.keys(prefsToUpdate).length > 0) {
+        updatePayload.travelPreferences = { ...existingPrefs, ...prefsToUpdate };
     }
 
-    // Always update the timestamp
-    updatePayload.updatedAt = new Date().toISOString()
+    if (Object.keys(updatePayload).length > 0) {
+        updatePayload.updatedAt = new Date().toISOString()
+        await update(userRef, updatePayload)
+    }
 
-    // Perform the update
-    await update(userRef, updatePayload)
-
-    // Return the updated profile
+    // Return the (potentially) updated profile
     const updatedProfile = await getUserProfileFromRTDB(userId)
     return updatedProfile
   } catch (error: any) {
