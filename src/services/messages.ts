@@ -33,18 +33,10 @@ export async function sendMessage(
         throw new Error("Failed to generate a message key from Firebase.");
     }
 
-    // Prepare the members object for security rule validation.
-    // The keys are the user IDs, and the value can be a simple boolean.
-    const members = {
-      [message.senderId]: true,
-      [message.recipientId]: true,
-    };
-
     await set(newMessageRef, {
       ...message,
       id: newMessageRef.key, // Save the generated key as the message ID
       timestamp: serverTimestamp(), // Use server-side timestamp for consistency
-      members: members, // Add members object for security rules
     })
   } catch (error) {
     console.error('Error sending message to Firebase:', error)
