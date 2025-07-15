@@ -46,7 +46,7 @@ export async function sendMessage(
 
     await set(newMessageRef, messageData);
   } catch (error) {
-    console.error('Error sending message to Firebase:', error)
+    console.error('Error sending message to Firebase:', error) // Log the original error
     throw new Error('Failed to send message.')
   }
 }
