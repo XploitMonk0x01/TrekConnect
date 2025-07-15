@@ -60,6 +60,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   const joinRoom = useCallback(
     (roomId: string) => {
+      // **Fix**: Do not proceed if auth is still loading or user is not logged in.
+      // The page component will call this function again once auth is ready.
+      if (authIsLoading || !user) {
+        setIsLoading(true); // Show loading state while waiting for auth
+        return;
+      }
+      
       if (currentRoomId.current === roomId && unsubscribeCallback.current) {
         return; // Already in the room and listening
       }
@@ -78,7 +85,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       // Start listening to the new room
       unsubscribeCallback.current = listenForMessages(roomId, handleMessagesUpdate, handleError);
     },
-    [handleMessagesUpdate, handleError]
+    [handleMessagesUpdate, handleError, user, authIsLoading]
   )
 
   const leaveRoom = useCallback(() => {

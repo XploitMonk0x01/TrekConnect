@@ -71,11 +71,13 @@ export default function ChatPage() {
   }, [currentUser, otherUser])
 
   useEffect(() => {
-    if (roomId) {
+    // **Fix**: This effect now correctly waits for both the roomId to be generated
+    // and for the authentication to be complete before attempting to join the room.
+    if (roomId && !authIsLoading) {
       joinRoom(roomId)
-      // The leaveRoom logic is now handled in the ChatContext on unmount or user change
     }
-  }, [roomId, joinRoom])
+    // The leaveRoom logic is now handled in the ChatContext on unmount or user change
+  }, [roomId, authIsLoading, joinRoom])
 
 
   useEffect(() => {
