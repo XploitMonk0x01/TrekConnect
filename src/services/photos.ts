@@ -2,23 +2,9 @@
 'use server';
 
 import { ref as dbRef, set, get, push, query, orderByChild, equalTo } from 'firebase/database';
-import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { realtimeDb, storage } from '@/lib/firebase';
+import { realtimeDb } from '@/lib/firebase';
 import type { Photo, CreatePhotoInput } from '@/lib/types';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
-import { v4 as uuidv4 } from 'uuid';
-
-
-// Helper function to upload image and get URL
-async function uploadImageAndGetURL(dataUri: string, userId: string): Promise<string> {
-    if (!dataUri.startsWith('data:image')) {
-        // If it's not a data URI, assume it's already a URL or a placeholder
-        return dataUri;
-    }
-    const imageRef = storageRef(storage, `images/${userId}/${uuidv4()}`);
-    const snapshot = await uploadString(imageRef, dataUri, 'data_url');
-    return getDownloadURL(snapshot.ref);
-}
 
 export async function createPhoto(photoInput: CreatePhotoInput): Promise<Photo> {
   try {
@@ -29,20 +15,16 @@ export async function createPhoto(photoInput: CreatePhotoInput): Promise<Photo> 
     if (!newPhotoId) {
       throw new Error('Could not generate a new photo ID.');
     }
-    
-    const finalImageUrl = photoInput.imageUrl 
-      ? await uploadImageAndGetURL(photoInput.imageUrl, photoInput.userId) 
-      : PLACEHOLDER_IMAGE_URL(600, 600);
 
     const newPhoto: Photo = {
       id: newPhotoId,
       userId: photoInput.userId,
       userName: photoInput.userName,
       userAvatarUrl: photoInput.userAvatarUrl || null,
-      imageUrl: finalImageUrl,
+      imageUrl: photoInput.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400),
       destinationId: photoInput.destinationId || undefined,
-      destinationName: photoInput.destinationName || '', // Use empty string for consistency
-      caption: photoInput.caption || '', // Use empty string for consistency
+      destinationName: photoInput.destinationName || '',
+      caption: photoInput.caption || '',
       tags: photoInput.tags || [],
       uploadedAt: new Date().toISOString(),
       likesCount: 0,

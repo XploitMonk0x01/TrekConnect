@@ -3,17 +3,8 @@
 
 import type { UserProfile } from '@/lib/types'
 import { ref, get, update, remove } from 'firebase/database'
-import { ref as storageRef, uploadString, getDownloadURL } from 'firebase/storage';
-import { realtimeDb, storage } from '@/lib/firebase'
+import { realtimeDb } from '@/lib/firebase'
 import { getUserProfileFromRTDB } from '@/lib/auth'
-import { v4 as uuidv4 } from 'uuid';
-
-export async function getUserProfile(
-  userId: string
-): Promise<UserProfile | null> {
-  // This function now uses the centralized function from auth.ts
-  return getUserProfileFromRTDB(userId)
-}
 
 // The incoming data type matches the form schema on the client
 type UserProfileUpdateData = {
@@ -48,11 +39,9 @@ export async function updateUserProfile(
 
     const updatePayload: Partial<UserProfile> = {}
 
-    // Handle new photo upload
+    // Directly use the photoUrl if it's a new data URI
     if (dataToUpdate.photoUrl && dataToUpdate.photoUrl.startsWith('data:image')) {
-        const imageRef = storageRef(storage, `images/${userId}/${uuidv4()}`);
-        const uploadResult = await uploadString(imageRef, dataToUpdate.photoUrl, 'data_url');
-        updatePayload.photoUrl = await getDownloadURL(uploadResult.ref);
+        updatePayload.photoUrl = dataToUpdate.photoUrl;
     }
 
     if (dataToUpdate.name) updatePayload.name = dataToUpdate.name;
