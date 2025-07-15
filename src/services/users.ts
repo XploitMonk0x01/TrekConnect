@@ -13,9 +13,24 @@ export async function getUserProfile(
   return getUserProfileFromRTDB(userId)
 }
 
+// The incoming data type matches the form schema on the client
+type UserProfileUpdateData = {
+  name?: string;
+  age?: number | string;
+  gender?: 'Male' | 'Female' | 'Non-binary' | 'Other' | 'Prefer not to say';
+  bio?: string;
+  photoUrl?: string; // This will be a base64 data URI if a new image is uploaded
+  travelPreferences_soloOrGroup?: 'Solo' | 'Group' | 'Flexible';
+  travelPreferences_budget?: 'Budget' | 'Mid-range' | 'Luxury' | 'Flexible';
+  travelPreferences_style?: string;
+  languagesSpoken?: string;
+  trekkingExperience?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
+};
+
+
 export async function updateUserProfile(
   userId: string,
-  dataToUpdate: Partial<Omit<UserProfile, 'id' | 'email' | 'createdAt'>>
+  dataToUpdate: UserProfileUpdateData
 ): Promise<UserProfile | null> {
   if (!userId) {
     console.error('updateUserProfile: User ID is missing')
@@ -30,22 +45,35 @@ export async function updateUserProfile(
     }
 
     // Create a payload with only the fields that are being updated.
-    const updatePayload: { [key: string]: any } = {}
-    const existingData = snapshot.val()
+    const updatePayload: Partial<UserProfile> = {}
 
-    // Directly assign fields if they exist in the input, allowing null to clear them.
-    Object.keys(dataToUpdate).forEach((key) => {
-      const typedKey = key as keyof typeof dataToUpdate
-      // Handle nested travelPreferences object by merging
-      if (typedKey === 'travelPreferences' && dataToUpdate.travelPreferences) {
-        updatePayload.travelPreferences = {
-          ...(existingData.travelPreferences || {}),
-          ...dataToUpdate.travelPreferences,
-        }
-      } else {
-        updatePayload[typedKey] = dataToUpdate[typedKey]
-      }
-    })
+    // Map form data to the UserProfile structure
+    if (dataToUpdate.name) updatePayload.name = dataToUpdate.name;
+    if (dataToUpdate.age) updatePayload.age = Number(dataToUpdate.age);
+    if (dataToUpdate.gender) updatePayload.gender = dataToUpdate.gender;
+    if (dataToUpdate.bio !== undefined) updatePayload.bio = dataToUpdate.bio || null;
+    
+    // Specifically handle the new photo upload
+    if (dataToUpdate.photoUrl && dataToUpdate.photoUrl.startsWith('data:image')) {
+        updatePayload.photoUrl = dataToUpdate.photoUrl;
+    }
+
+    if (dataToUpdate.languagesSpoken !== undefined) {
+        updatePayload.languagesSpoken = dataToUpdate.languagesSpoken.split(',').map(s => s.trim()).filter(s => s);
+    }
+    if (dataToUpdate.trekkingExperience) updatePayload.trekkingExperience = dataToUpdate.trekkingExperience;
+
+    // Handle nested travelPreferences object
+    const existingPrefs = snapshot.val().travelPreferences || {};
+    const newPrefs = {
+        soloOrGroup: dataToUpdate.travelPreferences_soloOrGroup,
+        budget: dataToUpdate.travelPreferences_budget,
+        style: dataToUpdate.travelPreferences_style,
+    };
+    // Only include travelPreferences in payload if there are changes
+    if (Object.values(newPrefs).some(v => v !== undefined)) {
+        updatePayload.travelPreferences = { ...existingPrefs, ...newPrefs };
+    }
 
     // Always update the timestamp
     updatePayload.updatedAt = new Date().toISOString()

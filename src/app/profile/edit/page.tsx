@@ -40,7 +40,7 @@ const profileFormSchema = z.object({
     .enum(['Male', 'Female', 'Non-binary', 'Other', 'Prefer not to say'])
     .optional(),
   bio: z.string().max(500, 'Bio cannot exceed 500 characters.').optional(),
-  profileImageDataUri: z.string().optional(), // This will hold the base64 string for new uploads
+  photoUrl: z.string().optional(), // Holds the base64 string for new uploads
   travelPreferences_soloOrGroup: z
     .enum(['Solo', 'Group', 'Flexible'])
     .optional(),
@@ -82,7 +82,7 @@ export default function EditProfilePage() {
       age: '',
       gender: undefined,
       bio: '',
-      profileImageDataUri: '',
+      photoUrl: '',
       travelPreferences_soloOrGroup: undefined,
       travelPreferences_budget: undefined,
       travelPreferences_style: '',
@@ -103,7 +103,7 @@ export default function EditProfilePage() {
         gender:
           (currentUser.gender as ProfileFormValues['gender']) || undefined,
         bio: currentUser.bio || '',
-        profileImageDataUri: '', // Reset this as it's for new uploads
+        photoUrl: '', // Reset this as it's for new uploads
         travelPreferences_soloOrGroup:
           (currentUser.travelPreferences
             ?.soloOrGroup as ProfileFormValues['travelPreferences_soloOrGroup']) ||
@@ -136,12 +136,12 @@ export default function EditProfilePage() {
           title: 'Image Too Large',
           description: 'Maximum file size is 5MB.',
         })
-        form.setError('profileImageDataUri', {
+        form.setError('photoUrl', {
           type: 'manual',
           message: 'Max file size is 5MB.',
         })
         setProfileImagePreview(null)
-        form.setValue('profileImageDataUri', '')
+        form.setValue('photoUrl', '')
         return
       }
       if (
@@ -154,26 +154,26 @@ export default function EditProfilePage() {
           title: 'Invalid File Type',
           description: 'Only JPG, PNG, GIF, WEBP allowed.',
         })
-        form.setError('profileImageDataUri', {
+        form.setError('photoUrl', {
           type: 'manual',
           message: 'Invalid file type.',
         })
         setProfileImagePreview(null)
-        form.setValue('profileImageDataUri', '')
+        form.setValue('photoUrl', '')
         return
       }
-      form.clearErrors('profileImageDataUri')
+      form.clearErrors('photoUrl')
       const reader = new FileReader()
       reader.onloadend = () => {
         setProfileImagePreview(reader.result as string)
-        form.setValue('profileImageDataUri', reader.result as string, {
+        form.setValue('photoUrl', reader.result as string, {
           shouldValidate: true,
         })
       }
       reader.readAsDataURL(file)
     } else {
       setProfileImagePreview(null)
-      form.setValue('profileImageDataUri', '')
+      form.setValue('photoUrl', '')
     }
   }
 
@@ -188,44 +188,14 @@ export default function EditProfilePage() {
     }
     setIsSaving(true)
 
-    const profileUpdateData: Partial<
-      Omit<
-        UserProfile,
-        'id' | 'email' | 'createdAt' | 'lastLoginAt' | 'password'
-      >
-    > = {
-      name: data.name,
-      age: data.age ? Number(data.age) : undefined,
-      gender: data.gender || undefined,
-      bio: data.bio || null,
-      travelPreferences: {
-        soloOrGroup: data.travelPreferences_soloOrGroup || undefined,
-        budget: data.travelPreferences_budget || undefined,
-        style: data.travelPreferences_style || undefined,
-      },
-      languagesSpoken: data.languagesSpoken
-        ? data.languagesSpoken
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s)
-        : [],
-      trekkingExperience: data.trekkingExperience || undefined,
-    }
-
-    // Only include photoUrl in the update if a new image data URI is present
-    if (
-      data.profileImageDataUri &&
-      data.profileImageDataUri.startsWith('data:image')
-    ) {
-      profileUpdateData.photoUrl = data.profileImageDataUri
-    }
-    // If data.profileImageDataUri is empty or not a data URI, photoUrl is not sent,
-    // so the backend won't update it, preserving the existing image.
+    // The data object from the form already has the correct shape.
+    // The photoUrl field will either be an empty string or a new base64 data URI.
+    // The service layer will handle the logic of whether to update the photoUrl or not.
 
     try {
       const updatedMongoDBProfile = await updateUserProfile(
         currentUser.id,
-        profileUpdateData
+        data
       )
 
       if (updatedMongoDBProfile) {
@@ -236,7 +206,7 @@ export default function EditProfilePage() {
         })
         setCurrentPhotoUrlForPreview(updatedMongoDBProfile.photoUrl) // Update preview with potentially new URL from server
         setProfileImagePreview(null) // Clear temporary client-side preview
-        form.setValue('profileImageDataUri', '') // Clear the file input field state in form
+        form.setValue('photoUrl', '') // Clear the file input field state in form
       } else {
         throw new Error(
           'Failed to update profile in database. Server returned no data.'
@@ -282,7 +252,7 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline" size="sm">
           <Link href="/profile">
@@ -324,7 +294,7 @@ export default function EditProfilePage() {
                 id="profile-image-upload"
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handleProfileImageChange} // This will set profileImageDataUri in the form
+                onChange={handleProfileImageChange} 
                 className="hidden"
                 disabled={inputsDisabled}
               />
@@ -342,9 +312,9 @@ export default function EditProfilePage() {
                   : 'Upload Image'}
               </Button>
             </div>
-            {form.formState.errors.profileImageDataUri && (
+            {form.formState.errors.photoUrl && (
               <p className="text-sm text-destructive mt-1">
-                {form.formState.errors.profileImageDataUri.message}
+                {form.formState.errors.photoUrl.message}
               </p>
             )}
           </div>

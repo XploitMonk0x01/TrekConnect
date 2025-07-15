@@ -4,7 +4,8 @@
       "$uid": {
         ".read": true,
         ".write": "auth != null && auth.uid === $uid"
-      }
+      },
+      ".indexOn": ["updatedAt"]
     },
     "messages": {
       "$roomId": {
