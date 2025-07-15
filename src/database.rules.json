@@ -8,12 +8,9 @@
     },
     "messages": {
       "$roomId": {
-        // A user can read a room's messages if their auth.uid is one of the members in the room ID.
-        ".read": "auth != null && $roomId.contains(auth.uid)",
+        ".read": "auth != null && ($roomId.split('_')[0] === auth.uid || $roomId.split('_')[1] === auth.uid)",
         "$messageId": {
-          // A user can write a new message if they are a member of the room
-          // and the message they are writing is from them.
-          ".write": "auth != null && !data.exists() && newData.exists() && $roomId.contains(auth.uid) && newData.child('senderId').val() === auth.uid",
+          ".write": "auth != null && (!data.exists() && newData.exists()) && ($roomId.split('_')[0] === auth.uid || $roomId.split('_')[1] === auth.uid)",
           ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp', 'members']) && newData.child('senderId').val() === auth.uid && newData.child('members').hasChildren([newData.child('senderId').val(), newData.child('recipientId').val()])"
         }
       }
