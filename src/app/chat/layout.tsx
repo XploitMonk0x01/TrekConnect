@@ -4,13 +4,11 @@ export default function ChatLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Chat pages typically don't have the main app sidebar and header.
-  // This layout ensures they are displayed as standalone pages.
+  // This layout provides a container that allows the chat page to take up the full height
+  // within the main content area, minus any global headers/footers if they were present.
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[calc(100vh-var(--header-height)-var(--footer-height)-2rem)]">
       {children}
     </div>
   );
 }
-
-    

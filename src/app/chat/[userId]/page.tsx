@@ -99,7 +99,7 @@ export default function ChatPage() {
 
   if (authIsLoading || isLoadingOtherUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="ml-2">Loading chat...</span>
       </div>
@@ -108,7 +108,7 @@ export default function ChatPage() {
 
   if (!currentUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-full">
         <Card className="w-full max-w-md p-6">
           <CardHeader>
             <CardTitle>Authentication Required</CardTitle>
@@ -128,7 +128,7 @@ export default function ChatPage() {
 
   if (!otherUser) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center h-full">
         <Card className="w-full max-w-md p-6">
           <CardHeader>
             <CardTitle>User Not Found</CardTitle>
@@ -147,8 +147,8 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="border-b p-4 flex items-center gap-4 sticky top-0 bg-background z-10">
+    <div className="flex flex-col h-full bg-card border rounded-lg shadow-sm">
+      <div className="border-b p-4 flex items-center gap-4 flex-shrink-0">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/connect">
             <ArrowLeft className="h-5 w-5" />
@@ -177,6 +177,7 @@ export default function ChatPage() {
         )}
       </div>
 
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
        {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
         <div className="p-4">
             <Alert variant={chatContextError ? "destructive" : "default"}>
@@ -188,8 +189,6 @@ export default function ChatPage() {
         </div>
       )}
 
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
         {chatContextIsLoading ? (
             <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -229,8 +228,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSendMessage} className="border-t p-4 bg-background fixed bottom-0 w-full">
-        <div className="flex gap-2 max-w-3xl mx-auto">
+      <form onSubmit={handleSendMessage} className="border-t p-4 bg-background/50 flex-shrink-0">
+        <div className="flex gap-2">
           <Input
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
