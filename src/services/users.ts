@@ -1,3 +1,4 @@
+
 'use server'
 
 import type { UserProfile } from '@/lib/types'
@@ -45,11 +46,6 @@ export async function updateUserProfile(
         updatePayload[typedKey] = dataToUpdate[typedKey]
       }
     })
-
-    // If no actual data is being changed besides the timestamp, don't run the update.
-    if (Object.keys(updatePayload).length === 0) {
-      return getUserProfileFromRTDB(userId)
-    }
 
     // Always update the timestamp
     updatePayload.updatedAt = new Date().toISOString()
