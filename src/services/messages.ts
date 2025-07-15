@@ -17,7 +17,7 @@ const MESSAGES_PATH = 'messages'
 
 /**
  * Sends a message to a specific room in Firebase Realtime Database.
- * This function is now designed to work with the updated security rules.
+ * This function now includes a 'members' object to align with security rules.
  * @param roomId The ID of the chat room.
  * @param message The message object to send, without an ID or timestamp.
  */
@@ -33,11 +33,18 @@ export async function sendMessage(
         throw new Error("Failed to generate a message key from Firebase.");
     }
 
-    await set(newMessageRef, {
+    const messageData = {
       ...message,
       id: newMessageRef.key, // Save the generated key as the message ID
       timestamp: serverTimestamp(), // Use server-side timestamp for consistency
-    })
+      // Add the members object for security rule validation
+      members: {
+        [message.senderId]: true,
+        [message.recipientId]: true,
+      },
+    };
+
+    await set(newMessageRef, messageData);
   } catch (error) {
     console.error('Error sending message to Firebase:', error)
     throw new Error('Failed to send message.')
