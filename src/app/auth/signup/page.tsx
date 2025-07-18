@@ -1,3 +1,4 @@
+
 'use client'
 
 import Link from 'next/link'
@@ -8,16 +9,16 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { UserPlus, Loader2 } from 'lucide-react'
+import { UserPlus, Loader2, MountainSnow } from 'lucide-react'
 import { SiteLogo } from '@/components/SiteLogo'
 import { useToast } from '@/hooks/use-toast'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
+import Image from 'next/image'
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -71,46 +72,58 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-background to-accent/10 p-4">
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="space-y-1 text-center">
-          <div className="inline-block mx-auto mb-4">
-            <SiteLogo />
-          </div>
-          <CardTitle className="text-3xl font-headline">
-            Join TrekConnect
-          </CardTitle>
-          <CardDescription>
-            Create your account and start your journey.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Your Name"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                disabled={isSubmitting || authIsLoading}
-              />
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
+      <div className="hidden bg-muted lg:block relative">
+        <Image
+          src="https://placehold.co/1200x800.png"
+          alt="Image"
+          width="1920"
+          height="1080"
+          className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          data-ai-hint="himalayan valley"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute top-8 left-8 text-white">
+             <div className="flex items-center gap-2 text-2xl font-semibold font-headline text-white">
+              <MountainSnow className="h-8 w-8" />
+              <span>TrekConnect</span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+            <p className="mt-2 text-lg">Your adventure starts here. Join a community of explorers.</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6">
+          <div className="grid gap-2 text-center">
+            <h1 className="text-3xl font-bold font-headline">Sign Up</h1>
+            <p className="text-balance text-muted-foreground">
+              Enter your information to create an account
+            </p>
+          </div>
+          <form onSubmit={handleSubmit} className="grid gap-4">
+             <div className="grid gap-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  placeholder="Max Robinson"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={isSubmitting || authIsLoading}
+                />
+              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="m@example.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting || authIsLoading}
               />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -122,44 +135,35 @@ export default function SignUpPage() {
                 disabled={isSubmitting || authIsLoading}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={isSubmitting || authIsLoading}
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full bg-accent hover:bg-accent/90"
-              disabled={isSubmitting || authIsLoading}
-            >
-              {(isSubmitting || authIsLoading) ? (
+             <div className="grid gap-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Confirm your password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isSubmitting || authIsLoading}
+                />
+              </div>
+            <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
+               {(isSubmitting || authIsLoading) ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <UserPlus className="mr-2 h-5 w-5" />
               )}
-              Create Account
+              Create an account
             </Button>
           </form>
-        </CardContent>
-        <CardFooter className="flex flex-col items-center space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link
-              href="/auth/signin"
-              className="font-semibold text-primary hover:underline"
-            >
-              Sign In
+          <div className="mt-4 text-center text-sm">
+            Already have an account?{" "}
+            <Link href="/auth/signin" className="underline">
+              Sign in
             </Link>
-          </p>
-        </CardFooter>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
