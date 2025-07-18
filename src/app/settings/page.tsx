@@ -454,8 +454,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="shadow-lg">
+    <div className="space-y-8 max-w-3xl mx-auto">
+       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-3xl text-primary">
             Settings
@@ -464,153 +464,144 @@ export default function SettingsPage() {
             Manage your account preferences and settings.
           </CardDescription>
         </CardHeader>
-      </Card>
+        <CardContent className="space-y-8">
+            {/* Account Info Section */}
+            <section>
+                <h2 className="text-xl font-semibold font-headline flex items-center border-b pb-2 mb-4">
+                  <UserCircle className="mr-2 h-5 w-5" /> Account Information
+                </h2>
+                {renderAccountForm()}
+            </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <UserCircle className="mr-2 h-5 w-5" /> Account Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>{renderAccountForm()}</CardContent>
-      </Card>
+            <Separator />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Lock className="mr-2 h-5 w-5" /> Security
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {renderPasswordForm()}
-          <Separator />
-          <div className="flex items-center justify-between">
-            <Label htmlFor="twoFactorAuth" className="flex flex-col space-y-1">
-              <span>Two-Factor Authentication</span>
-              <span className="font-normal leading-snug text-muted-foreground">
-                Add an extra layer of security to your account. (Coming Soon)
-              </span>
-            </Label>
-            <Switch
-              id="twoFactorAuth"
-              aria-label="Toggle Two-Factor Authentication"
-              disabled
-            />
-          </div>
-        </CardContent>
-      </Card>
+            {/* Security Section */}
+            <section>
+                <h2 className="text-xl font-semibold font-headline flex items-center border-b pb-2 mb-4">
+                  <Lock className="mr-2 h-5 w-5" /> Security
+                </h2>
+                <div className="space-y-4">
+                    {renderPasswordForm()}
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="twoFactorAuth" className="flex flex-col space-y-1">
+                        <span>Two-Factor Authentication</span>
+                        <span className="font-normal leading-snug text-muted-foreground">
+                            Add an extra layer of security to your account. (Coming Soon)
+                        </span>
+                        </Label>
+                        <Switch
+                        id="twoFactorAuth"
+                        aria-label="Toggle Two-Factor Authentication"
+                        disabled
+                        />
+                    </div>
+                </div>
+            </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Bell className="mr-2 h-5 w-5" /> Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="matchNotifications">New Match Notifications</Label>
-            <Switch
-              id="matchNotifications"
-              defaultChecked
-              disabled={!currentUser}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="messageNotifications">
-              New Message Notifications
-            </Label>
-            <Switch
-              id="messageNotifications"
-              defaultChecked
-              disabled={!currentUser}
-            />
-          </div>
-          {!currentUser && (
-            <p className="text-xs text-muted-foreground">
-              Sign in to manage notifications.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+             <Separator />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Palette className="mr-2 h-5 w-5" /> Appearance
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ThemeToggleSwitch />
-        </CardContent>
-      </Card>
+            {/* Notifications Section */}
+            <section>
+                 <h2 className="text-xl font-semibold font-headline flex items-center border-b pb-2 mb-4">
+                  <Bell className="mr-2 h-5 w-5" /> Notifications
+                </h2>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="matchNotifications">New Match Notifications</Label>
+                        <Switch
+                        id="matchNotifications"
+                        defaultChecked
+                        disabled={!currentUser}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="messageNotifications">
+                        New Message Notifications
+                        </Label>
+                        <Switch
+                        id="messageNotifications"
+                        defaultChecked
+                        disabled={!currentUser}
+                        />
+                    </div>
+                    {!currentUser && (
+                        <p className="text-xs text-muted-foreground">
+                        Sign in to manage notifications.
+                        </p>
+                    )}
+                </div>
+            </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <ShieldQuestion className="mr-2 h-5 w-5" /> Privacy & Data
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label
-              htmlFor="profileVisibility"
-              className="flex flex-col space-y-1"
-            >
-              <span>Profile Visibility</span>
-              <span className="font-normal leading-snug text-muted-foreground">
-                Control who can see your profile. (Coming Soon)
-              </span>
-            </Label>
-            <Button variant="outline" size="sm" disabled>
-              Manage Visibility
-            </Button>
-          </div>
-          <Button variant="link" className="p-0 h-auto text-primary">
-            View Privacy Policy
-          </Button>
-          <Separator />
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                className="w-full sm:w-auto"
-                disabled={!currentUser || isDeletingAccount}
-              >
-                {isDeletingAccount ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-2 h-4 w-4" />
-                )}
-                Delete Account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete
-                  your account and remove your data from our servers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteAccount}
-                  disabled={isDeletingAccount}
-                >
-                  {isDeletingAccount ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : null}
-                  Yes, delete account
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          {!currentUser && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Sign in to manage your account data.
-            </p>
-          )}
+            <Separator />
+
+            {/* Appearance Section */}
+            <section>
+                 <h2 className="text-xl font-semibold font-headline flex items-center border-b pb-2 mb-4">
+                  <Palette className="mr-2 h-5 w-5" /> Appearance
+                </h2>
+                <ThemeToggleSwitch />
+            </section>
+
+            <Separator />
+            
+            {/* Data & Privacy Section */}
+             <section>
+                 <h2 className="text-xl font-semibold font-headline flex items-center border-b pb-2 mb-4 text-destructive">
+                  <Trash2 className="mr-2 h-5 w-5" /> Danger Zone
+                </h2>
+                 <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-4 space-y-4">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h3 className="font-semibold">Delete Account</h3>
+                            <p className="text-sm text-muted-foreground mt-1">Permanently delete your account and all associated data. This action cannot be undone.</p>
+                        </div>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                            <Button
+                                variant="destructive"
+                                disabled={!currentUser || isDeletingAccount}
+                            >
+                                {isDeletingAccount ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                )}
+                                Delete Account
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete
+                                your account and remove your data from our servers.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                onClick={handleDeleteAccount}
+                                disabled={isDeletingAccount}
+                                className="bg-destructive hover:bg-destructive/90"
+                                >
+                                {isDeletingAccount ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : null}
+                                Yes, delete account
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                 </div>
+                 {!currentUser && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Sign in to manage your account data.
+                    </p>
+                    )}
+            </section>
+
         </CardContent>
       </Card>
     </div>
