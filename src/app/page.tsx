@@ -21,6 +21,7 @@ import Image from 'next/image'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { searchPexelsImage } from '@/services/pexels'
 import { useState, useEffect } from 'react'
+import { getCachedImage, setCachedImage } from '@/lib/image-cache'
 
 interface Feature {
   title: string
@@ -92,20 +93,31 @@ export default function DashboardPage() {
       setIsLoading(true)
       try {
         const heroQuery = 'adventure travel'
-        const fetchedHeroImageUrl = await searchPexelsImage(
-          heroQuery,
-          1200,
-          400
-        )
-        setHeroImageUrl(fetchedHeroImageUrl)
+        const cachedHeroImage = getCachedImage(heroQuery)
+        if (cachedHeroImage) {
+          setHeroImageUrl(cachedHeroImage)
+        } else {
+          const fetchedHeroImageUrl = await searchPexelsImage(
+            heroQuery,
+            1200,
+            400
+          )
+          setHeroImageUrl(fetchedHeroImageUrl)
+          setCachedImage(heroQuery, fetchedHeroImageUrl)
+        }
 
         const fetchedFeatures = await Promise.all(
           initialFeaturesData.map(async (feature) => {
+            const cachedFeatureImage = getCachedImage(feature.queryHint)
+            if (cachedFeatureImage) {
+              return { ...feature, imageUrl: cachedFeatureImage }
+            }
             const imageUrl = await searchPexelsImage(
               feature.queryHint,
               400,
               200
             )
+            setCachedImage(feature.queryHint, imageUrl)
             return { ...feature, imageUrl }
           })
         )

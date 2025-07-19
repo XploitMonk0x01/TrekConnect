@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import CachedImage from './CachedImage';
 import {
   Card,
   CardContent,

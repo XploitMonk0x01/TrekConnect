@@ -3,10 +3,9 @@ import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { WeatherInfo, Destination } from '@/lib/types'
 import { getDestinationById } from '@/services/destinations'
-import { getWeatherFromGemini } from '@/services/weather/weather.service'
 import DestinationDetailClientContent from './DestinationDetailClientContent'
 
-export default function DestinationDetailPage({
+export default async function DestinationDetailPage({
   params,
 }: {
   params: { destinationId: string }
@@ -18,14 +17,14 @@ export default function DestinationDetailPage({
   const destinationId = params.destinationId
 
   try {
-    destination = getDestinationById(destinationId)
+    destination = await getDestinationById(destinationId)
     if (destination?.coordinates?.lat && destination?.coordinates?.lng) {
       // Use Gemini for weather
-      weatherInfo = getWeatherFromGemini(
-        destination.name,
-        destination.coordinates.lat,
-        destination.coordinates.lng
-      )
+      // weatherInfo = await getWeatherFromGemini(
+      //   destination.name,
+      //   destination.coordinates.lat,
+      //   destination.coordinates.lng
+      // )
     }
   } catch (err) {
     console.error('Error fetching destination or weather:', err)
