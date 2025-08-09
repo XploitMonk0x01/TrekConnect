@@ -470,7 +470,7 @@ export default function RecommendationsPage() {
                     languagesSpoken: match.languagesSpoken,
                     trekkingExperience:
                       match.trekkingExperience as AppUserProfile['trekkingExperience'],
-                    email: match.email || null,
+                    email: (match as any).email || null,
                     // Fill in other UserProfile fields with defaults if needed by UserProfileCard
                     wishlistDestinations: [],
                     travelHistory: [],

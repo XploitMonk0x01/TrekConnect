@@ -89,24 +89,19 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
 
   // Safely handle languagesSpoken - it might be a string, array, or undefined
   const languagesSpokenText = (() => {
-    if (!user.languagesSpoken) return 'Languages: Not specified'
+    const langs: unknown = user.languagesSpoken as unknown
+    if (!langs) return 'Languages: Not specified'
 
     // If it's already an array
-    if (
-      Array.isArray(user.languagesSpoken) &&
-      user.languagesSpoken.length > 0
-    ) {
-      return `Speaks: ${user.languagesSpoken.join(', ')}`
+    if (Array.isArray(langs) && (langs as string[]).length > 0) {
+      return `Speaks: ${(langs as string[]).join(', ')}`
     }
 
     // If it's a string, convert to array
-    if (
-      typeof user.languagesSpoken === 'string' &&
-      user.languagesSpoken.trim()
-    ) {
-      const languagesArray = user.languagesSpoken
+    if (typeof langs === 'string' && langs && (langs as string).trim()) {
+      const languagesArray = (langs as string)
         .split(',')
-        .map((lang) => lang.trim())
+        .map((lang: string) => lang.trim())
         .filter(Boolean)
       return languagesArray.length > 0
         ? `Speaks: ${languagesArray.join(', ')}`
@@ -175,18 +170,23 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
               {travelStyleText}
             </span>
           </div>
-          {user.languagesSpoken &&
-            ((Array.isArray(user.languagesSpoken) &&
-              user.languagesSpoken.length > 0) ||
-              (typeof user.languagesSpoken === 'string' &&
-                user.languagesSpoken.trim())) && (
-              <div className="flex items-center text-sm">
-                <Languages className="h-4 w-4 mr-3 text-primary shrink-0" />
-                <span className="text-muted-foreground truncate">
-                  {languagesSpokenText}
-                </span>
-              </div>
-            )}
+          {(() => {
+            const langs: unknown = user.languagesSpoken as unknown
+            return (
+              !!langs &&
+              ((Array.isArray(langs) && (langs as string[]).length > 0) ||
+                (typeof langs === 'string' &&
+                  !!langs &&
+                  (langs as string).trim()))
+            )
+          })() && (
+            <div className="flex items-center text-sm">
+              <Languages className="h-4 w-4 mr-3 text-primary shrink-0" />
+              <span className="text-muted-foreground truncate">
+                {languagesSpokenText}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Badges */}

@@ -174,12 +174,7 @@ export default function ExploreClientComponent({
             isLoadingImg = false
           } else {
             try {
-              pexelsImageUrl = await searchPexelsImage(
-                imageQuery,
-                600,
-                400,
-                abortController.signal
-              )
+              pexelsImageUrl = await searchPexelsImage(imageQuery, 600, 400)
               if (isComponentMounted) {
                 imageCache.set(imageQuery, pexelsImageUrl)
                 setCache(imageCache) // Save to localStorage
@@ -376,17 +371,17 @@ export default function ExploreClientComponent({
       await updateUserProfileClient(currentUser.id, {
         wishlistDestinations: newWishlist,
       })
-      if (updatedUser) {
-        updateUserInContext(updatedUser)
-        toast({
-          title: isWishlisted ? 'Removed from Wishlist' : 'Added to Wishlist',
-          description: `${destinationName} has been ${
-            isWishlisted ? 'removed from' : 'added to'
-          } your wishlist.`,
-        })
-      } else {
-        throw new Error('Failed to update wishlist on server.')
-      }
+      // Update local context optimistically
+      updateUserInContext({
+        ...currentUser,
+        wishlistDestinations: newWishlist,
+      })
+      toast({
+        title: isWishlisted ? 'Removed from Wishlist' : 'Added to Wishlist',
+        description: `${destinationName} has been ${
+          isWishlisted ? 'removed from' : 'added to'
+        } your wishlist.`,
+      })
     } catch (error) {
       console.error('Error updating wishlist:', error)
       toast({
@@ -648,15 +643,7 @@ export default function ExploreClientComponent({
                   </div>
                 ) : destination.weather ? (
                   <div className="text-xs text-blue-700 mt-1">
-                    Weather:{' '}
-                    {destination.weather.summary ||
-                    destination.weather.description
-                      ? destination.weather.summary ||
-                        destination.weather.description
-                      : ''}{' '}
-                    {destination.weather.temp
-                      ? `| ${destination.weather.temp}°C`
-                      : ''}
+                    Weather: {destination.weather.condition}
                   </div>
                 ) : null}
               </CardContent>

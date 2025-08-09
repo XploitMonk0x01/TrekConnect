@@ -22,6 +22,7 @@ export type UserProfileUpdateData = {
   travelPreferences_style?: string
   languagesSpoken?: string
   trekkingExperience?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'
+  wishlistDestinations?: string[]
 }
 
 // Client-side profile update function

@@ -20,6 +20,31 @@ function generateRoomId(userId1: string, userId2: string): string {
   return [userId1, userId2].sort().join('_')
 }
 
+// Format Firebase/ISO timestamps safely (supports number, string, or object with seconds/nanoseconds)
+function formatMessageTime(ts: unknown): string {
+  try {
+    let d: Date | null = null
+    if (typeof ts === 'number') {
+      d = new Date(ts)
+    } else if (typeof ts === 'string') {
+      d = new Date(ts)
+    } else if (ts && typeof ts === 'object') {
+      const anyTs = ts as any
+      if (typeof anyTs.seconds === 'number') {
+        const millis =
+          anyTs.seconds * 1000 +
+          Math.floor((anyTs.nanoseconds || 0) / 1_000_000)
+        d = new Date(millis)
+      }
+    }
+    return d
+      ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : ''
+  } catch {
+    return ''
+  }
+}
+
 export default function ChatPage() {
   const params = useParams()
   const otherUserIdFromParams = params.userId as string
@@ -159,7 +184,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-card border rounded-lg shadow-sm">
+    <div className="flex flex-col h-full bg-card border rounded-lg shadow-sm max-w-7xl mx-auto w-full">
       <div className="border-b p-4 flex items-center gap-4 flex-shrink-0">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/connect">
@@ -189,7 +214,7 @@ export default function ChatPage() {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4">
         {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
           <div className="p-4">
             <Alert variant={chatContextError ? 'destructive' : 'default'}>
@@ -227,20 +252,17 @@ export default function ChatPage() {
               }`}
             >
               <div
-                className={`max-w-[70%] rounded-lg p-3 shadow-md ${
+                className={`max-w-[68ch] md:max-w-[60%] rounded-xl p-3 md:p-4 shadow-md ${
                   message.senderId === currentUser.id
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground'
                 }`}
               >
-                <p className="whitespace-pre-wrap break-words">
+                <p className="whitespace-pre-wrap break-words leading-relaxed">
                   {message.content}
                 </p>
-                <p className="text-xs opacity-70 mt-1 text-right">
-                  {new Date(message.timestamp as number).toLocaleTimeString(
-                    [],
-                    { hour: '2-digit', minute: '2-digit' }
-                  )}
+                <p className="text-[11px] opacity-70 mt-1 text-right">
+                  {formatMessageTime(message.timestamp as unknown)}
                 </p>
               </div>
             </div>
@@ -249,8 +271,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t p-4 bg-background/50 flex-shrink-0">
-        <div className="flex gap-2">
+      <div className="border-t p-4 md:p-6 bg-background/50 flex-shrink-0">
+        <div className="flex gap-2 md:gap-3">
           <Input
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
@@ -263,7 +285,7 @@ export default function ChatPage() {
             placeholder={
               isConnected ? 'Type a message...' : 'Connecting to chat...'
             }
-            className="flex-1"
+            className="flex-1 h-12 md:h-14"
             disabled={!isConnected}
           />
           <Button
@@ -272,7 +294,7 @@ export default function ChatPage() {
             disabled={!isConnected || !messageInput.trim()}
             onClick={() => void handleSendMessage()}
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5 md:h-6 md:w-6" />
           </Button>
         </div>
       </div>

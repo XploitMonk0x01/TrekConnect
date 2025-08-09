@@ -141,8 +141,8 @@ export default function SettingsPage() {
     }
     setIsSavingAccount(true)
 
-    const profileUpdateData: Partial<Pick<UserProfile, 'name' | 'bio'>> = {
-      name: data.name,
+    const profileUpdateData = {
+      name: data.name ?? undefined,
       bio: data.bio ?? undefined,
     }
 

@@ -104,12 +104,14 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
       try {
         // Create or get the room if other user info is provided
         if (otherUserId && otherUserName) {
+          const currentUserPhoto: string | undefined =
+            user.photoUrl || undefined
           await createOrGetRoom(
             user.id,
             otherUserId,
             user.name || 'User',
             otherUserName,
-            user.photoUrl,
+            currentUserPhoto,
             otherUserPhoto
           )
         }
@@ -198,12 +200,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Ensure room exists before sending message
       if (recipientName) {
+        const currentUserPhoto: string | undefined = user.photoUrl || undefined
         await createOrGetRoom(
           user.id,
           recipientId,
           user.name || 'User',
           recipientName,
-          user.photoUrl,
+          currentUserPhoto,
           recipientPhoto
         )
       }

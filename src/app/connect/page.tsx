@@ -223,38 +223,42 @@ export default function ConnectSpherePage() {
             connecting!
           </p>
           <div className="flex gap-4 mt-8">
-            <Image
-              src={currentUserPhoto}
-              alt="Your profile"
-              width={100}
-              height={100}
-              className="rounded-full border-4 border-primary object-cover"
-              data-ai-hint="person user"
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
-                  100,
-                  100
-                )
-              }}
-            />
-            <Image
-              src={
-                lastSwipedProfile.photoUrl || PLACEHOLDER_IMAGE_URL(100, 100)
-              }
-              alt={lastSwipedProfile.name || 'Match'}
-              width={100}
-              height={100}
-              className="rounded-full border-4 border-pink-500 object-cover"
-              data-ai-hint={`person ${
-                lastSwipedProfile.name?.split(' ')[0] || 'match'
-              }`}
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
-                  100,
-                  100
-                )
-              }}
-            />
+            <div className="relative h-24 w-24 rounded-full border-4 border-primary overflow-hidden">
+              <Image
+                src={currentUserPhoto}
+                alt="Your profile"
+                fill
+                sizes="96px"
+                className="object-cover"
+                data-ai-hint="person user"
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
+                    100,
+                    100
+                  )
+                }}
+              />
+            </div>
+            <div className="relative h-24 w-24 rounded-full border-4 border-pink-500 overflow-hidden">
+              <Image
+                src={
+                  lastSwipedProfile.photoUrl || PLACEHOLDER_IMAGE_URL(100, 100)
+                }
+                alt={lastSwipedProfile.name || 'Match'}
+                fill
+                sizes="96px"
+                className="object-cover"
+                data-ai-hint={`person ${
+                  lastSwipedProfile.name?.split(' ')[0] || 'match'
+                }`}
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
+                    100,
+                    100
+                  )
+                }}
+              />
+            </div>
           </div>
           <Button
             className="mt-8 bg-accent hover:bg-accent/90"

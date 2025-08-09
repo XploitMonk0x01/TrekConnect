@@ -1,18 +1,4 @@
-import { Server as NetServer, Socket } from 'net'
-import { NextApiResponse } from 'next'
-import { Server as SocketIOServer } from 'socket.io'
-
-export interface SocketServer extends NetServer {
-  io?: SocketIOServer
-}
-
-export interface SocketWithIO extends Socket {
-  server: SocketServer
-}
-
-export interface NextApiResponseServerIO extends NextApiResponse {
-  socket: SocketWithIO
-}
+// Legacy socket.io types removed as we now use Firebase RTDB for chat
 
 // UserProfile as it is stored in Firebase RTDB
 export interface UserProfile {
