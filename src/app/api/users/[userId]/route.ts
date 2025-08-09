@@ -1,11 +1,6 @@
-
-import {NextRequest, NextResponse} from 'next/server';
-import {
-  getUserProfile,
-  updateUserProfile,
-  deleteUserProfile,
-} from '@/services/users';
-import {revalidateTag} from 'next/cache';
+import { NextRequest, NextResponse } from 'next/server'
+import { getUserProfile, deleteUserProfile } from '@/services/users'
+import { revalidateTag } from 'next/cache'
 
 // Helper to check for authorization (is the request from the user themselves?)
 // In a real app, this might involve more robust session/token validation.
@@ -26,94 +21,61 @@ async function isAuthorized(
   // } catch (error) {
   //   return false;
   // }
-  return true; // Placeholder for now
+  return true // Placeholder for now
 }
 
 // GET a single user profile from Firebase RTDB
 export async function GET(
   request: NextRequest,
-  {params}: {params: {userId: string}}
+  { params }: { params: { userId: string } }
 ) {
   try {
-    const {userId} = params;
-    const user = await getUserProfile(userId);
+    const { userId } = params
+    const user = await getUserProfile(userId)
 
     if (!user) {
-      return NextResponse.json({error: 'User not found'}, {status: 404});
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Omit sensitive data if necessary before sending
-    return NextResponse.json(user);
+    return NextResponse.json(user)
   } catch (error) {
-    console.error('Error fetching user profile:', error);
+    console.error('Error fetching user profile:', error)
     return NextResponse.json(
-      {error: 'Internal server error'},
-      {status: 500}
-    );
-  }
-}
-
-// PATCH (update) a user profile in Firebase RTDB
-export async function PATCH(
-  request: NextRequest,
-  {params}: {params: {userId: string}}
-) {
-  try {
-    const {userId} = params;
-    const body = await request.json();
-
-    // Basic authorization check
-    if (!(await isAuthorized(request, userId))) {
-      return NextResponse.json({error: 'Unauthorized'}, {status: 403});
-    }
-
-    const updatedUser = await updateUserProfile(userId, body);
-
-    if (!updatedUser) {
-      return NextResponse.json({error: 'User not found'}, {status: 404});
-    }
-
-    // Revalidate tags if you are using data caching for user profiles
-    revalidateTag(`user-profile-${userId}`);
-
-    return NextResponse.json(updatedUser);
-  } catch (error) {
-    console.error('Error updating user profile:', error);
-    return NextResponse.json(
-      {error: 'Internal server error'},
-      {status: 500}
-    );
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
 // DELETE a user profile from Firebase RTDB
 export async function DELETE(
   request: NextRequest,
-  {params}: {params: {userId: string}}
+  { params }: { params: { userId: string } }
 ) {
   try {
-    const {userId} = params;
+    const { userId } = params
 
     // Basic authorization check
     if (!(await isAuthorized(request, userId))) {
-      return NextResponse.json({error: 'Unauthorized'}, {status: 403});
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const success = await deleteUserProfile(userId);
+    const success = await deleteUserProfile(userId)
 
     if (!success) {
       return NextResponse.json(
-        {error: 'Failed to delete user or user not found'},
-        {status: 400}
-      );
+        { error: 'Failed to delete user or user not found' },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({success: true});
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Error deleting user:', error)
     return NextResponse.json(
-      {error: 'Internal server error'},
-      {status: 500}
-    );
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

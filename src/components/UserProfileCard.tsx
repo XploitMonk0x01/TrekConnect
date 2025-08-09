@@ -1,4 +1,6 @@
-import CachedImage from './CachedImage';
+import { useState } from 'react'
+import Image from 'next/image'
+import CachedImage from './CachedImage'
 import {
   Card,
   CardContent,
@@ -18,7 +20,6 @@ import {
   TrendingUp,
   Briefcase,
 } from 'lucide-react'
-import { useState } from 'react'
 
 interface UserProfileCardProps {
   user: UserProfile

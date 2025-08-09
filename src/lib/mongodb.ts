@@ -1,31 +1,35 @@
+import { MongoClient, Db, MongoClientOptions } from 'mongodb'
 
-import { MongoClient, Db, MongoClientOptions } from 'mongodb';
-
-const MONGODB_URI = process.env.MONGODB_URI;
-const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME;
+const MONGODB_URI = process.env.MONGODB_URI
+const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env');
+  throw new Error(
+    'Please define the MONGODB_URI environment variable inside .env'
+  )
 }
 
 if (!MONGODB_DB_NAME) {
-  throw new Error('Please define the MONGODB_DB_NAME environment variable inside .env');
+  throw new Error(
+    'Please define the MONGODB_DB_NAME environment variable inside .env'
+  )
 }
 
 const options: MongoClientOptions = {
-    maxPoolSize: 10,
-    minPoolSize: 1,
-    serverSelectionTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
-    connectTimeoutMS: 30000,
-    retryWrites: true,
-    retryReads: true,
-    writeConcern: { w: 'majority' },
-};
+  maxPoolSize: 10,
+  minPoolSize: 1,
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 45000,
+  connectTimeoutMS: 30000,
+  retryWrites: true,
+  retryReads: true,
+  writeConcern: { w: 'majority' },
+  // Add DNS resolution fallback
+  family: 4, // Use IPv4
+}
 
-
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+let client: MongoClient
+let clientPromise: Promise<MongoClient>
 
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
@@ -47,14 +51,31 @@ if (process.env.NODE_ENV === 'development') {
 
 export async function getDb(): Promise<Db> {
   try {
-    const connectedClient = await clientPromise;
-    const db = connectedClient.db(MONGODB_DB_NAME);
-    return db;
+    console.log('🔄 Attempting to connect to MongoDB...')
+    const connectedClient = await clientPromise
+    console.log('✅ Connected to MongoDB successfully')
+    const db = connectedClient.db(MONGODB_DB_NAME)
+    return db
   } catch (error) {
-    console.error('❌ MongoDB connection error in getDb():', error);
-    throw new Error('Failed to connect to database');
+    console.error('❌ MongoDB connection error in getDb():', error)
+
+    // Check if it's a DNS resolution error
+    if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+      console.error(
+        '🌐 DNS resolution failed. This might be a network connectivity issue.'
+      )
+      console.error('💡 Suggestions:')
+      console.error('  1. Check your internet connection')
+      console.error('  2. Verify MongoDB Atlas cluster is running')
+      console.error(
+        '  3. Check if your IP address is whitelisted in MongoDB Atlas'
+      )
+      console.error('  4. Try using a different network or VPN')
+    }
+
+    throw new Error('Failed to connect to database')
   }
 }
 
 // Export a client promise for seeding and other scripts if needed
-export default clientPromise;
+export default clientPromise

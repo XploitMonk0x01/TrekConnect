@@ -1,18 +1,25 @@
 {
   "rules": {
     "users": {
+      ".read": "auth != null",
       "$uid": {
         ".read": true,
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "auth != null && auth.uid == $uid"
       },
       ".indexOn": ["updatedAt"]
     },
+    "rooms": {
+      "$roomId": {
+        ".read": "auth != null && data.child('members').child(auth.uid).val() == true",
+        ".write": "auth != null && data.child('members').child(auth.uid).val() == true"
+      }
+    },
     "messages": {
       "$roomId": {
-        ".read": "auth != null && ($roomId.split('_')[0] === auth.uid || $roomId.split('_')[1] === auth.uid)",
+        ".read": "auth != null && root.child('rooms').child($roomId).child('members').child(auth.uid).val() == true",
         "$messageId": {
-          ".write": "auth != null && (!data.exists() && newData.exists()) && ($roomId.split('_')[0] === auth.uid || $roomId.split('_')[1] === auth.uid)",
-          ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp', 'members']) && newData.child('senderId').val() === auth.uid && newData.child('members').hasChildren([newData.child('senderId').val(), newData.child('recipientId').val()])"
+          ".write": "auth != null && newData.child('senderId').val() == auth.uid && root.child('rooms').child($roomId).child('members').child(auth.uid).val() == true",
+          ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp']) && newData.child('senderId').val() == auth.uid"
         }
       }
     },
@@ -20,14 +27,14 @@
       ".read": "auth != null",
       ".indexOn": "uploadedAt",
       "$photoId": {
-        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() == auth.uid)"
       }
     },
     "stories": {
       ".read": "auth != null",
       ".indexOn": "createdAt",
       "$storyId": {
-        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid)"
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() == auth.uid)"
       }
     }
   }

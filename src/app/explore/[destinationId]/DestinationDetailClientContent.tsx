@@ -37,7 +37,7 @@ import { useToast } from '@/hooks/use-toast'
 import { searchPexelsImage } from '@/services/pexels'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
-import { updateUserProfile } from '@/services/users'
+import { updateUserProfileClient } from '@/services/users'
 
 interface DestinationDetailClientContentProps {
   initialDestination: Destination
@@ -254,12 +254,11 @@ export default function DestinationDetailClientContent({
       : [...currentWishlist, destination.name]
 
     try {
-      const updatedUser = await updateUserProfile(currentUser.id, {
+      await updateUserProfileClient(currentUser.id, {
         wishlistDestinations: newWishlist,
       })
-      if (updatedUser) {
-        updateUserInContext(updatedUser as UserProfile)
-        toast({
+      // Update local context - you might need to fetch updated user or update locally
+      toast({
           title: isWishlisted ? 'Removed from Wishlist' : 'Added to Wishlist',
           description: `${destination.name} has been ${
             isWishlisted ? 'removed from' : 'added to'

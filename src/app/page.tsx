@@ -21,7 +21,7 @@ import Image from 'next/image'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { searchPexelsImage } from '@/services/pexels'
 import { useState, useEffect } from 'react'
-import { getCachedImage, setCachedImage } from '@/lib/image-cache'
+import { getCachedImage, cacheImage } from '@/lib/image-cache'
 
 interface Feature {
   title: string
@@ -103,7 +103,7 @@ export default function DashboardPage() {
             400
           )
           setHeroImageUrl(fetchedHeroImageUrl)
-          setCachedImage(heroQuery, fetchedHeroImageUrl)
+          cacheImage(fetchedHeroImageUrl)
         }
 
         const fetchedFeatures = await Promise.all(
@@ -117,7 +117,7 @@ export default function DashboardPage() {
               400,
               200
             )
-            setCachedImage(feature.queryHint, imageUrl)
+            cacheImage(imageUrl)
             return { ...feature, imageUrl }
           })
         )

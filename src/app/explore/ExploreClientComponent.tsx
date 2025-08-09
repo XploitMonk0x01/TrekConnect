@@ -1,4 +1,3 @@
-
 'use client'
 
 import {
@@ -35,7 +34,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { useToast } from '@/hooks/use-toast'
-import { updateUserProfile } from '@/services/users'
+import { updateUserProfileClient } from '@/services/users'
 import { useRouter } from 'next/navigation'
 import {
   Dialog,
@@ -374,7 +373,7 @@ export default function ExploreClientComponent({
       ? currentWishlist.filter((name) => name !== destinationName)
       : [...currentWishlist, destinationName]
     try {
-      const updatedUser = await updateUserProfile(currentUser.id, {
+      await updateUserProfileClient(currentUser.id, {
         wishlistDestinations: newWishlist,
       })
       if (updatedUser) {
@@ -677,28 +676,30 @@ export default function ExploreClientComponent({
                   <Link href={`/explore/${destination.id}`}>View Details</Link>
                 </Button>
                 <div className="col-span-full mt-2 grid grid-cols-2 gap-2">
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="border-accent text-accent hover:bg-accent/5"
+                  >
+                    <Link
+                      href={`/explore/routes/new?destinationId=${destination.id}`}
+                    >
+                      <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
+                    </Link>
+                  </Button>
+                  {destination.youtubeVideoId && (
                     <Button
-                      asChild
                       size="sm"
                       variant="outline"
-                      className="border-accent text-accent hover:bg-accent/5"
+                      className="border-accent text-accent hover:bg-accent/10"
+                      onClick={() =>
+                        openVideoModal(destination.youtubeVideoId!)
+                      }
                     >
-                      <Link
-                        href={`/explore/routes/new?destinationId=${destination.id}`}
-                      >
-                        <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
-                      </Link>
+                      <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
                     </Button>
-                    {destination.youtubeVideoId && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-accent text-accent hover:bg-accent/10"
-                        onClick={() => openVideoModal(destination.youtubeVideoId!)}
-                      >
-                        <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
-                      </Button>
-                    )}
+                  )}
                 </div>
               </CardFooter>
             </Card>

@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from 'next/link'
@@ -140,13 +139,15 @@ export default function ProfilePage() {
   if (!currentUser) {
     // This state should ideally not be reached due to the checks above, but it's a good fallback.
     return (
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
-            <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
-            <h1 className="text-2xl font-semibold">An Error Occurred</h1>
-            <p className="text-muted-foreground">Could not load user profile data.</p>
-        </div>
-    );
-}
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+        <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
+        <h1 className="text-2xl font-semibold">An Error Occurred</h1>
+        <p className="text-muted-foreground">
+          Could not load user profile data.
+        </p>
+      </div>
+    )
+  }
 
   const travelPreferencesParts: string[] = []
   if (currentUser?.travelPreferences?.soloOrGroup) {
@@ -208,7 +209,12 @@ export default function ProfilePage() {
             <p className="text-xs text-muted-foreground mt-1">
               Joined:{' '}
               {currentUser.createdAt
-                ? new Date(currentUser.createdAt).toLocaleDateString()
+                ? new Date(
+                    typeof currentUser.createdAt === 'string' ||
+                    typeof currentUser.createdAt === 'number'
+                      ? currentUser.createdAt
+                      : (currentUser.createdAt as any)?.toString?.() ?? ''
+                  ).toLocaleDateString()
                 : 'N/A'}
             </p>
           </div>
@@ -226,8 +232,12 @@ export default function ProfilePage() {
               <div>
                 <strong>Languages:</strong>{' '}
                 {currentUser.languagesSpoken &&
+                Array.isArray(currentUser.languagesSpoken) &&
                 currentUser.languagesSpoken.length > 0
                   ? currentUser.languagesSpoken.join(', ')
+                  : typeof currentUser.languagesSpoken === 'string' &&
+                    currentUser.languagesSpoken
+                  ? currentUser.languagesSpoken
                   : 'Not specified'}
               </div>
             </div>

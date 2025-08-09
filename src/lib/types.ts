@@ -21,13 +21,7 @@ export interface UserProfile {
   name: string | null
   photoUrl: string | null
   age?: number
-  gender?:
-    | 'Male'
-    | 'Female'
-    | 'Non-binary'
-    | 'Other'
-    | 'Prefer not to say'
-    | string
+  gender?: 'Male' | 'Female'
   bio?: string | null
   travelPreferences: {
     soloOrGroup?: 'Solo' | 'Group' | 'Flexible'
@@ -44,7 +38,6 @@ export interface UserProfile {
   updatedAt?: string | object
   lastLoginAt?: string | object
 }
-
 
 export interface Destination {
   id: string
@@ -97,7 +90,6 @@ export type CreatePhotoInput = Pick<
   'imageUrl' | 'caption' | 'destinationName' | 'tags'
 > & { userId: string; userName: string; userAvatarUrl?: string | null }
 
-
 export interface Story {
   id: string
   userId: string
@@ -119,7 +111,6 @@ export type CreateStoryInput = Pick<
   Story,
   'title' | 'content' | 'imageUrl' | 'destinationName' | 'tags'
 > & { userId: string; userName: string; userAvatarUrl?: string | null }
-
 
 export interface WeatherInfo {
   temperature: string
