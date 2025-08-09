@@ -1,8 +1,8 @@
-import { connectToDatabase } from '@/lib/mongodb'
+import { getDb } from '@/lib/mongodb'
 import { Message } from '@/lib/types'
 
 export async function saveMessageToDatabase(message: Message) {
-  const { db } = await connectToDatabase()
+  const db = await getDb()
 
   try {
     await db.collection('messages').insertOne({
@@ -18,7 +18,7 @@ export async function saveMessageToDatabase(message: Message) {
 }
 
 export async function getMessagesForRoom(roomId: string) {
-  const { db } = await connectToDatabase()
+  const db = await getDb()
 
   try {
     const messages = await db
@@ -35,7 +35,7 @@ export async function getMessagesForRoom(roomId: string) {
 }
 
 export async function markMessageAsRead(messageId: string) {
-  const { db } = await connectToDatabase()
+  const db = await getDb()
 
   try {
     await db
