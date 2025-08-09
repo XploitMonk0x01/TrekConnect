@@ -86,20 +86,45 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
     prefParts.length > 0 ? prefParts.join(', ') : 'Not specified'
 
   const trekkingExperienceText = user.trekkingExperience || 'Not specified'
-  const languagesSpokenText =
-    user.languagesSpoken && user.languagesSpoken.length > 0
-      ? `Speaks: ${user.languagesSpoken.join(', ')}`
-      : 'Languages: Not specified'
+
+  // Safely handle languagesSpoken - it might be a string, array, or undefined
+  const languagesSpokenText = (() => {
+    if (!user.languagesSpoken) return 'Languages: Not specified'
+
+    // If it's already an array
+    if (
+      Array.isArray(user.languagesSpoken) &&
+      user.languagesSpoken.length > 0
+    ) {
+      return `Speaks: ${user.languagesSpoken.join(', ')}`
+    }
+
+    // If it's a string, convert to array
+    if (
+      typeof user.languagesSpoken === 'string' &&
+      user.languagesSpoken.trim()
+    ) {
+      const languagesArray = user.languagesSpoken
+        .split(',')
+        .map((lang) => lang.trim())
+        .filter(Boolean)
+      return languagesArray.length > 0
+        ? `Speaks: ${languagesArray.join(', ')}`
+        : 'Languages: Not specified'
+    }
+
+    return 'Languages: Not specified'
+  })()
 
   return (
-    <Card className="w-full max-w-sm rounded-xl overflow-hidden shadow-xl transform transition-all duration-300 hover:scale-105 bg-card">
-      <div className="relative w-full h-72 aspect-[4/3]">
+    <Card className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl transform transition-all duration-300 hover:scale-105 bg-card border-2">
+      <div className="relative w-full h-80">
         <Image
           src={photoUrl}
           alt={user.name || 'User profile'}
           fill
           sizes="(max-width: 768px) 100vw, 400px"
-          className="rounded-t-xl object-cover"
+          className="rounded-t-2xl object-cover"
           style={{
             objectFit: 'cover',
             width: '100%',
@@ -113,55 +138,81 @@ export function UserProfileCard({ user }: UserProfileCardProps) {
             }
           }}
         />
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-          <CardTitle className="font-headline text-2xl text-primary-foreground">
+        {/* Experience Badge */}
+        {user.trekkingExperience && (
+          <div className="absolute top-4 right-4">
+            <Badge className="bg-primary/90 text-primary-foreground border-0 shadow-lg">
+              <Mountain className="h-3 w-3 mr-1" />
+              {user.trekkingExperience}
+            </Badge>
+          </div>
+        )}
+
+        <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+          <CardTitle className="font-headline text-2xl text-white font-bold drop-shadow-lg">
             {displayNameAge}
           </CardTitle>
-          <CardDescription className="text-sm text-primary-foreground/80 line-clamp-2">
+          <CardDescription className="text-sm text-white/90 line-clamp-2 mt-1">
             {bioText}
           </CardDescription>
         </div>
       </div>
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-center text-sm text-muted-foreground">
-          <User className="h-4 w-4 mr-2 text-primary" />
-          <span>{genderText}</span>
-        </div>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4 mr-2 text-primary" />
-          <span>Planning trip to: {plannedTripText}</span>
-        </div>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Briefcase className="h-4 w-4 mr-2 text-primary" />
-          <span>Travel Style: {travelStyleText}</span>
-        </div>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Mountain className="h-4 w-4 mr-2 text-primary" />
-          <span>Trekking: {trekkingExperienceText}</span>
-        </div>
-        {user.languagesSpoken && user.languagesSpoken.length > 0 && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Languages className="h-4 w-4 mr-2 text-primary" />
-            <span>{languagesSpokenText}</span>
+      <CardContent className="p-6 space-y-4">
+        <div className="space-y-3">
+          <div className="flex items-center text-sm">
+            <User className="h-4 w-4 mr-3 text-primary shrink-0" />
+            <span className="text-muted-foreground">{genderText}</span>
           </div>
-        )}
-        {user.badges && user.badges.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            {user.badges.slice(0, 3).map(
-              (
-                badge // Ensure badge has a unique key if 'id' is available
-              ) => (
-                <Badge
-                  key={badge.id || badge.name}
-                  variant="secondary"
-                  className="text-xs"
-                >
-                  {badge.name}
-                </Badge>
-              )
+          <div className="flex items-center text-sm">
+            <MapPin className="h-4 w-4 mr-3 text-primary shrink-0" />
+            <span className="text-muted-foreground truncate">
+              Trip: {plannedTripText}
+            </span>
+          </div>
+          <div className="flex items-center text-sm">
+            <Briefcase className="h-4 w-4 mr-3 text-primary shrink-0" />
+            <span className="text-muted-foreground truncate">
+              {travelStyleText}
+            </span>
+          </div>
+          {user.languagesSpoken &&
+            ((Array.isArray(user.languagesSpoken) &&
+              user.languagesSpoken.length > 0) ||
+              (typeof user.languagesSpoken === 'string' &&
+                user.languagesSpoken.trim())) && (
+              <div className="flex items-center text-sm">
+                <Languages className="h-4 w-4 mr-3 text-primary shrink-0" />
+                <span className="text-muted-foreground truncate">
+                  {languagesSpokenText}
+                </span>
+              </div>
             )}
-          </div>
-        )}
+        </div>
+
+        {/* Badges */}
+        <div className="flex flex-wrap gap-2 pt-2">
+          {user.travelPreferences?.soloOrGroup && (
+            <Badge variant="secondary" className="text-xs">
+              {user.travelPreferences.soloOrGroup}
+            </Badge>
+          )}
+          {user.travelPreferences?.budget && (
+            <Badge variant="secondary" className="text-xs">
+              {user.travelPreferences.budget}
+            </Badge>
+          )}
+          {user.badges &&
+            user.badges.length > 0 &&
+            user.badges.slice(0, 2).map((badge) => (
+              <Badge
+                key={badge.id || badge.name}
+                variant="outline"
+                className="text-xs"
+              >
+                {badge.name}
+              </Badge>
+            ))}
+        </div>
       </CardContent>
     </Card>
   )

@@ -1,24 +1,26 @@
 {
   "rules": {
     "users": {
+      ".read": "auth != null",
       "$uid": {
-        ".read": true,
         ".write": "auth != null && auth.uid == $uid"
       },
       ".indexOn": ["updatedAt"]
     },
     "rooms": {
       "$roomId": {
-        ".read": "auth != null && data.child('members').child(auth.uid).val() == true",
-        ".write": "auth != null && data.child('members').child(auth.uid).val() == true"
+        ".read": "auth != null && (!data.exists() || data.child('members').child(auth.uid).exists())",
+        ".write": "auth != null && ((!data.exists() && newData.child('members').child(auth.uid).exists()) || (data.exists() && data.child('members').child(auth.uid).exists()))",
+        ".validate": "newData.hasChildren(['members', 'createdAt'])",
+        ".indexOn": ["lastMessageTime", "createdAt"]
       }
     },
     "messages": {
       "$roomId": {
-        ".read": "auth != null && root.child('rooms').child($roomId).child('members').child(auth.uid).val() == true",
+        ".read": "auth != null && root.child('rooms').child($roomId).child('members').child(auth.uid).exists()",
         "$messageId": {
-          ".write": "auth != null && newData.child('senderId').val() == auth.uid && root.child('rooms').child($roomId).child('members').child(auth.uid).val() == true",
-          ".validate": "newData.hasChildren(['senderId', 'content', 'timestamp']) && newData.child('senderId').val() == auth.uid"
+          ".write": "auth != null && newData.child('senderId').val() == auth.uid",
+          ".validate": "newData.hasChildren(['senderId', 'recipientId', 'content', 'timestamp']) && newData.child('senderId').val() == auth.uid"
         }
       }
     },

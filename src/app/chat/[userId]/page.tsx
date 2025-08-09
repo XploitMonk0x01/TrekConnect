@@ -1,7 +1,6 @@
-
 'use client'
 
-import { useEffect, useState, useRef, FormEvent } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { useChat } from '@/contexts/ChatContext'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
@@ -22,14 +21,15 @@ function generateRoomId(userId1: string, userId2: string): string {
 }
 
 export default function ChatPage() {
-  const params = useParams();
-  const otherUserIdFromParams = params.userId as string;
+  const params = useParams()
+  const otherUserIdFromParams = params.userId as string
 
   const {
     messages,
     sendMessage,
     joinRoom,
     leaveRoom,
+    markAsRead,
     isLoading: chatContextIsLoading,
     isConnected,
     error: chatContextError,
@@ -50,13 +50,13 @@ export default function ChatPage() {
           setOtherUser(userData)
         } catch (error) {
           console.error('Failed to fetch other user profile:', error)
-          setOtherUser(null);
+          setOtherUser(null)
         } finally {
           setIsLoadingOtherUser(false)
         }
       } else {
-        setIsLoadingOtherUser(false);
-        setOtherUser(null);
+        setIsLoadingOtherUser(false)
+        setOtherUser(null)
       }
     }
 
@@ -71,14 +71,14 @@ export default function ChatPage() {
   }, [currentUser, otherUser])
 
   useEffect(() => {
-    // **Fix**: This effect now correctly waits for both the roomId to be generated
-    // and for the authentication to be complete before attempting to join the room.
-    if (roomId && !authIsLoading) {
-      joinRoom(roomId)
+    // Ensure we create/get the room before listening by passing safe defaults
+    if (roomId && !authIsLoading && otherUser) {
+      const safeName = otherUser.name || 'User'
+      const safePhoto = otherUser.photoUrl || undefined
+      joinRoom(roomId, otherUser.id, safeName, safePhoto)
     }
     // The leaveRoom logic is now handled in the ChatContext on unmount or user change
-  }, [roomId, authIsLoading, joinRoom])
-
+  }, [roomId, authIsLoading, otherUser, joinRoom])
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -86,26 +86,32 @@ export default function ChatPage() {
     }
   }, [messages])
 
-  const handleSendMessage = async (e: FormEvent) => {
-    e.preventDefault()
-    if (!messageInput.trim() || !roomId || !otherUser || !currentUser || !isConnected) return
+  const handleSendMessage = async () => {
+    if (
+      !messageInput.trim() ||
+      !roomId ||
+      !otherUser ||
+      !currentUser ||
+      !isConnected
+    ) {
+      return
+    }
 
     try {
-        await sendMessage(roomId, messageInput.trim(), otherUser.id)
-        setMessageInput('')
+      const safeName = otherUser.name || 'User'
+      const safePhoto = otherUser.photoUrl || undefined
+      await sendMessage(
+        roomId,
+        messageInput.trim(),
+        otherUser.id,
+        safeName,
+        safePhoto
+      )
+      setMessageInput('')
     } catch (error) {
-        console.error("Error sending message from page:", error);
-        // Toast is handled in context or service layer
+      console.error('Error sending message from page:', error)
+      // Toast is handled in context or service layer
     }
-  }
-
-  if (authIsLoading || isLoadingOtherUser) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">Loading chat...</span>
-      </div>
-    )
   }
 
   if (!currentUser) {
@@ -120,7 +126,11 @@ export default function ChatPage() {
               Please sign in to access the chat.
             </p>
             <Button asChild>
-              <Link href={`/auth/signin?redirect=/chat/${otherUserIdFromParams}`}>Sign In</Link>
+              <Link
+                href={`/auth/signin?redirect=/chat/${otherUserIdFromParams}`}
+              >
+                Sign In
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -180,22 +190,26 @@ export default function ChatPage() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-       {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
-        <div className="p-4">
-            <Alert variant={chatContextError ? "destructive" : "default"}>
-                <AlertTitle>{chatContextError ? "Chat Connection Error" : "Chat Disconnected"}</AlertTitle>
-                <AlertDescription>
-                {chatContextError || "Connecting to chat..."}
-                </AlertDescription>
+        {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
+          <div className="p-4">
+            <Alert variant={chatContextError ? 'destructive' : 'default'}>
+              <AlertTitle>
+                {chatContextError
+                  ? 'Chat Connection Error'
+                  : 'Chat Disconnected'}
+              </AlertTitle>
+              <AlertDescription>
+                {chatContextError || 'Connecting to chat...'}
+              </AlertDescription>
             </Alert>
-        </div>
-      )}
+          </div>
+        )}
 
         {chatContextIsLoading ? (
-            <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="ml-2 text-muted-foreground">Loading messages...</p>
-            </div>
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <p className="ml-2 text-muted-foreground">Loading messages...</p>
+          </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-muted-foreground">
@@ -219,9 +233,14 @@ export default function ChatPage() {
                     : 'bg-muted text-foreground'
                 }`}
               >
-                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                <p className="whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
                 <p className="text-xs opacity-70 mt-1 text-right">
-                  {new Date(message.timestamp as number).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(message.timestamp as number).toLocaleTimeString(
+                    [],
+                    { hour: '2-digit', minute: '2-digit' }
+                  )}
                 </p>
               </div>
             </div>
@@ -230,20 +249,33 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSendMessage} className="border-t p-4 bg-background/50 flex-shrink-0">
+      <div className="border-t p-4 bg-background/50 flex-shrink-0">
         <div className="flex gap-2">
           <Input
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
-            placeholder={isConnected ? "Type a message..." : "Connecting to chat..."}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                void handleSendMessage()
+              }
+            }}
+            placeholder={
+              isConnected ? 'Type a message...' : 'Connecting to chat...'
+            }
             className="flex-1"
             disabled={!isConnected}
           />
-          <Button type="submit" size="icon" disabled={!isConnected || !messageInput.trim()}>
+          <Button
+            type="button"
+            size="icon"
+            disabled={!isConnected || !messageInput.trim()}
+            onClick={() => void handleSendMessage()}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
-      </form>
+      </div>
     </div>
   )
 }

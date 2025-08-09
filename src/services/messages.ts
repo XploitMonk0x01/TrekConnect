@@ -1,4 +1,3 @@
-
 'use server'
 
 import {
@@ -12,12 +11,13 @@ import {
 } from 'firebase/database'
 import { realtimeDb } from '@/lib/firebase'
 import type { Message } from '@/lib/types'
+import { updateRoomLastMessage } from '@/services/rooms'
 
 const MESSAGES_PATH = 'messages'
 
 /**
  * Sends a message to a specific room in Firebase Realtime Database.
- * This function now includes a 'members' object to align with security rules.
+ * This function now includes automatic room management.
  * @param roomId The ID of the chat room.
  * @param message The message object to send, without an ID or timestamp.
  */
@@ -28,23 +28,30 @@ export async function sendMessage(
   try {
     const roomRef = ref(realtimeDb, `${MESSAGES_PATH}/${roomId}`)
     const newMessageRef = push(roomRef) // Generates a unique key for the message
-    
+
     if (!newMessageRef.key) {
-        throw new Error("Failed to generate a message key from Firebase.");
+      throw new Error('Failed to generate a message key from Firebase.')
     }
 
     const messageData = {
       ...message,
       id: newMessageRef.key, // Save the generated key as the message ID
       timestamp: serverTimestamp(), // Use server-side timestamp for consistency
-      // Add the members object for security rule validation
-      members: {
-        [message.senderId]: true,
-        [message.recipientId]: true,
-      },
-    };
+    }
 
-    await set(newMessageRef, messageData);
+    await set(newMessageRef, messageData)
+
+    // Update the room with last message info
+    try {
+      await updateRoomLastMessage(roomId, {
+        content: message.content,
+        senderId: message.senderId,
+        timestamp: messageData.timestamp,
+      })
+    } catch (roomError) {
+      console.warn('Failed to update room last message:', roomError)
+      // Don't fail the message send if room update fails
+    }
   } catch (error) {
     console.error('Error sending message to Firebase:', error) // Log the original error
     throw new Error('Failed to send message.')
@@ -62,14 +69,11 @@ export async function getMessages(
   limit: number = 50
 ): Promise<Message[]> {
   const roomRef = ref(realtimeDb, `${MESSAGES_PATH}/${roomId}`)
-  const messagesQuery = query(
-    roomRef,
-    orderByChild('timestamp')
-  );
+  const messagesQuery = query(roomRef, orderByChild('timestamp'))
 
-  const snapshot = await get(messagesQuery);
+  const snapshot = await get(messagesQuery)
   if (snapshot.exists()) {
     return Object.values(snapshot.val()) as Message[]
   }
-  return [];
+  return []
 }

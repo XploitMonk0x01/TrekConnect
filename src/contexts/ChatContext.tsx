@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, {
@@ -14,15 +13,28 @@ import type { Message } from '@/lib/types'
 import { useCustomAuth } from './CustomAuthContext'
 import {
   listenForMessages,
+  sendMessage as clientSendMessage,
 } from '@/services/messages.client'
-import { sendMessage as firebaseSendMessage } from '@/services/messages'
+import { createOrGetRoom, markRoomAsRead } from '@/services/rooms'
 import { useToast } from '@/hooks/use-toast'
 
 interface ChatContextType {
   messages: Message[]
-  sendMessage: (roomId: string, content: string, recipientId: string) => Promise<void>
-  joinRoom: (roomId: string) => void
+  sendMessage: (
+    roomId: string,
+    content: string,
+    recipientId: string,
+    recipientName?: string,
+    recipientPhoto?: string
+  ) => Promise<void>
+  joinRoom: (
+    roomId: string,
+    otherUserId?: string,
+    otherUserName?: string,
+    otherUserPhoto?: string
+  ) => void
   leaveRoom: () => void
+  markAsRead: (roomId: string) => void
   isConnected: boolean
   isLoading: boolean
   error: string | null
@@ -38,7 +50,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const currentRoomId = useRef<string | null>(null)
-  const unsubscribeCallback = useRef<(() => void) | null>(null);
+  const unsubscribeCallback = useRef<(() => void) | null>(null)
 
   const handleMessagesUpdate = useCallback((newMessages: Message[]) => {
     setMessages(newMessages)
@@ -47,43 +59,76 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     setError(null)
   }, [])
 
-  const handleError = useCallback((err: Error) => {
-    setError(err.message)
-    setIsLoading(false)
-    setIsConnected(false)
-    toast({
+  const handleError = useCallback(
+    (err: Error) => {
+      setError(err.message)
+      setIsLoading(false)
+      setIsConnected(false)
+      toast({
         variant: 'destructive',
         title: 'Chat Error',
         description: err.message,
-    });
-  }, [toast])
+      })
+    },
+    [toast]
+  )
 
   const joinRoom = useCallback(
-    (roomId: string) => {
+    async (
+      roomId: string,
+      otherUserId?: string,
+      otherUserName?: string,
+      otherUserPhoto?: string
+    ) => {
       // **Fix**: Do not proceed if auth is still loading or user is not logged in.
       // The page component will call this function again once auth is ready.
       if (authIsLoading || !user) {
-        setIsLoading(true); // Show loading state while waiting for auth
-        return;
+        setIsLoading(true) // Show loading state while waiting for auth
+        return
       }
-      
+
       if (currentRoomId.current === roomId && unsubscribeCallback.current) {
-        return; // Already in the room and listening
+        return // Already in the room and listening
       }
-      
+
       // Leave previous room if there was one
       if (unsubscribeCallback.current) {
-        unsubscribeCallback.current();
-        unsubscribeCallback.current = null;
+        unsubscribeCallback.current()
+        unsubscribeCallback.current = null
       }
 
       setIsLoading(true)
       setMessages([])
       setError(null)
-      currentRoomId.current = roomId
-      
-      // Start listening to the new room
-      unsubscribeCallback.current = listenForMessages(roomId, handleMessagesUpdate, handleError);
+
+      try {
+        // Create or get the room if other user info is provided
+        if (otherUserId && otherUserName) {
+          await createOrGetRoom(
+            user.id,
+            otherUserId,
+            user.name || 'User',
+            otherUserName,
+            user.photoUrl,
+            otherUserPhoto
+          )
+        }
+
+        currentRoomId.current = roomId
+
+        // Start listening to the new room
+        unsubscribeCallback.current = listenForMessages(
+          roomId,
+          handleMessagesUpdate,
+          handleError
+        )
+
+        // Mark room as read when joining
+        await markRoomAsRead(roomId, user.id)
+      } catch (error) {
+        console.error('Error joining room:', error)
+        handleError(new Error('Failed to join chat room'))
+      }
     },
     [handleMessagesUpdate, handleError, user, authIsLoading]
   )
@@ -91,11 +136,11 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
   const leaveRoom = useCallback(() => {
     if (unsubscribeCallback.current) {
       unsubscribeCallback.current()
-      unsubscribeCallback.current = null;
+      unsubscribeCallback.current = null
     }
-    currentRoomId.current = null;
-    setMessages([]);
-    setIsConnected(false);
+    currentRoomId.current = null
+    setMessages([])
+    setIsConnected(false)
   }, [])
 
   // Cleanup on unmount or user change
@@ -109,47 +154,76 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // When auth is loading or no user, we are not connected.
-    if(authIsLoading || !user) {
-        setIsLoading(authIsLoading);
-        setIsConnected(false);
-        if (currentRoomId.current) {
-            leaveRoom();
-        }
+    if (authIsLoading || !user) {
+      setIsLoading(authIsLoading)
+      setIsConnected(false)
+      if (currentRoomId.current) {
+        leaveRoom()
+      }
     }
   }, [user, authIsLoading, leaveRoom])
 
+  const markAsRead = useCallback(
+    async (roomId: string) => {
+      if (!user) return
+      try {
+        await markRoomAsRead(roomId, user.id)
+      } catch (error) {
+        console.error('Error marking room as read:', error)
+      }
+    },
+    [user]
+  )
 
   const sendMessage = async (
     roomId: string,
     content: string,
-    recipientId: string
+    recipientId: string,
+    recipientName?: string,
+    recipientPhoto?: string
   ) => {
     if (!user) {
       const err = 'You must be logged in to send messages.'
       setError(err)
-      toast({ variant: 'destructive', title: 'Error', description: err });
+      toast({ variant: 'destructive', title: 'Error', description: err })
       throw new Error(err)
     }
     if (!recipientId) {
       const err = 'Recipient not found. Cannot send message.'
       setError(err)
-      toast({ variant: 'destructive', title: 'Error', description: err });
-      throw new Error(err);
-    }
-
-    const messagePayload: Omit<Message, 'id' | 'timestamp'> = {
-      roomId,
-      content,
-      senderId: user.id,
-      recipientId,
-      read: false,
+      toast({ variant: 'destructive', title: 'Error', description: err })
+      throw new Error(err)
     }
 
     try {
-      await firebaseSendMessage(roomId, messagePayload)
+      // Ensure room exists before sending message
+      if (recipientName) {
+        await createOrGetRoom(
+          user.id,
+          recipientId,
+          user.name || 'User',
+          recipientName,
+          user.photoUrl,
+          recipientPhoto
+        )
+      }
+
+      const messagePayload: Omit<Message, 'id' | 'timestamp'> = {
+        roomId,
+        content,
+        senderId: user.id,
+        recipientId,
+        read: false,
+      }
+
+      await clientSendMessage(roomId, messagePayload)
     } catch (err: any) {
       setError(err.message)
-      toast({ variant: 'destructive', title: 'Send Error', description: err.message });
+      toast({
+        variant: 'destructive',
+        title: 'Send Error',
+        description: err.message,
+      })
       console.error('Failed to send message:', err)
       throw err
     }
@@ -160,6 +234,7 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
     sendMessage,
     joinRoom,
     leaveRoom,
+    markAsRead,
     isConnected,
     isLoading: isLoading && !error,
     error,

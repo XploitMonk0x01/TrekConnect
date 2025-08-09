@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -67,7 +66,7 @@ export default function ConnectSpherePage() {
     try {
       const fetchedProfiles = await getOtherUsers(currentUser.id)
       // Basic profile validation
-      const validProfiles = fetchedProfiles.filter(p => p && p.id && p.name);
+      const validProfiles = fetchedProfiles.filter((p) => p && p.id && p.name)
       setProfiles(validProfiles || [])
       setCurrentIndex(0)
     } catch (error) {
@@ -75,8 +74,9 @@ export default function ConnectSpherePage() {
       toast({
         variant: 'destructive',
         title: 'Error Loading Profiles',
-        description: 'Could not fetch trekker profiles. Please try again later.',
-      });
+        description:
+          'Could not fetch trekker profiles. Please try again later.',
+      })
       setProfiles([])
     } finally {
       setIsLoadingProfiles(false)
@@ -107,18 +107,21 @@ export default function ConnectSpherePage() {
     }
     setShowMatchAnimation(false)
     setLastSwipedProfile(null)
-    
+
     setCurrentIndex((prevIndex) => prevIndex + 1)
   }
 
   // Check if we need to reload profiles when we run out
   useEffect(() => {
-    if (!isLoadingProfiles && profiles.length > 0 && currentIndex >= profiles.length) {
-      setShouldReloadProfiles(true);
-      setCurrentIndex(0);
+    if (
+      !isLoadingProfiles &&
+      profiles.length > 0 &&
+      currentIndex >= profiles.length
+    ) {
+      setShouldReloadProfiles(true)
+      setCurrentIndex(0)
     }
-  }, [currentIndex, profiles.length, isLoadingProfiles]);
-
+  }, [currentIndex, profiles.length, isLoadingProfiles])
 
   const handleSwipe = (direction: 'left' | 'right') => {
     if (!currentUser || profiles.length === 0 || !profiles[currentIndex]) return
@@ -147,7 +150,7 @@ export default function ConnectSpherePage() {
   }
 
   const handleUndo = () => {
-    if (!currentUser || currentIndex === 0) return;
+    if (!currentUser || currentIndex === 0) return
     if (showMatchAnimation && matchAnimationTimeoutId) {
       clearTimeout(matchAnimationTimeoutId)
       setShowMatchAnimation(false)
@@ -163,7 +166,7 @@ export default function ConnectSpherePage() {
     setShowMatchAnimation(false) // Hide match animation
     router.push(`/chat/${matchProfileId}`)
   }
-  
+
   const currentProfileForCard =
     !isLoadingProfiles && profiles.length > 0 && currentIndex < profiles.length
       ? profiles[currentIndex]
@@ -196,14 +199,16 @@ export default function ConnectSpherePage() {
           <p className="text-gray-600">
             Please sign in to access the Connect feature
           </p>
-          <Button onClick={() => router.push('/auth/signin?redirect=/connect')} className="mt-4">
+          <Button
+            onClick={() => router.push('/auth/signin?redirect=/connect')}
+            className="mt-4"
+          >
             Sign In
           </Button>
         </div>
       </div>
     )
   }
-
 
   if (showMatchAnimation && lastSwipedProfile && currentUser) {
     const currentUserPhoto =
@@ -270,109 +275,246 @@ export default function ConnectSpherePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 flex flex-col items-center h-full">
-      <div className="w-full max-w-md space-y-6">
-        <Card className="text-center shadow-lg">
-          <CardHeader>
-            <CardTitle className="font-headline text-3xl text-primary">
-              ConnectSphere
-            </CardTitle>
-            <CardDescription>
-              Swipe right to connect, left to pass. Find your next Indian trek
-              buddy!
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full sm:w-auto" disabled>
-              <Filter className="mr-2 h-4 w-4" /> Filter Preferences (Soon!)
-            </Button>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-background">
+      {/* Header Section */}
+      <div className="bg-card border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-6">
+            <div>
+              <h1 className="text-3xl font-bold font-headline text-primary">
+                ConnectSphere
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Find your next trekking companion
+              </p>
+            </div>
 
-        <div className="relative w-full h-[480px] flex items-center justify-center">
-          <AnimatePresence>
-            {isLoadingProfiles ? (
-                 <div className="text-center p-8 bg-card rounded-xl shadow-lg">
-                    <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
-                    <p className="mt-2 text-muted-foreground">Finding trekkers...</p>
-                 </div>
-            ) : profiles.length > 0 && currentIndex < profiles.length ? (
-                profiles.slice(currentIndex, currentIndex + 3).reverse().map((profile, index) => {
-                    const isTop = index === (profiles.slice(currentIndex, currentIndex + 3).length - 1);
-                    return (
-                        <motion.div
-                            key={profile.id}
-                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
-                            animate={{ 
-                                scale: 1 - (profiles.slice(currentIndex, currentIndex + 3).length - 1 - index) * 0.05, 
-                                y: (profiles.slice(currentIndex, currentIndex + 3).length - 1 - index) * -8, 
-                                opacity: 1 
-                            }}
-                            exit={{ x: 300, opacity: 0, scale: 0.9 }}
-                            transition={{ duration: 0.3 }}
-                            className="absolute w-full h-full"
-                        >
-                            <SwipeableCard
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" disabled>
+                <Filter className="mr-2 h-4 w-4" />
+                Filters (Soon!)
+              </Button>
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span>{profiles.length} trekkers</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content - Optimized for Laptop */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Sidebar - Instructions & Stats */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">How it works</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <Heart className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Swipe Right</p>
+                    <p className="text-xs text-muted-foreground">To connect</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <X className="h-4 w-4 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Swipe Left</p>
+                    <p className="text-xs text-muted-foreground">To pass</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <RotateCcw className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Undo</p>
+                    <p className="text-xs text-muted-foreground">Go back one</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Progress Stats */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg">Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Viewed:</span>
+                    <span className="font-medium">
+                      {currentIndex} / {profiles.length}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${
+                          profiles.length > 0
+                            ? (currentIndex / profiles.length) * 100
+                            : 0
+                        }%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Center - Profile Cards */}
+          <div className="lg:col-span-2">
+            <div className="flex justify-center">
+              <div className="relative w-full max-w-md">
+                {/* Profile Card Area */}
+                <div className="relative h-[600px] flex items-center justify-center">
+                  <AnimatePresence>
+                    {isLoadingProfiles ? (
+                      <div className="text-center p-8 bg-card rounded-xl shadow-lg w-full">
+                        <Loader2 className="h-16 w-16 animate-spin text-primary mx-auto" />
+                        <p className="mt-4 text-muted-foreground">
+                          Finding trekkers...
+                        </p>
+                      </div>
+                    ) : profiles.length > 0 &&
+                      currentIndex < profiles.length ? (
+                      profiles
+                        .slice(currentIndex, currentIndex + 3)
+                        .reverse()
+                        .map((profile, index) => {
+                          const isTop =
+                            index ===
+                            profiles.slice(currentIndex, currentIndex + 3)
+                              .length -
+                              1
+                          return (
+                            <motion.div
+                              key={profile.id}
+                              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+                              animate={{
+                                scale:
+                                  1 -
+                                  (profiles.slice(
+                                    currentIndex,
+                                    currentIndex + 3
+                                  ).length -
+                                    1 -
+                                    index) *
+                                    0.05,
+                                y:
+                                  (profiles.slice(
+                                    currentIndex,
+                                    currentIndex + 3
+                                  ).length -
+                                    1 -
+                                    index) *
+                                  -8,
+                                opacity: 1,
+                              }}
+                              exit={{ x: 300, opacity: 0, scale: 0.9 }}
+                              transition={{ duration: 0.3 }}
+                              className="absolute w-full h-full"
+                            >
+                              <SwipeableCard
                                 user={profile}
                                 onSwipe={handleSwipe}
                                 isActive={isTop}
-                            />
-                        </motion.div>
-                    );
-                })
-            ) : (
-                <div className="text-center p-8 bg-card rounded-xl shadow-lg">
-                    <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="font-headline text-xl">No More Profiles</h3>
-                    <p className="text-muted-foreground">Check back later or adjust your filters!</p>
-                    <Button onClick={() => setShouldReloadProfiles(true)} className="mt-4" disabled={isLoadingProfiles || authIsLoading}>
-                        {isLoadingProfiles ? (<Loader2 className="mr-2 h-4 w-4 animate-spin" />) : ('Reload Profiles')}
-                    </Button>
+                              />
+                            </motion.div>
+                          )
+                        })
+                    ) : (
+                      <div className="text-center p-8 bg-card rounded-xl shadow-lg">
+                        <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="font-headline text-xl">
+                          No More Profiles
+                        </h3>
+                        <p className="text-muted-foreground">
+                          Check back later or adjust your filters!
+                        </p>
+                        <Button
+                          onClick={() => setShouldReloadProfiles(true)}
+                          className="mt-4"
+                          disabled={isLoadingProfiles || authIsLoading}
+                        >
+                          {isLoadingProfiles ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            'Reload Profiles'
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </AnimatePresence>
                 </div>
-            )}
-           </AnimatePresence>
-        </div>
-        
-        {currentProfileForCard && (
-          <div className="flex space-x-4 items-center justify-center">
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="outline"
-                size="lg"
-                className="rounded-full p-4 border-destructive text-destructive hover:bg-destructive/10"
-                onClick={() => handleSwipe('left')}
-                aria-label="Pass"
-              >
-                <X className="h-8 w-8" />
-              </Button>
-            </motion.div>
 
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full p-2 border-muted-foreground text-muted-foreground hover:bg-muted-foreground/10"
-                onClick={handleUndo}
-                aria-label="Undo"
-                disabled={currentIndex === 0}
-              >
-                <RotateCcw className="h-5 w-5" />
-              </Button>
-            </motion.div>
+                {/* Action Buttons */}
+                {currentProfileForCard && (
+                  <div className="flex justify-center mt-6">
+                    <div className="flex space-x-4 items-center">
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          className="rounded-full p-4 border-destructive text-destructive hover:bg-destructive/10 shadow-lg"
+                          onClick={() => handleSwipe('left')}
+                          aria-label="Pass"
+                        >
+                          <X className="h-8 w-8" />
+                        </Button>
+                      </motion.div>
 
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="outline"
-                size="lg"
-                className="rounded-full p-4 border-green-500 text-green-500 hover:bg-green-500/10"
-                onClick={() => handleSwipe('right')}
-                aria-label="Connect"
-              >
-                <Heart className="h-8 w-8" />
-              </Button>
-            </motion.div>
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="rounded-full p-3 border-muted-foreground text-muted-foreground hover:bg-muted-foreground/10 shadow-lg"
+                          onClick={handleUndo}
+                          aria-label="Undo"
+                          disabled={currentIndex === 0}
+                        >
+                          <RotateCcw className="h-5 w-5" />
+                        </Button>
+                      </motion.div>
+
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          className="rounded-full p-4 border-green-500 text-green-500 hover:bg-green-500/10 shadow-lg"
+                          onClick={() => handleSwipe('right')}
+                          aria-label="Connect"
+                        >
+                          <Heart className="h-8 w-8" />
+                        </Button>
+                      </motion.div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   )
