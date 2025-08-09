@@ -259,14 +259,11 @@ export default function DestinationDetailClientContent({
       })
       // Update local context - you might need to fetch updated user or update locally
       toast({
-          title: isWishlisted ? 'Removed from Wishlist' : 'Added to Wishlist',
-          description: `${destination.name} has been ${
-            isWishlisted ? 'removed from' : 'added to'
-          } your wishlist.`,
-        })
-      } else {
-        throw new Error('Failed to update wishlist on server.')
-      }
+        title: isWishlisted ? 'Removed from Wishlist' : 'Added to Wishlist',
+        description: `${destination.name} has been ${
+          isWishlisted ? 'removed from' : 'added to'
+        } your wishlist.`,
+      })
     } catch (error) {
       console.error('Error updating wishlist:', error)
       toast({
