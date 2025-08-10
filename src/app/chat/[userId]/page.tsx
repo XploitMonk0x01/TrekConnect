@@ -194,8 +194,8 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl">
-      <div className="flex flex-col bg-card border rounded-lg shadow-sm w-full h-[calc(100vh-10rem)]">
+    <div className="container mx-auto max-w-7xl h-full flex flex-col">
+      <div className="flex flex-col bg-card border rounded-lg shadow-sm w-full flex-1">
         <div className="border-b p-4 flex items-center gap-4 flex-shrink-0">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/connect">

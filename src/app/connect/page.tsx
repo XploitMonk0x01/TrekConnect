@@ -173,20 +173,34 @@ export default function ConnectSpherePage() {
       ? profiles[currentIndex]
       : null
 
-  if (authIsLoading) {
-    return (
-      <div className="container mx-auto max-w-7xl space-y-6">
-          <Skeleton className="h-32 w-full" />
-          <div className="relative w-full h-[480px] flex items-center justify-center">
-            <Loader2 className="h-16 w-16 animate-spin text-primary" />
-          </div>
-          <div className="flex space-x-4 items-center justify-center">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <Skeleton className="h-16 w-16 rounded-full" />
+  const ConnectPageSkeleton = () => (
+    <div className="container mx-auto max-w-7xl space-y-8">
+      <Skeleton className="h-32 w-full rounded-lg" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-1 space-y-6">
+          <Skeleton className="h-48 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
+        <div className="lg:col-span-2">
+          <div className="flex justify-center">
+            <div className="relative w-full max-w-md">
+              <Skeleton className="relative h-[600px] w-full rounded-2xl" />
+              <div className="flex justify-center mt-6">
+                <div className="flex space-x-4 items-center">
+                  <Skeleton className="h-16 w-16 rounded-full" />
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <Skeleton className="h-16 w-16 rounded-full" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-    )
+      </div>
+    </div>
+  );
+
+  if (authIsLoading) {
+    return <ConnectPageSkeleton />;
   }
 
   if (!currentUser) {
