@@ -31,7 +31,7 @@ import type { Destination, WeatherInfo } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { searchPexelsImage } from '@/services/pexels'
 import { searchYouTubeVideoId } from '@/services/youtube'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { useToast } from '@/hooks/use-toast'
@@ -89,7 +89,7 @@ function setCache(cache: Map<string, string>): void {
 }
 
 // Initialize cache from localStorage
-let imageCache = getCache()
+const imageCache = getCache()
 
 export default function ExploreClientComponent({
   initialDestinations,
@@ -105,15 +105,15 @@ export default function ExploreClientComponent({
   const [destinations, setDestinations] = useState<DestinationWithMedia[]>(
     initialDestinations.map((d) => ({
       ...d,
-      isLoadingImage: true,
-      fetchedImageUrl: d.imageUrl,
-      isLoadingYouTubeVideoId: true,
+      fetchedImageUrl: d.imageUrl, // Start with initial URL
       youtubeVideoId: null,
-      isLoadingWeather: true,
-      weather: null,
+      weather: null, // Weather data will be populated later
       weatherError: null,
     }))
   )
+  
+  const [mediaLoadingState, setMediaLoadingState] = useState<Record<string, {image: boolean, video: boolean}>>({})
+
   const [searchQuery, setSearchQuery] = useState('')
   const [wishlistProcessing, setWishlistProcessing] = useState<
     Record<string, boolean>
@@ -131,6 +131,13 @@ export default function ExploreClientComponent({
   const [aiFilterExplanation, setAiFilterExplanation] = useState<string | null>(
     null
   )
+
+  const isLoadingInitialData = useMemo(() => {
+    if (initialDestinations.length === 0) return false;
+    // Check if any destination is still in its initial loading state
+    return Object.keys(mediaLoadingState).length < initialDestinations.length || Object.values(mediaLoadingState).some(s => s.image || s.video);
+  }, [mediaLoadingState, initialDestinations.length]);
+
 
   // Memoize the displayed destinations to prevent unnecessary re-renders
   const displayedDestinations = useMemo(() => {
@@ -156,107 +163,61 @@ export default function ExploreClientComponent({
     return currentList
   }, [destinations, searchQuery, aiFilteredDestinationIds])
 
+  const fetchMediaForDestination = useCallback(async (dest: Destination, signal: AbortSignal) => {
+    const imageQuery = dest.aiHint || dest.name
+    let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400)
+
+    if (imageCache.has(imageQuery)) {
+        pexelsImageUrl = imageCache.get(imageQuery)!
+    } else {
+        try {
+            const fetchedUrl = await searchPexelsImage(imageQuery, 600, 400)
+            if (signal.aborted) return;
+            pexelsImageUrl = fetchedUrl
+            imageCache.set(imageQuery, fetchedUrl)
+            setCache(imageCache)
+        } catch (error) {
+            if ((error as Error).name !== 'AbortError') {
+              console.error(`Failed to load Pexels image for ${dest.name}:`, error)
+            }
+        }
+    }
+    
+    setMediaLoadingState(prev => ({...prev, [dest.id]: {...(prev[dest.id] || {video: true}), image: false}}))
+    setDestinations(prev => prev.map(d => d.id === dest.id ? {...d, fetchedImageUrl: pexelsImageUrl} : d))
+
+    const youtubeQuery = dest.aiHint || `${dest.name} ${dest.region || dest.country || ''}`
+    try {
+        const fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery)
+        if (signal.aborted) return;
+        setDestinations(prev => prev.map(d => d.id === dest.id ? {...d, youtubeVideoId: fetchedYoutubeVideoId} : d))
+    } catch (error) {
+       if ((error as Error).name !== 'AbortError') {
+         console.error(`Failed to load YouTube video ID for ${dest.name}:`, error)
+       }
+    }
+    setMediaLoadingState(prev => ({...prev, [dest.id]: {...(prev[dest.id] || {image: false}), video: false}}))
+
+  }, []);
+
   useEffect(() => {
-    let isComponentMounted = true
     const abortController = new AbortController()
+    
+    if (initialDestinations.length > 0) {
+        const initialLoadingState: Record<string, {image: boolean, video: boolean}> = {};
+        initialDestinations.forEach(d => {
+            initialLoadingState[d.id] = { image: true, video: true };
+        });
+        setMediaLoadingState(initialLoadingState);
 
-    const fetchMediaForAllDestinations = async () => {
-      const mediaPromises = (initialDestinations as Destination[]).map(
-        async (dest: Destination) => {
-          if (!isComponentMounted) return null
-
-          let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400)
-          let isLoadingImg = true
-          const imageQuery = dest.aiHint || dest.name
-
-          // Check image cache first
-          if (imageCache.has(imageQuery)) {
-            pexelsImageUrl = imageCache.get(imageQuery)!
-            isLoadingImg = false
-          } else {
-            try {
-              pexelsImageUrl = await searchPexelsImage(imageQuery, 600, 400)
-              if (isComponentMounted) {
-                imageCache.set(imageQuery, pexelsImageUrl)
-                setCache(imageCache) // Save to localStorage
-              }
-            } catch (error) {
-              if ((error as { name?: string }).name === 'AbortError')
-                return null
-              console.error(
-                `Failed to load Pexels image for ${dest.name}:`,
-                error
-              )
-              if (isComponentMounted) {
-                toast({
-                  title: 'Image Load Error',
-                  description: `Failed to load image for ${dest.name}. Using placeholder instead.`,
-                  variant: 'destructive',
-                })
-              }
-            } finally {
-              isLoadingImg = false
-            }
-          }
-
-          if (!isComponentMounted) return null
-
-          let fetchedYoutubeVideoId: string | null = null
-          let isLoadingYTVideoId = true
-          const youtubeQuery =
-            dest.aiHint || `${dest.name} ${dest.region || dest.country || ''}`
-          try {
-            fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery)
-            if (!fetchedYoutubeVideoId) {
-              throw new Error('No video ID returned')
-            }
-          } catch (error) {
-            if ((error as { name?: string }).name === 'AbortError') return null
-            console.error(
-              `Failed to load YouTube video ID for ${dest.name} (query: ${youtubeQuery}):`,
-              error
-            )
-            if (isComponentMounted) {
-              toast({
-                title: 'Video Load Error',
-                description: `Failed to load video for ${dest.name}. Try again later.`,
-                variant: 'destructive',
-              })
-            }
-          } finally {
-            isLoadingYTVideoId = false
-          }
-
-          if (!isComponentMounted) return null
-
-          return {
-            ...dest,
-            fetchedImageUrl: pexelsImageUrl,
-            isLoadingImage: isLoadingImg,
-            youtubeVideoId: fetchedYoutubeVideoId,
-            isLoadingYouTubeVideoId: isLoadingYTVideoId,
-            // weather,
-            // isLoadingWeather,
-            // weatherError,
-          }
-        }
-      )
-
-      try {
-        const destinationsWithFetchedMedia = (
-          await Promise.all(mediaPromises)
-        ).filter(Boolean) as DestinationWithMedia[]
-        if (isComponentMounted) {
-          setDestinations(destinationsWithFetchedMedia)
-        }
-
+        initialDestinations.forEach(dest => {
+            fetchMediaForDestination(dest, abortController.signal)
+        });
+        
         const firstDestinationWithCoords = initialDestinations.find(
           (d) => d.coordinates?.lat && d.coordinates?.lng
         )
-        if (
-          firstDestinationWithCoords &&
-          firstDestinationWithCoords.coordinates
-        ) {
+        if (firstDestinationWithCoords && firstDestinationWithCoords.coordinates) {
           const { lat, lng } = firstDestinationWithCoords.coordinates
           const zoomLevel = 0.5
           setMapUrl(
@@ -267,31 +228,17 @@ export default function ExploreClientComponent({
             }&layer=mapnik&marker=${lat}%2C${lng}`
           )
         } else {
-          setMapUrl(
-            `https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`
-          )
+           setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`)
         }
-      } catch (error) {
-        console.error('Error in fetchMediaForAllDestinations:', error)
-      }
-    }
-
-    if (initialDestinations.length > 0) {
-      fetchMediaForAllDestinations()
     } else {
-      setDestinations([])
-      setMapUrl(
-        `https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`
-      )
+        setDestinations([])
     }
 
     return () => {
-      isComponentMounted = false
       abortController.abort()
     }
-    // We include toast in the dependency array as it's used in the effect
-    // Add explicit type annotation for initialDestinations in the dependency array
-  }, [initialDestinations as Destination[], toast])
+  }, [initialDestinations, fetchMediaForDestination])
+
 
   const handleApplyAIFilter = async () => {
     if (!aiFilterQuery.trim()) {
@@ -403,19 +350,15 @@ export default function ExploreClientComponent({
   const openVideoModal = (videoId: string) => setSelectedYouTubeVideoId(videoId)
   const closeVideoModal = () => setSelectedYouTubeVideoId(null)
 
-  const isLoadingInitialMedia = destinations.some(
-    (d) => d.isLoadingImage || d.isLoadingYouTubeVideoId
-  )
-
   const DestinationCardSkeleton = () => (
     <Card className="overflow-hidden flex flex-col">
       <CardHeader className="p-0 relative h-48">
         <Skeleton className="h-full w-full" />
       </CardHeader>
       <CardContent className="p-4 flex-grow">
-        <Skeleton className="h-6 w-3/4 mb-1" />
-        <Skeleton className="h-4 w-1/2 mb-2" />
-        <div className="space-y-1">
+        <Skeleton className="h-6 w-3/4 mb-2" />
+        <Skeleton className="h-4 w-1/2 mb-3" />
+        <div className="space-y-2">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
@@ -423,7 +366,7 @@ export default function ExploreClientComponent({
       </CardContent>
       <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
         <div className="flex items-center col-span-1">
-          <Skeleton className="h-5 w-5 mr-1 rounded-full" />
+          <Skeleton className="h-5 w-5 mr-1.5 rounded-full" />
           <Skeleton className="h-5 w-8" />
         </div>
         <Skeleton className="h-9 w-full col-span-1" />
@@ -532,36 +475,13 @@ export default function ExploreClientComponent({
         </CardContent>
       </Card>
 
-      {(authIsLoading || isLoadingInitialMedia || isFilteringWithAI) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, index) => (
-            <DestinationCardSkeleton key={`skeleton-${index}`} />
-          ))}
-        </div>
-      )}
-
-      {!isLoadingInitialMedia &&
-        !isFilteringWithAI &&
-        displayedDestinations.length === 0 && (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold">No Treks Found</h3>
-              <p className="text-muted-foreground">
-                {searchQuery || aiFilterQuery
-                  ? 'Try adjusting your search or AI filter query.'
-                  : 'There are no treks available at the moment.'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {displayedDestinations.map((destination) =>
-          (destination.isLoadingImage || destination.isLoadingYouTubeVideoId) &&
-          !isFilteringWithAI ? (
-            <DestinationCardSkeleton key={`${destination.id}-loading`} />
-          ) : (
+        {isLoadingInitialData ? (
+          [...Array(initialDestinations.length || 3)].map((_, index) => (
+            <DestinationCardSkeleton key={`skeleton-${index}`} />
+          ))
+        ) : displayedDestinations.length > 0 ? (
+          displayedDestinations.map((destination) => (
             <Card
               key={destination.id}
               className="overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col"
@@ -680,14 +600,33 @@ export default function ExploreClientComponent({
                       onClick={() =>
                         openVideoModal(destination.youtubeVideoId!)
                       }
+                      disabled={mediaLoadingState[destination.id]?.video}
                     >
-                      <PlayCircle className="mr-2 h-4 w-4" /> Watch Video
+                      {mediaLoadingState[destination.id]?.video ? 
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
+                       <PlayCircle className="mr-2 h-4 w-4" />
+                      }
+                      Watch Video
                     </Button>
                   )}
                 </div>
               </CardFooter>
             </Card>
-          )
+          ))
+        ) : (
+          <div className="md:col-span-2 lg:col-span-3">
+             <Card>
+                <CardContent className="p-6 text-center">
+                <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold">No Treks Found</h3>
+                <p className="text-muted-foreground">
+                    {searchQuery || aiFilterQuery
+                    ? 'Try adjusting your search or AI filter query.'
+                    : 'There are no treks available at the moment.'}
+                </p>
+                </CardContent>
+            </Card>
+          </div>
         )}
       </div>
 
@@ -718,5 +657,3 @@ export default function ExploreClientComponent({
     </div>
   )
 }
-
-    
