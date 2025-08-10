@@ -43,18 +43,18 @@ export default function ConnectSpherePage() {
   const [lastSwipedProfile, setLastSwipedProfile] =
     useState<UserProfile | null>(null)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
-  const [matchAnimationTimeoutId, setMatchAnimationTimeoutId] =
-    useState<NodeJS.Timeout | null>(null)
+  const matchAnimationTimeoutId = useRef<NodeJS.Timeout | null>(null)
   const [shouldReloadProfiles, setShouldReloadProfiles] = useState(false)
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    const timeoutId = matchAnimationTimeoutId.current;
     return () => {
-      if (matchAnimationTimeoutId) {
-        clearTimeout(matchAnimationTimeoutId)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
       }
     }
-  }, [matchAnimationTimeoutId])
+  }, [])
 
   const loadProfiles = useCallback(async () => {
     if (!currentUser?.id) {
@@ -102,9 +102,9 @@ export default function ConnectSpherePage() {
   }, [shouldReloadProfiles, loadProfiles])
 
   const advanceToNextProfile = () => {
-    if (showMatchAnimation && matchAnimationTimeoutId) {
-      clearTimeout(matchAnimationTimeoutId)
-      setMatchAnimationTimeoutId(null)
+    if (showMatchAnimation && matchAnimationTimeoutId.current) {
+      clearTimeout(matchAnimationTimeoutId.current)
+      matchAnimationTimeoutId.current = null
     }
     setShowMatchAnimation(false)
     setLastSwipedProfile(null)
@@ -132,8 +132,8 @@ export default function ConnectSpherePage() {
       navigator.vibrate(50)
     }
 
-    if (matchAnimationTimeoutId) {
-      clearTimeout(matchAnimationTimeoutId)
+    if (matchAnimationTimeoutId.current) {
+      clearTimeout(matchAnimationTimeoutId.current)
     }
 
     const swipedProfile = profiles[currentIndex]
@@ -144,7 +144,7 @@ export default function ConnectSpherePage() {
       const timeoutId = setTimeout(() => {
         advanceToNextProfile()
       }, 3500) // Extended to allow clicking chat button
-      setMatchAnimationTimeoutId(timeoutId)
+      matchAnimationTimeoutId.current = timeoutId
     } else {
       advanceToNextProfile()
     }
@@ -152,8 +152,8 @@ export default function ConnectSpherePage() {
 
   const handleUndo = () => {
     if (!currentUser || currentIndex === 0) return
-    if (showMatchAnimation && matchAnimationTimeoutId) {
-      clearTimeout(matchAnimationTimeoutId)
+    if (showMatchAnimation && matchAnimationTimeoutId.current) {
+      clearTimeout(matchAnimationTimeoutId.current)
       setShowMatchAnimation(false)
     }
     setCurrentIndex(currentIndex - 1)
@@ -161,8 +161,8 @@ export default function ConnectSpherePage() {
   }
 
   const handleStartChat = (matchProfileId: string) => {
-    if (matchAnimationTimeoutId) {
-      clearTimeout(matchAnimationTimeoutId) // Clear the auto-advance timeout
+    if (matchAnimationTimeoutId.current) {
+      clearTimeout(matchAnimationTimeoutId.current) // Clear the auto-advance timeout
     }
     setShowMatchAnimation(false) // Hide match animation
     router.push(`/chat/${matchProfileId}`)
@@ -175,8 +175,7 @@ export default function ConnectSpherePage() {
 
   if (authIsLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-full">
-        <div className="w-full max-w-md space-y-6">
+      <div className="w-full max-w-6xl mx-auto space-y-6">
           <Skeleton className="h-32 w-full" />
           <div className="relative w-full h-[480px] flex items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -187,26 +186,28 @@ export default function ConnectSpherePage() {
             <Skeleton className="h-16 w-16 rounded-full" />
           </div>
         </div>
-      </div>
     )
   }
 
   if (!currentUser) {
     return (
-      <div className="container mx-auto px-4 py-8 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
-          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto" />
-          <h2 className="text-2xl font-semibold">Authentication Required</h2>
-          <p className="text-gray-600">
-            Please sign in to access the Connect feature
-          </p>
-          <Button
-            onClick={() => router.push('/auth/signin?redirect=/connect')}
-            className="mt-4"
-          >
-            Sign In
-          </Button>
-        </div>
+      <div className="w-full max-w-6xl mx-auto flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md w-full text-center">
+            <CardHeader>
+                <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto" />
+                <CardTitle>Authentication Required</CardTitle>
+                <CardDescription>
+                Please sign in to access the Connect feature
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button
+                    onClick={() => router.push('/auth/signin?redirect=/connect')}
+                >
+                    Sign In
+                </Button>
+            </CardContent>
+        </Card>
       </div>
     )
   }
@@ -215,7 +216,7 @@ export default function ConnectSpherePage() {
     const currentUserPhoto =
       currentUser?.photoUrl || PLACEHOLDER_IMAGE_URL(100, 100)
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="w-full max-w-6xl mx-auto">
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4 bg-background">
           <Heart className="w-24 h-24 text-pink-500 animate-ping mb-4" />
           <h2 className="text-3xl font-headline text-primary">It's a Match!</h2>
@@ -280,7 +281,7 @@ export default function ConnectSpherePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 w-full max-w-6xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
           <div>

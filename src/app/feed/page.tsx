@@ -11,7 +11,7 @@ export default async function PhotoFeedPage() {
   const photos: Photo[] = await getAllPhotos();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -48,7 +48,7 @@ export default async function PhotoFeedPage() {
       
       {photos.length > 0 && (
         <div className="flex justify-center mt-8">
-            <Button variant="outline">Load More Photos (Coming Soon)</Button>
+            <Button variant="outline" disabled>Load More Photos (Coming Soon)</Button>
         </div>
       )}
     </div>

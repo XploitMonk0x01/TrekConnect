@@ -22,7 +22,7 @@ export default async function TravelStoriesPage() {
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-7xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -40,7 +40,7 @@ export default async function TravelStoriesPage() {
       </Card>
 
       {stories.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stories.map((story, index) => {
             // Add AI hints for images within StoryCard
             const storyWithAIHints = {
@@ -65,7 +65,7 @@ export default async function TravelStoriesPage() {
       
       {stories.length > 0 && (
         <div className="flex justify-center mt-8">
-            <Button variant="outline">Load More Stories (Coming Soon)</Button>
+            <Button variant="outline" disabled>Load More Stories (Coming Soon)</Button>
         </div>
       )}
     </div>

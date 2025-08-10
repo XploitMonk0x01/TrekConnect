@@ -1,3 +1,4 @@
+
 'use server'
 
 import { Button } from '@/components/ui/button'
@@ -36,7 +37,7 @@ export default async function Page({ params }: { params: { storyId: string } }) 
 
   if (!story) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-6">
+      <div className="flex flex-col items-center justify-center h-full text-center p-6 max-w-2xl mx-auto">
         <BookOpen className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-semibold">Story not found</h1>
         <p className="text-muted-foreground">
@@ -73,7 +74,7 @@ export default async function Page({ params }: { params: { storyId: string } }) 
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-3xl mx-auto">
       <div className="flex items-center">
         <Button asChild variant="outline">
           <Link href="/stories">

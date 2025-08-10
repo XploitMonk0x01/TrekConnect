@@ -1,3 +1,4 @@
+
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,7 +34,7 @@ export default async function DestinationDetailPage({
 
   if (error || !destination) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-6">
+      <div className="flex flex-col items-center justify-center h-full text-center p-6 max-w-2xl mx-auto">
         <MapPin className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-semibold">Destination not found</h1>
         <p className="text-muted-foreground">
