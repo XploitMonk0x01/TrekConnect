@@ -1,20 +1,18 @@
-# **App Name**: TrekConnect
+# **App Name**: Next Starter
 
 ## Core Features:
 
-- Destination Exploration: Destination display with details, integrated Google Maps with user-uploaded photos, and weather updates using external APIs.
-- ConnectSphere Interface: Profile card interface for discovering other trekkers planning travel to similar destinations at similar times. Tinder-like swiping to match profiles.
-- Smart Recommendations: Suggest potential matches and travel destinations based on user profile details and travel history, using an AI tool.
-- Photo Sharing: Enable users to share photos, and view photos from other travellers and of different locations. Display as a public community driven feed of travel experiences and snapshots.
-- Wishlist and Travel History: Travel bucket list. Mark places the user wants to go, or record places they have visited.
-- Travel Stories: Allow users to post trip stories and reviews to offer community-driven insight, as well as travel tips.
+- Static File Serving: Serve static files with Next.js
+- User Authentication: User Authentication with NextAuth.js for securing pages.
+- Environment Configuration: Configure environment variables with sensible defaults.
+- Typescript: Preconfigured Next.js configuration with Typescript
 
 ## Style Guidelines:
 
-- Primary color: HSL(50, 80%, 50%) converted to bright gold (#E6B800), conveying adventure, discovery, and a bit of luxury without being ostentatious.
-- Background color: Desaturated, lighter tint of the primary color (#F8F5E7). It's a warm, neutral tone that lets the bright imagery take center stage.
-- Accent color: A harmonious analogous color shifted ~30 degrees, a bright saturated orange, specifically  (#FF8000).
-- Font pairing: 'Playfair' (serif) for headlines to bring an elegant feel and 'PT Sans' (sans-serif) for body text for readability and a modern, neutral tone.
-- Outline style icons; use icons consistently.
-- Card-based layout with rounded corners for a friendly feel. Utilize white space to prevent a cluttered interface.
-- Smooth transitions and subtle animations on UI elements during profile discovery.
+- Primary color: Vibrant indigo (#663399) for a modern feel.
+- Background color: Light gray (#F0F0F5), a desaturated version of indigo for a clean background.
+- Accent color: Analogous purple (#993366), more saturated to add contrast to highlights and calls to action.
+- Font: 'Inter', a grotesque-style sans-serif, will be used for both headings and body text due to its modern and neutral appearance, lending well to a professional starter app.
+- Simple, outline-style icons for navigation and user actions.
+- Clean, modern layout with a focus on readability and ease of navigation.
+- Subtle transitions for page loading and user interactions.

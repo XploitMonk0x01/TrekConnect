@@ -4,21 +4,6 @@ import './globals.css'
 // import { Toaster } from '@/components/ui/toaster' // Toaster is now in ClientLayout
 import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants'
 import { ClientLayout } from '@/components/layout/ClientLayout'
-import { PT_Sans, Playfair_Display } from 'next/font/google'
-
-const ptSans = PT_Sans({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-
-const playfairDisplay = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['400', '700', '900'],
-  variable: '--font-serif',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: {
@@ -39,8 +24,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${ptSans.variable} ${playfairDisplay.variable}`}>
-      <head />
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet" />
+      </head>
       <body className="font-body antialiased">
         <ClientLayout>{children}</ClientLayout>
       </body>
