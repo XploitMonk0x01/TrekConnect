@@ -357,8 +357,8 @@ export default function ExploreClientComponent({
       </CardHeader>
       <CardContent className="p-4 flex-grow">
         <Skeleton className="h-6 w-3/4 mb-2" />
-        <Skeleton className="h-4 w-1/2 mb-3" />
-        <div className="space-y-2">
+        <Skeleton className="h-4 w-1/2 mb-2" />
+        <div className="space-y-2 mt-2">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
