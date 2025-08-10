@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
@@ -139,6 +140,15 @@ export default function ChatPage() {
     }
   }
 
+  if (authIsLoading || isLoadingOtherUser) {
+    return (
+      <div className="flex items-center justify-center h-[70vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-3 text-muted-foreground">Loading Chat...</p>
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -184,7 +194,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-card border rounded-lg shadow-sm max-w-7xl mx-auto w-full">
+    <div className="flex flex-col bg-card border rounded-lg shadow-sm max-w-7xl mx-auto w-full h-[calc(100vh-10rem)]">
       <div className="border-b p-4 flex items-center gap-4 flex-shrink-0">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/connect">
@@ -252,7 +262,7 @@ export default function ChatPage() {
               }`}
             >
               <div
-                className={`max-w-[68ch] md:max-w-[60%] rounded-xl p-3 md:p-4 shadow-md ${
+                className={`max-w-[75%] md:max-w-[60%] rounded-xl p-3 md:p-4 shadow-md ${
                   message.senderId === currentUser.id
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground'
@@ -285,7 +295,7 @@ export default function ChatPage() {
             placeholder={
               isConnected ? 'Type a message...' : 'Connecting to chat...'
             }
-            className="flex-1 h-12 md:h-14"
+            className="flex-1"
             disabled={!isConnected}
           />
           <Button
@@ -294,7 +304,7 @@ export default function ChatPage() {
             disabled={!isConnected || !messageInput.trim()}
             onClick={() => void handleSendMessage()}
           >
-            <Send className="h-5 w-5 md:h-6 md:w-6" />
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </div>

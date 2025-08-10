@@ -6,7 +6,8 @@ export default function ChatLayout({
   // This layout provides a container that allows the chat page to take up the full height
   // within the main content area, minus any global headers/footers if they were present.
   return (
-    <div className="h-[calc(100vh-var(--header-height,0px)-var(--footer-height,0px))]">
+    // The inner page now controls its own height relative to the viewport
+    <div>
       {children}
     </div>
   )
