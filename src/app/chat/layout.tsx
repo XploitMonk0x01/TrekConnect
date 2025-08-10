@@ -3,11 +3,9 @@ export default function ChatLayout({
 }: {
   children: React.ReactNode
 }) {
-  // This layout provides a container that allows the chat page to take up the full height
-  // within the main content area, minus any global headers/footers if they were present.
+  // This layout wrapper ensures that the chat page can correctly use a full-height container.
   return (
-    // The inner page now controls its own height relative to the viewport
-    <div>
+    <div className="h-full">
       {children}
     </div>
   )

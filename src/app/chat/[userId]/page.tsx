@@ -142,7 +142,7 @@ export default function ChatPage() {
 
   if (authIsLoading || isLoadingOtherUser) {
     return (
-      <div className="flex items-center justify-center h-[70vh]">
+      <div className="flex items-center justify-center h-full min-h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Loading Chat...</p>
       </div>
@@ -194,118 +194,120 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col bg-card border rounded-lg shadow-sm max-w-7xl mx-auto w-full h-[calc(100vh-10rem)]">
-      <div className="border-b p-4 flex items-center gap-4 flex-shrink-0">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/connect">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        {otherUser && (
-          <div className="flex items-center gap-3">
-            <Image
-              src={otherUser.photoUrl || PLACEHOLDER_IMAGE_URL(40, 40)}
-              alt={otherUser.name || 'User'}
-              width={40}
-              height={40}
-              className="rounded-full object-cover"
-              data-ai-hint={`person ${otherUser.name?.split(' ')[0] || 'chat'}`}
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
-                  40,
-                  40
-                )
-              }}
-            />
-            <div>
-              <h2 className="font-semibold">{otherUser.name}</h2>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4">
-        {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
-          <div className="p-4">
-            <Alert variant={chatContextError ? 'destructive' : 'default'}>
-              <AlertTitle>
-                {chatContextError
-                  ? 'Chat Connection Error'
-                  : 'Chat Disconnected'}
-              </AlertTitle>
-              <AlertDescription>
-                {chatContextError || 'Connecting to chat...'}
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        {chatContextIsLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <p className="ml-2 text-muted-foreground">Loading messages...</p>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-muted-foreground">
-              No messages yet. Start the conversation!
-            </p>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.senderId === currentUser.id
-                  ? 'justify-end'
-                  : 'justify-start'
-              }`}
-            >
-              <div
-                className={`max-w-[75%] md:max-w-[60%] rounded-xl p-3 md:p-4 shadow-md ${
-                  message.senderId === currentUser.id
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-foreground'
-                }`}
-              >
-                <p className="whitespace-pre-wrap break-words leading-relaxed">
-                  {message.content}
-                </p>
-                <p className="text-[11px] opacity-70 mt-1 text-right">
-                  {formatMessageTime(message.timestamp as unknown)}
-                </p>
+    <div className="container mx-auto max-w-7xl">
+      <div className="flex flex-col bg-card border rounded-lg shadow-sm w-full h-[calc(100vh-10rem)]">
+        <div className="border-b p-4 flex items-center gap-4 flex-shrink-0">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/connect">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          {otherUser && (
+            <div className="flex items-center gap-3">
+              <Image
+                src={otherUser.photoUrl || PLACEHOLDER_IMAGE_URL(40, 40)}
+                alt={otherUser.name || 'User'}
+                width={40}
+                height={40}
+                className="rounded-full object-cover"
+                data-ai-hint={`person ${otherUser.name?.split(' ')[0] || 'chat'}`}
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
+                    40,
+                    40
+                  )
+                }}
+              />
+              <div>
+                <h2 className="font-semibold">{otherUser.name}</h2>
               </div>
             </div>
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+          )}
+        </div>
 
-      <div className="border-t p-4 md:p-6 bg-background/50 flex-shrink-0">
-        <div className="flex gap-2 md:gap-3">
-          <Input
-            value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                void handleSendMessage()
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4">
+          {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
+            <div className="p-4">
+              <Alert variant={chatContextError ? 'destructive' : 'default'}>
+                <AlertTitle>
+                  {chatContextError
+                    ? 'Chat Connection Error'
+                    : 'Chat Disconnected'}
+                </AlertTitle>
+                <AlertDescription>
+                  {chatContextError || 'Connecting to chat...'}
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          {chatContextIsLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <p className="ml-2 text-muted-foreground">Loading messages...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground">
+                No messages yet. Start the conversation!
+              </p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.senderId === currentUser.id
+                    ? 'justify-end'
+                    : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`max-w-[75%] md:max-w-[60%] rounded-xl p-3 md:p-4 shadow-md ${
+                    message.senderId === currentUser.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground'
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words leading-relaxed">
+                    {message.content}
+                  </p>
+                  <p className="text-[11px] opacity-70 mt-1 text-right">
+                    {formatMessageTime(message.timestamp as unknown)}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="border-t p-4 md:p-6 bg-background/50 flex-shrink-0">
+          <div className="flex gap-2 md:gap-3">
+            <Input
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  void handleSendMessage()
+                }
+              }}
+              placeholder={
+                isConnected ? 'Type a message...' : 'Connecting to chat...'
               }
-            }}
-            placeholder={
-              isConnected ? 'Type a message...' : 'Connecting to chat...'
-            }
-            className="flex-1"
-            disabled={!isConnected}
-          />
-          <Button
-            type="button"
-            size="icon"
-            disabled={!isConnected || !messageInput.trim()}
-            onClick={() => void handleSendMessage()}
-          >
-            <Send className="h-5 w-5" />
-          </Button>
+              className="flex-1"
+              disabled={!isConnected}
+            />
+            <Button
+              type="button"
+              size="icon"
+              disabled={!isConnected || !messageInput.trim()}
+              onClick={() => void handleSendMessage()}
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -37,7 +37,7 @@ export default async function Page({ params }: { params: { storyId: string } }) 
 
   if (!story) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-6 max-w-2xl mx-auto">
+      <div className="container mx-auto max-w-7xl flex flex-col items-center justify-center h-full text-center p-6">
         <BookOpen className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-semibold">Story not found</h1>
         <p className="text-muted-foreground">
@@ -74,7 +74,7 @@ export default async function Page({ params }: { params: { storyId: string } }) 
   }
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-8 container mx-auto max-w-3xl">
       <div className="flex items-center">
         <Button asChild variant="outline">
           <Link href="/stories">

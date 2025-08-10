@@ -115,7 +115,7 @@ export default function ProfilePage() {
 
   if (!currentUser && !authIsLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+      <div className="container mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold">Access Denied</h1>
         <p className="text-muted-foreground">
@@ -140,7 +140,7 @@ export default function ProfilePage() {
   if (!currentUser) {
     // This state should ideally not be reached due to the checks above, but it's a good fallback.
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+      <div className="container mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold">An Error Occurred</h1>
         <p className="text-muted-foreground">
@@ -166,7 +166,7 @@ export default function ProfilePage() {
       : 'Not specified'
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 container mx-auto max-w-7xl">
       <Card className="shadow-lg">
         <CardHeader className="items-center text-center md:text-left md:flex-row md:items-start md:gap-6">
           <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-primary shadow-md">

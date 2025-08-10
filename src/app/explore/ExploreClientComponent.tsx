@@ -379,7 +379,7 @@ export default function ExploreClientComponent({
   );
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 container mx-auto max-w-7xl">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-3xl text-primary">

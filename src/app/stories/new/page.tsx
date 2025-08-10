@@ -141,7 +141,7 @@ export default function NewStoryPage() {
 
   if (!currentUser && !authIsLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+      <div className="container mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold">Share Your Story</h1>
         <p className="text-muted-foreground mb-4">Please sign in to write and publish your travel adventures.</p>
@@ -153,7 +153,7 @@ export default function NewStoryPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-8 container mx-auto max-w-3xl">
       <div className="flex items-center">
         <Button asChild variant="outline" size="sm">
           <Link href="/stories"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Stories</Link>

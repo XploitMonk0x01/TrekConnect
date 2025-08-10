@@ -1,3 +1,4 @@
+
 'use client'
 
 import {
@@ -134,7 +135,7 @@ export default function DashboardPage() {
   }, [])
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 container mx-auto max-w-7xl">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="font-headline text-3xl text-primary">

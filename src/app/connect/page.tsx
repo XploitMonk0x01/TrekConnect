@@ -175,7 +175,7 @@ export default function ConnectSpherePage() {
 
   if (authIsLoading) {
     return (
-      <div className="w-full max-w-6xl mx-auto space-y-6">
+      <div className="container mx-auto max-w-7xl space-y-6">
           <Skeleton className="h-32 w-full" />
           <div className="relative w-full h-[480px] flex items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -191,7 +191,7 @@ export default function ConnectSpherePage() {
 
   if (!currentUser) {
     return (
-      <div className="w-full max-w-6xl mx-auto flex items-center justify-center min-h-[60vh]">
+      <div className="container mx-auto max-w-7xl flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-full text-center">
             <CardHeader>
                 <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto" />
@@ -216,7 +216,7 @@ export default function ConnectSpherePage() {
     const currentUserPhoto =
       currentUser?.photoUrl || PLACEHOLDER_IMAGE_URL(100, 100)
     return (
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="container mx-auto max-w-7xl">
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4 bg-background">
           <Heart className="w-24 h-24 text-pink-500 animate-ping mb-4" />
           <h2 className="text-3xl font-headline text-primary">It's a Match!</h2>
@@ -281,7 +281,7 @@ export default function ConnectSpherePage() {
   }
 
   return (
-    <div className="space-y-8 w-full max-w-6xl mx-auto">
+    <div className="space-y-8 container mx-auto max-w-7xl">
       <Card className="shadow-lg">
         <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
           <div>

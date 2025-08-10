@@ -22,7 +22,7 @@ export default async function TravelStoriesPage() {
 
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-8 container mx-auto max-w-7xl">
       <Card className="shadow-lg">
         <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -303,7 +304,7 @@ export default function DestinationDetailClientContent({
   }
 
   return (
-    <div className="space-y-8 p-4 md:p-6 lg:p-8">
+    <div className="space-y-8 container mx-auto max-w-7xl">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline">
           <Link href="/explore">

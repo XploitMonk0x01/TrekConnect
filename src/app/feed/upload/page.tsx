@@ -174,7 +174,7 @@ export default function UploadPhotoPage() {
 
   if (!currentUser && !authIsLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+      <div className="container mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold">Share Your Photo</h1>
         <p className="text-muted-foreground mb-4">
@@ -190,7 +190,7 @@ export default function UploadPhotoPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
+    <div className="space-y-8 container mx-auto max-w-2xl">
       <div className="flex items-center">
         <Button asChild variant="outline" size="sm">
           <Link href="/feed">

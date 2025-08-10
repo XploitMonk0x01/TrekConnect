@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect, ChangeEvent } from 'react'
@@ -283,7 +284,7 @@ export default function EditProfilePage() {
 
   if (!currentUser && !authIsLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
+      <div className="container mx-auto max-w-7xl flex flex-col items-center justify-center min-h-[calc(100vh-200px)] text-center p-6">
         <AlertTriangle className="w-16 h-16 text-destructive mb-4" />
         <h1 className="text-2xl font-semibold">Access Denied</h1>
         <p className="text-muted-foreground">
@@ -297,53 +298,19 @@ export default function EditProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header Section */}
-      <div className="bg-card border-b shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
+    <div className="container mx-auto max-w-3xl space-y-8">
+       <div className="flex items-center">
             <Button asChild variant="ghost" size="sm">
               <Link href="/profile">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Profile
               </Link>
             </Button>
-            {/* Profile Header */}
-            <div className="flex items-center space-x-4">
-              <NextImage
-                src={
-                  profileImagePreview ||
-                  currentPhotoUrlForPreview ||
-                  PLACEHOLDER_IMAGE_URL(48, 48)
-                }
-                alt="Profile"
-                width={48}
-                height={48}
-                className="rounded-full border-2 border-primary object-cover"
-                data-ai-hint="person current profile"
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
-                    48,
-                    48
-                  )
-                }}
-              />
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">
-                  {currentUser?.name || 'My Profile'}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Edit your profile information
-                </p>
-              </div>
-            </div>
-            <div className="w-24"></div> {/* Spacer for balance */}
-          </div>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="shadow-sm border">
+      <Card className="shadow-xl border">
+         <CardHeader>
+            <CardTitle className="font-headline text-3xl text-primary text-center">Edit Your Profile</CardTitle>
+            <CardDescription className="text-center">Keep your travel identity fresh and up to date.</CardDescription>
+        </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Profile Picture Section */}
@@ -646,7 +613,6 @@ export default function EditProfilePage() {
             </form>
           </CardContent>
         </Card>
-      </div>
     </div>
   )
 }
