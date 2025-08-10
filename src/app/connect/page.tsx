@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -279,37 +280,31 @@ export default function ConnectSpherePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header Section */}
-      <div className="bg-card border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-6">
-            <div>
-              <h1 className="text-3xl font-bold font-headline text-primary">
-                ConnectSphere
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Find your next trekking companion
-              </p>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" disabled>
-                <Filter className="mr-2 h-4 w-4" />
-                Filters (Soon!)
-              </Button>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>{profiles.length} trekkers</span>
-              </div>
+    <div className="space-y-8">
+      <Card className="shadow-lg">
+        <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="font-headline text-3xl text-primary">
+              ConnectSphere
+            </CardTitle>
+            <CardDescription>
+              Find your next trekking companion. Swipe right to connect!
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" size="sm" disabled>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters (Soon!)
+            </Button>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span>{profiles.length} trekkers available</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Main Content - Optimized for Laptop */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        </CardHeader>
+      </Card>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Sidebar - Instructions & Stats */}
           <div className="lg:col-span-1 space-y-6">
             <Card className="shadow-sm">
@@ -347,7 +342,6 @@ export default function ConnectSpherePage() {
               </CardContent>
             </Card>
 
-            {/* Progress Stats */}
             <Card className="shadow-sm">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg">Progress</CardTitle>
@@ -377,11 +371,9 @@ export default function ConnectSpherePage() {
             </Card>
           </div>
 
-          {/* Center - Profile Cards */}
           <div className="lg:col-span-2">
             <div className="flex justify-center">
               <div className="relative w-full max-w-md">
-                {/* Profile Card Area */}
                 <div className="relative h-[600px] flex items-center justify-center">
                   <AnimatePresence>
                     {isLoadingProfiles ? (
@@ -463,7 +455,6 @@ export default function ConnectSpherePage() {
                   </AnimatePresence>
                 </div>
 
-                {/* Action Buttons */}
                 {currentProfileForCard && (
                   <div className="flex justify-center mt-6">
                     <div className="flex space-x-4 items-center">
@@ -519,7 +510,6 @@ export default function ConnectSpherePage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   )
 }

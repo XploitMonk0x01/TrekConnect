@@ -1,3 +1,4 @@
+
 'use client'
 
 import Link from 'next/link'
@@ -165,7 +166,7 @@ export default function ProfilePage() {
       : 'Not specified'
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-5xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader className="items-center text-center md:text-left md:flex-row md:items-start md:gap-6">
           <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-primary shadow-md">
