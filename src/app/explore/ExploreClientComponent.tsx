@@ -1,3 +1,4 @@
+
 'use client'
 
 import {
@@ -406,6 +407,34 @@ export default function ExploreClientComponent({
     (d) => d.isLoadingImage || d.isLoadingYouTubeVideoId
   )
 
+  const DestinationCardSkeleton = () => (
+    <Card className="overflow-hidden flex flex-col">
+      <CardHeader className="p-0 relative h-48">
+        <Skeleton className="h-full w-full" />
+      </CardHeader>
+      <CardContent className="p-4 flex-grow">
+        <Skeleton className="h-6 w-3/4 mb-1" />
+        <Skeleton className="h-4 w-1/2 mb-2" />
+        <div className="space-y-1">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </CardContent>
+      <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
+        <div className="flex items-center col-span-1">
+          <Skeleton className="h-5 w-5 mr-1 rounded-full" />
+          <Skeleton className="h-5 w-8" />
+        </div>
+        <Skeleton className="h-9 w-full col-span-1" />
+        <div className="col-span-full mt-2 grid grid-cols-2 gap-2">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <div className="space-y-8">
       <Card className="shadow-lg">
@@ -506,23 +535,7 @@ export default function ExploreClientComponent({
       {(authIsLoading || isLoadingInitialMedia || isFilteringWithAI) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(3)].map((_, index) => (
-            <Card
-              key={`skeleton-${index}`}
-              className="overflow-hidden flex flex-col"
-            >
-              <Skeleton className="h-48 w-full" />
-              <CardContent className="p-4 flex-grow">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2 mb-3" />
-                <Skeleton className="h-4 w-full mb-1" />
-                <Skeleton className="h-4 w-full mb-1" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-              <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
-                <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-8 w-full" />
-              </CardFooter>
-            </Card>
+            <DestinationCardSkeleton key={`skeleton-${index}`} />
           ))}
         </div>
       )}
@@ -547,23 +560,7 @@ export default function ExploreClientComponent({
         {displayedDestinations.map((destination) =>
           (destination.isLoadingImage || destination.isLoadingYouTubeVideoId) &&
           !isFilteringWithAI ? (
-            <Card
-              key={`${destination.id}-loading`}
-              className="overflow-hidden flex flex-col"
-            >
-              <Skeleton className="h-48 w-full" />
-              <CardContent className="p-4 flex-grow">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2 mb-3" />
-                <Skeleton className="h-4 w-full mb-1" />
-                <Skeleton className="h-4 w-full mb-1" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-              <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
-                <Skeleton className="h-5 w-12" />
-                <Skeleton className="h-8 w-full" />
-              </CardFooter>
-            </Card>
+            <DestinationCardSkeleton key={`${destination.id}-loading`} />
           ) : (
             <Card
               key={destination.id}
@@ -721,3 +718,5 @@ export default function ExploreClientComponent({
     </div>
   )
 }
+
+    
