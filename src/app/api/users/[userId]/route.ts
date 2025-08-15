@@ -27,10 +27,9 @@ async function isAuthorized(
 // GET a single user profile from Firebase RTDB
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params: { userId } }: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
     const user = await getUserProfile(userId)
 
     if (!user) {
@@ -51,11 +50,9 @@ export async function GET(
 // DELETE a user profile from Firebase RTDB
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params: { userId } }: { params: { userId: string } }
 ) {
   try {
-    const { userId } = params
-
     // Basic authorization check
     if (!(await isAuthorized(request, userId))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
