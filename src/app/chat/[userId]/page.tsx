@@ -23,13 +23,26 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import dynamic from 'next/dynamic'
 
-// Dynamically import emoji picker to avoid SSR issues
-const EmojiPicker = dynamic(
-  () => import('@emoji-mart/react').then((mod) => mod.default),
-  { ssr: false }
-)
+// Common emojis for quick access
+const QUICK_EMOJIS = [
+  '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊',
+  '😍', '🥰', '😘', '😗', '😙', '😋', '😛', '🤔',
+  '🤗', '🤩', '😎', '🙂', '😐', '😑', '😶', '🙄',
+  '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫',
+  '🥱', '😴', '😌', '😛', '😜', '😝', '🤤', '😒',
+  '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁',
+  '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧',
+  '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶',
+  '😳', '🤪', '😵', '🥴', '😠', '😡', '🤬', '😷',
+  '🤒', '🤕', '🤢', '🤮', '🤧', '🥳', '🥺', '🤠',
+  '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙',
+  '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚',
+  '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+  '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
+  '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️'
+]
 
 // Helper function to generate consistent room ID between two users
 function generateRoomId(userId1: string, userId2: string): string {
@@ -179,8 +192,8 @@ export default function ChatPage() {
     }
   }
 
-  const handleEmojiSelect = useCallback((emoji: any) => {
-    setMessageInput(prev => prev + emoji.native)
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    setMessageInput(prev => prev + emoji)
   }, [])
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -407,20 +420,25 @@ export default function ChatPage() {
                     <Smile className="h-5 w-5" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 border-none shadow-lg" side="top" align="start">
-                  {typeof window !== 'undefined' && (
-                    <EmojiPicker
-                      data={async () => {
-                        const response = await fetch('/emoji-data.json')
-                        return response.json()
-                      }}
-                      onEmojiSelect={handleEmojiSelect}
-                      theme="light"
-                      set="apple"
-                      maxFrequentRows={2}
-                      perLine={8}
-                    />
-                  )}
+                <PopoverContent className="w-80 p-3 border shadow-lg" side="top" align="start">
+                  <div className="max-h-48 overflow-y-auto">
+                    <div className="grid grid-cols-8 gap-1">
+                      {QUICK_EMOJIS.map((emoji, index) => (
+                        <Button
+                          key={index}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-accent/20 text-lg"
+                          onClick={() => {
+                            handleEmojiSelect(emoji)
+                            setShowEmojiPicker(false)
+                          }}
+                        >
+                          {emoji}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
 
