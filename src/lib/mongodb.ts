@@ -51,9 +51,7 @@ if (process.env.NODE_ENV === 'development') {
 
 export async function getDb(): Promise<Db> {
   try {
-    console.log('🔄 Attempting to connect to MongoDB...')
     const connectedClient = await clientPromise
-    console.log('✅ Connected to MongoDB successfully')
     const db = connectedClient.db(MONGODB_DB_NAME)
     return db
   } catch (error) {

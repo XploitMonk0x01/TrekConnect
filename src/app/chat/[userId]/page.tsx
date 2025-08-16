@@ -1,20 +1,35 @@
-
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { useChat } from '@/contexts/ChatContext'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Send, ArrowLeft, Loader2 } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Send, ArrowLeft, Loader2, Smile, Phone, Video, MoreVertical } from 'lucide-react'
 import Link from 'next/link'
 import { getUserProfileFromRTDB as getUserProfile } from '@/lib/auth'
 import type { UserProfile } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import Image from 'next/image'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import dynamic from 'next/dynamic'
+
+// Dynamically import emoji picker to avoid SSR issues
+const EmojiPicker = dynamic(
+  () => import('@emoji-mart/react').then((mod) => mod.default),
+  { ssr: false }
+)
 
 // Helper function to generate consistent room ID between two users
 function generateRoomId(userId1: string, userId2: string): string {
@@ -63,26 +78,49 @@ export default function ChatPage() {
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
   const [messageInput, setMessageInput] = useState('')
   const [otherUser, setOtherUser] = useState<UserProfile | null>(null)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isLoadingOtherUser, setIsLoadingOtherUser] = useState(true)
   const [roomId, setRoomId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchOtherUser = async () => {
-      if (otherUserIdFromParams) {
-        try {
-          setIsLoadingOtherUser(true)
-          const userData = await getUserProfile(otherUserIdFromParams)
-          setOtherUser(userData)
-        } catch (error) {
-          console.error('Failed to fetch other user profile:', error)
-          setOtherUser(null)
-        } finally {
-          setIsLoadingOtherUser(false)
-        }
-      } else {
+      if (!otherUserIdFromParams) {
         setIsLoadingOtherUser(false)
         setOtherUser(null)
+        return
+      }
+
+      // Try instant prefill from sessionStorage for fast room join
+      if (typeof window !== 'undefined') {
+        const prefillRaw = sessionStorage.getItem(
+          `chat_prefill_${otherUserIdFromParams}`
+        )
+        if (prefillRaw) {
+          try {
+            const prefill = JSON.parse(prefillRaw) as Partial<UserProfile>
+            if (prefill && prefill.id) {
+              setOtherUser({
+                id: prefill.id as string,
+                name: (prefill.name as string) || 'User',
+                photoUrl: (prefill.photoUrl as string) || undefined,
+                email: '',
+              } as UserProfile)
+              setIsLoadingOtherUser(false)
+            }
+          } catch {}
+        }
+      }
+
+      // Always fetch in background to ensure latest info
+      try {
+        const userData = await getUserProfile(otherUserIdFromParams)
+        setOtherUser(userData)
+      } catch (error) {
+        console.error('Failed to fetch other user profile:', error)
+      } finally {
+        setIsLoadingOtherUser(false)
       }
     }
 
@@ -134,19 +172,34 @@ export default function ChatPage() {
         safePhoto
       )
       setMessageInput('')
+      setShowEmojiPicker(false) // Close emoji picker after sending
     } catch (error) {
       console.error('Error sending message from page:', error)
       // Toast is handled in context or service layer
     }
   }
 
-  if (authIsLoading || isLoadingOtherUser) {
+  const handleEmojiSelect = useCallback((emoji: any) => {
+    setMessageInput(prev => prev + emoji.native)
+  }, [])
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageInput(e.target.value)
+    
+    // Simple typing indicator logic
+    if (!isTyping) {
+      setIsTyping(true)
+      setTimeout(() => setIsTyping(false), 2000)
+    }
+  }, [isTyping])
+
+  if (authIsLoading || (isLoadingOtherUser && !otherUser)) {
     return (
       <div className="flex items-center justify-center h-full min-h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <p className="ml-3 text-muted-foreground">Loading Chat...</p>
       </div>
-    );
+    )
   }
 
   if (!currentUser) {
@@ -194,119 +247,213 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl h-full flex flex-col">
-      <div className="flex flex-col bg-card border rounded-lg shadow-sm w-full flex-1">
-        <div className="border-b p-4 flex items-center gap-4 flex-shrink-0">
-          <Button variant="ghost" size="icon" asChild>
+    <div className="h-screen flex flex-col bg-gradient-to-br from-background to-accent/5">
+      {/* Modern Chat Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+        <div className="container mx-auto max-w-7xl flex h-16 items-center gap-4 px-4 sm:px-6">
+          <Button variant="ghost" size="icon" asChild className="hover:bg-accent/20">
             <Link href="/connect">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
+
           {otherUser && (
-            <div className="flex items-center gap-3">
-              <Image
-                src={otherUser.photoUrl || PLACEHOLDER_IMAGE_URL(40, 40)}
-                alt={otherUser.name || 'User'}
-                width={40}
-                height={40}
-                className="rounded-full object-cover"
-                data-ai-hint={`person ${otherUser.name?.split(' ')[0] || 'chat'}`}
-                onError={(e) => {
-                  ;(e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE_URL(
-                    40,
-                    40
-                  )
-                }}
-              />
-              <div>
-                <h2 className="font-semibold">{otherUser.name}</h2>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="relative">
+                <Avatar className="h-10 w-10 border-2 border-primary/20">
+                  <AvatarImage
+                    src={otherUser.photoUrl || PLACEHOLDER_IMAGE_URL(40, 40)}
+                    alt={otherUser.name || 'User'}
+                    data-ai-hint={`person ${
+                      otherUser.name?.split(' ')[0] || 'user'
+                    }`}
+                  />
+                  <AvatarFallback>
+                    {(otherUser.name || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-background rounded-full"></div>
+              </div>
+              <div className="flex-1">
+                <h1 className="text-lg font-semibold font-headline text-foreground">
+                  {otherUser.name || 'User'}
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  {isConnected ? (isTyping ? 'Typing...' : 'Online') : 'Connecting...'}
+                </p>
               </div>
             </div>
           )}
-        </div>
 
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-4">
-          {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
-            <div className="p-4">
-              <Alert variant={chatContextError ? 'destructive' : 'default'}>
-                <AlertTitle>
-                  {chatContextError
-                    ? 'Chat Connection Error'
-                    : 'Chat Disconnected'}
-                </AlertTitle>
-                <AlertDescription>
-                  {chatContextError || 'Connecting to chat...'}
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
-
-          {chatContextIsLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="ml-2 text-muted-foreground">Loading messages...</p>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">
-                No messages yet. Start the conversation!
-              </p>
-            </div>
-          ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.senderId === currentUser.id
-                    ? 'justify-end'
-                    : 'justify-start'
-                }`}
-              >
-                <div
-                  className={`max-w-[75%] md:max-w-[60%] rounded-xl p-3 md:p-4 shadow-md ${
-                    message.senderId === currentUser.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-foreground'
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap break-words leading-relaxed">
-                    {message.content}
-                  </p>
-                  <p className="text-[11px] opacity-70 mt-1 text-right">
-                    {formatMessageTime(message.timestamp as unknown)}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div className="border-t p-4 md:p-6 bg-background/50 flex-shrink-0">
-          <div className="flex gap-2 md:gap-3">
-            <Input
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  void handleSendMessage()
-                }
-              }}
-              placeholder={
-                isConnected ? 'Type a message...' : 'Connecting to chat...'
-              }
-              className="flex-1"
-              disabled={!isConnected}
-            />
-            <Button
-              type="button"
-              size="icon"
-              disabled={!isConnected || !messageInput.trim()}
-              onClick={() => void handleSendMessage()}
-            >
-              <Send className="h-5 w-5" />
+          {/* Chat Actions */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-accent/20">
+              <Phone className="h-4 w-4" />
             </Button>
+            <Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-accent/20">
+              <Video className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="hover:bg-accent/20">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>View Profile</DropdownMenuItem>
+                <DropdownMenuItem>Block User</DropdownMenuItem>
+                <DropdownMenuItem>Report</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+
+      {/* Chat Content Area */}
+      <div className="flex-1 container mx-auto max-w-7xl flex flex-col overflow-hidden p-4">
+        <div className="flex flex-col bg-card border rounded-xl shadow-lg w-full flex-1 xl:max-w-5xl xl:self-center overflow-hidden">
+          
+          {/* Messages Area */}
+          <ScrollArea className="flex-1 p-4 md:p-6">
+            <div className="space-y-4">
+              {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
+                <Alert variant={chatContextError ? 'destructive' : 'default'} className="mx-auto max-w-md">
+                  <AlertTitle>
+                    {chatContextError ? 'Connection Error' : 'Disconnected'}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {chatContextError || 'Reconnecting to chat...'}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {chatContextIsLoading ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Loading messages...</p>
+                  </div>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex items-center justify-center h-40">
+                  <div className="text-center">
+                    <div className="text-4xl mb-2">💬</div>
+                    <p className="text-muted-foreground">No messages yet</p>
+                    <p className="text-sm text-muted-foreground">Start the conversation!</p>
+                  </div>
+                </div>
+              ) : (
+                messages.map((message, index) => {
+                  const isOwn = message.senderId === currentUser?.id
+                  const showAvatar = !isOwn && (index === 0 || messages[index - 1]?.senderId !== message.senderId)
+                  
+                  return (
+                    <div
+                      key={message.id}
+                      className={`flex gap-3 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {!isOwn && (
+                        <div className="w-8 flex-shrink-0">
+                          {showAvatar && (
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage
+                                src={otherUser?.photoUrl || PLACEHOLDER_IMAGE_URL(32, 32)}
+                                alt={otherUser?.name || 'User'}
+                              />
+                              <AvatarFallback className="text-xs">
+                                {(otherUser?.name || 'U').charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className={`max-w-[70%] sm:max-w-[60%] md:max-w-[50%] lg:max-w-[45%] ${isOwn ? 'ml-auto' : ''}`}>
+                        <div
+                          className={`rounded-2xl px-4 py-3 shadow-sm transition-all hover:shadow-md ${
+                            isOwn
+                              ? 'bg-primary text-primary-foreground rounded-br-md'
+                              : 'bg-muted text-foreground rounded-bl-md'
+                          }`}
+                        >
+                          <p className="whitespace-pre-wrap break-words leading-relaxed text-sm">
+                            {message.content}
+                          </p>
+                        </div>
+                        <p className={`text-xs text-muted-foreground mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
+                          {formatMessageTime(message.timestamp as unknown)}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          {/* Message Input Area */}
+          <div className="border-t bg-background/50 p-4 md:p-6">
+            <div className="flex items-end gap-3">
+              {/* Emoji Picker */}
+              <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="shrink-0 hover:bg-accent/20"
+                    disabled={!isConnected}
+                  >
+                    <Smile className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 border-none shadow-lg" side="top" align="start">
+                  {typeof window !== 'undefined' && (
+                    <EmojiPicker
+                      data={async () => {
+                        const response = await fetch('/emoji-data.json')
+                        return response.json()
+                      }}
+                      onEmojiSelect={handleEmojiSelect}
+                      theme="light"
+                      set="apple"
+                      maxFrequentRows={2}
+                      perLine={8}
+                    />
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              {/* Message Input */}
+              <div className="flex-1 relative">
+                <Input
+                  value={messageInput}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      void handleSendMessage()
+                    }
+                  }}
+                  placeholder={
+                    isConnected ? 'Type a message...' : 'Connecting...'
+                  }
+                  className="h-11 pr-12 resize-none border-2 focus:border-primary/50 transition-colors"
+                  disabled={!isConnected}
+                />
+              </div>
+
+              {/* Send Button */}
+              <Button
+                type="button"
+                size="icon"
+                disabled={!isConnected || !messageInput.trim()}
+                onClick={() => void handleSendMessage()}
+                className="shrink-0 h-11 w-11 rounded-full bg-primary hover:bg-primary/90 transition-all hover:scale-105"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

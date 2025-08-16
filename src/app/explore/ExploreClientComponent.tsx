@@ -1,4 +1,3 @@
-
 'use client'
 
 import {
@@ -32,7 +31,6 @@ import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import { searchPexelsImage } from '@/services/pexels'
 import { searchYouTubeVideoId } from '@/services/youtube'
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Skeleton } from '@/components/ui/skeleton'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { useToast } from '@/hooks/use-toast'
 import { updateUserProfileClient } from '@/services/users'
@@ -111,8 +109,10 @@ export default function ExploreClientComponent({
       weatherError: null,
     }))
   )
-  
-  const [mediaLoadingState, setMediaLoadingState] = useState<Record<string, {image: boolean, video: boolean}>>({})
+
+  const [mediaLoadingState, setMediaLoadingState] = useState<
+    Record<string, { image: boolean; video: boolean }>
+  >({})
 
   const [searchQuery, setSearchQuery] = useState('')
   const [wishlistProcessing, setWishlistProcessing] = useState<
@@ -133,11 +133,13 @@ export default function ExploreClientComponent({
   )
 
   const isLoadingInitialData = useMemo(() => {
-    if (initialDestinations.length === 0) return false;
+    if (initialDestinations.length === 0) return false
     // Check if any destination is still in its initial loading state
-    return Object.keys(mediaLoadingState).length < initialDestinations.length || Object.values(mediaLoadingState).some(s => s.image || s.video);
-  }, [mediaLoadingState, initialDestinations.length]);
-
+    return (
+      Object.keys(mediaLoadingState).length < initialDestinations.length ||
+      Object.values(mediaLoadingState).some((s) => s.image || s.video)
+    )
+  }, [mediaLoadingState, initialDestinations.length])
 
   // Memoize the displayed destinations to prevent unnecessary re-renders
   const displayedDestinations = useMemo(() => {
@@ -163,82 +165,92 @@ export default function ExploreClientComponent({
     return currentList
   }, [destinations, searchQuery, aiFilteredDestinationIds])
 
-  const fetchMediaForDestination = useCallback(async (dest: Destination, signal: AbortSignal) => {
-    const imageQuery = dest.aiHint || dest.name
-    let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400)
+  const fetchMediaForDestination = useCallback(
+    async (dest: Destination, signal: AbortSignal) => {
+      const imageQuery = dest.aiHint || dest.name
+      let pexelsImageUrl = dest.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400)
 
-    if (imageCache.has(imageQuery)) {
+      if (imageCache.has(imageQuery)) {
         pexelsImageUrl = imageCache.get(imageQuery)!
-    } else {
+      } else {
         try {
-            const fetchedUrl = await searchPexelsImage(imageQuery, 600, 400)
-            if (signal.aborted) return;
-            pexelsImageUrl = fetchedUrl
-            imageCache.set(imageQuery, fetchedUrl)
-            setCache(imageCache)
+          const fetchedUrl = await searchPexelsImage(imageQuery, 600, 400)
+          if (signal.aborted) return
+          pexelsImageUrl = fetchedUrl
+          imageCache.set(imageQuery, fetchedUrl)
+          setCache(imageCache)
         } catch (error) {
-            if ((error as Error).name !== 'AbortError') {
-              console.error(`Failed to load Pexels image for ${dest.name}:`, error)
-            }
+          if ((error as Error).name !== 'AbortError') {
+            console.error(
+              `Failed to load Pexels image for ${dest.name}:`,
+              error
+            )
+          }
         }
-    }
-    
-    setMediaLoadingState(prev => ({...prev, [dest.id]: {...(prev[dest.id] || {video: true}), image: false}}))
-    setDestinations(prev => prev.map(d => d.id === dest.id ? {...d, fetchedImageUrl: pexelsImageUrl} : d))
+      }
 
-    const youtubeQuery = dest.aiHint || `${dest.name} ${dest.region || dest.country || ''}`
-    try {
-        const fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery)
-        if (signal.aborted) return;
-        setDestinations(prev => prev.map(d => d.id === dest.id ? {...d, youtubeVideoId: fetchedYoutubeVideoId} : d))
-    } catch (error) {
-       if ((error as Error).name !== 'AbortError') {
-         console.error(`Failed to load YouTube video ID for ${dest.name}:`, error)
-       }
-    }
-    setMediaLoadingState(prev => ({...prev, [dest.id]: {...(prev[dest.id] || {image: false}), video: false}}))
+      setMediaLoadingState((prev) => ({
+        ...prev,
+        [dest.id]: { ...(prev[dest.id] || { video: false }), image: false },
+      }))
+      setDestinations((prev) =>
+        prev.map((d) =>
+          d.id === dest.id ? { ...d, fetchedImageUrl: pexelsImageUrl } : d
+        )
+      )
 
-  }, []);
+      // Don't automatically fetch YouTube videos on page load
+      // Videos will be fetched on-demand when user clicks "Watch Video" button
+    },
+    []
+  )
 
   useEffect(() => {
     const abortController = new AbortController()
-    
-    if (initialDestinations.length > 0) {
-        const initialLoadingState: Record<string, {image: boolean, video: boolean}> = {};
-        initialDestinations.forEach(d => {
-            initialLoadingState[d.id] = { image: true, video: true };
-        });
-        setMediaLoadingState(initialLoadingState);
 
-        initialDestinations.forEach(dest => {
-            fetchMediaForDestination(dest, abortController.signal)
-        });
-        
-        const firstDestinationWithCoords = initialDestinations.find(
-          (d) => d.coordinates?.lat && d.coordinates?.lng
+    if (initialDestinations.length > 0) {
+      const initialLoadingState: Record<
+        string,
+        { image: boolean; video: boolean }
+      > = {}
+      initialDestinations.forEach((d) => {
+        initialLoadingState[d.id] = { image: true, video: false }
+      })
+      setMediaLoadingState(initialLoadingState)
+
+      initialDestinations.forEach((dest) => {
+        fetchMediaForDestination(dest, abortController.signal)
+      })
+
+      const firstDestinationWithCoords = initialDestinations.find(
+        (d) => d.coordinates?.lat && d.coordinates?.lng
+      )
+      if (
+        firstDestinationWithCoords &&
+        firstDestinationWithCoords.coordinates
+      ) {
+        const { lat, lng } = firstDestinationWithCoords.coordinates
+        const zoomLevel = 0.5
+        setMapUrl(
+          `https://www.openstreetmap.org/export/embed.html?bbox=${
+            lng - zoomLevel
+          }%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${
+            lat + zoomLevel
+          }&layer=mapnik&marker=${lat}%2C${lng}`
         )
-        if (firstDestinationWithCoords && firstDestinationWithCoords.coordinates) {
-          const { lat, lng } = firstDestinationWithCoords.coordinates
-          const zoomLevel = 0.5
-          setMapUrl(
-            `https://www.openstreetmap.org/export/embed.html?bbox=${
-              lng - zoomLevel
-            }%2C${lat - zoomLevel}%2C${lng + zoomLevel}%2C${
-              lat + zoomLevel
-            }&layer=mapnik&marker=${lat}%2C${lng}`
-          )
-        } else {
-           setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`)
-        }
+      } else {
+        setMapUrl(
+          `https://www.openstreetmap.org/export/embed.html?bbox=68.0%2C25.0%2C97.0%2C35.0&layer=mapnik`
+        )
+      }
     } else {
-        setDestinations([])
+      setDestinations([])
     }
 
     return () => {
       abortController.abort()
     }
   }, [initialDestinations, fetchMediaForDestination])
-
 
   const handleApplyAIFilter = async () => {
     if (!aiFilterQuery.trim()) {
@@ -350,33 +362,67 @@ export default function ExploreClientComponent({
   const openVideoModal = (videoId: string) => setSelectedYouTubeVideoId(videoId)
   const closeVideoModal = () => setSelectedYouTubeVideoId(null)
 
-  const DestinationCardSkeleton = () => (
-    <Card className="overflow-hidden flex flex-col">
-      <CardHeader className="p-0 relative h-48">
-        <Skeleton className="h-full w-full" />
-      </CardHeader>
-      <CardContent className="p-4 flex-grow">
-        <Skeleton className="h-6 w-3/4 mb-2" />
-        <Skeleton className="h-4 w-1/2 mb-2" />
-        <div className="space-y-2 mt-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
-        </div>
-      </CardContent>
-      <CardFooter className="p-4 border-t grid grid-cols-2 gap-2 items-center">
-        <div className="flex items-center col-span-1">
-          <Skeleton className="h-5 w-5 mr-1.5 rounded-full" />
-          <Skeleton className="h-5 w-8" />
-        </div>
-        <Skeleton className="h-9 w-full col-span-1" />
-        <div className="col-span-full mt-2 grid grid-cols-2 gap-2">
-          <Skeleton className="h-9 w-full" />
-          <Skeleton className="h-9 w-full" />
-        </div>
-      </CardFooter>
-    </Card>
-  );
+  const fetchVideoForDestination = useCallback(
+    async (destination: DestinationWithMedia) => {
+      if (destination.youtubeVideoId) {
+        openVideoModal(destination.youtubeVideoId)
+        return
+      }
+
+      setMediaLoadingState((prev) => ({
+        ...prev,
+        [destination.id]: {
+          ...(prev[destination.id] || { image: false }),
+          video: true,
+        },
+      }))
+
+      try {
+        const youtubeQuery =
+          destination.aiHint ||
+          `${destination.name} ${
+            destination.region || destination.country || ''
+          }`
+        const fetchedYoutubeVideoId = await searchYouTubeVideoId(youtubeQuery)
+
+        if (fetchedYoutubeVideoId) {
+          setDestinations((prev) =>
+            prev.map((d) =>
+              d.id === destination.id
+                ? { ...d, youtubeVideoId: fetchedYoutubeVideoId }
+                : d
+            )
+          )
+          openVideoModal(fetchedYoutubeVideoId)
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Video Not Found',
+            description: 'Could not find a video for this destination.',
+          })
+        }
+      } catch (error) {
+        console.error(
+          `Failed to load YouTube video ID for ${destination.name}:`,
+          error
+        )
+        toast({
+          variant: 'destructive',
+          title: 'Video Load Failed',
+          description: 'Could not load video for this destination.',
+        })
+      } finally {
+        setMediaLoadingState((prev) => ({
+          ...prev,
+          [destination.id]: {
+            ...(prev[destination.id] || { image: false }),
+            video: false,
+          },
+        }))
+      }
+    },
+    [toast]
+  )
 
   return (
     <div className="space-y-8 container mx-auto max-w-7xl">
@@ -476,11 +522,7 @@ export default function ExploreClientComponent({
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoadingInitialData ? (
-          [...Array(initialDestinations.length || 3)].map((_, index) => (
-            <DestinationCardSkeleton key={`skeleton-${index}`} />
-          ))
-        ) : displayedDestinations.length > 0 ? (
+        {displayedDestinations.length > 0 ? (
           displayedDestinations.map((destination) => (
             <Card
               key={destination.id}
@@ -592,39 +634,36 @@ export default function ExploreClientComponent({
                       <RouteIcon className="mr-2 h-4 w-4" /> Plan Route
                     </Link>
                   </Button>
-                  {destination.youtubeVideoId && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-accent text-accent hover:bg-accent/10"
-                      onClick={() =>
-                        openVideoModal(destination.youtubeVideoId!)
-                      }
-                      disabled={mediaLoadingState[destination.id]?.video}
-                    >
-                      {mediaLoadingState[destination.id]?.video ? 
-                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> :
-                       <PlayCircle className="mr-2 h-4 w-4" />
-                      }
-                      Watch Video
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-accent text-accent hover:bg-accent/10"
+                    onClick={() => fetchVideoForDestination(destination)}
+                    disabled={mediaLoadingState[destination.id]?.video}
+                  >
+                    {mediaLoadingState[destination.id]?.video ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <PlayCircle className="mr-2 h-4 w-4" />
+                    )}
+                    Watch Video
+                  </Button>
                 </div>
               </CardFooter>
             </Card>
           ))
         ) : (
           <div className="md:col-span-2 lg:col-span-3">
-             <Card>
-                <CardContent className="p-6 text-center">
+            <Card>
+              <CardContent className="p-6 text-center">
                 <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold">No Treks Found</h3>
                 <p className="text-muted-foreground">
-                    {searchQuery || aiFilterQuery
+                  {searchQuery || aiFilterQuery
                     ? 'Try adjusting your search or AI filter query.'
                     : 'There are no treks available at the moment.'}
                 </p>
-                </CardContent>
+              </CardContent>
             </Card>
           </div>
         )}

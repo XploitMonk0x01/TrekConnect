@@ -1,0 +1,102 @@
+{
+  "categories": [
+    {
+      "id": "people",
+      "name": "Smileys & People",
+      "emojis": [
+        "grinning", "smiley", "smile", "grin", "laughing", "sweat_smile", "joy", "rofl",
+        "relaxed", "blush", "innocent", "wink", "relieved", "heart_eyes", "kissing_heart",
+        "kissing", "kissing_smiling_eyes", "kissing_closed_eyes", "yum", "stuck_out_tongue",
+        "stuck_out_tongue_winking_eye", "stuck_out_tongue_closed_eyes", "money_mouth_face",
+        "hugs", "hand_over_mouth", "shushing_face", "thinking", "zipper_mouth_face",
+        "raised_eyebrow", "neutral_face", "expressionless", "no_mouth", "smirk",
+        "unamused", "roll_eyes", "grimacing", "lying_face", "frowning", "anguished",
+        "fearful", "weary", "sleepy", "tired_face", "worried", "confused", "slightly_frowning_face",
+        "frowning_face", "persevere", "confounded", "disappointed", "sweat", "sob", "scream",
+        "hot_face", "cold_face", "flushed", "dizzy_face", "rage", "angry", "triumph",
+        "skull", "heart", "yellow_heart", "green_heart", "blue_heart", "purple_heart"
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Animals & Nature",
+      "emojis": [
+        "dog", "cat", "mouse", "hamster", "rabbit", "fox", "bear", "panda", "koala",
+        "tiger", "lion", "cow", "pig", "monkey", "chicken", "penguin", "bird", "dove",
+        "eagle", "duck", "swan", "owl", "flamingo", "peacock", "parrot", "frog", "crocodile",
+        "turtle", "lizard", "snake", "dragon", "sauropod", "t-rex", "whale", "dolphin",
+        "fish", "tropical_fish", "blowfish", "shark", "octopus", "shell", "snail", "butterfly",
+        "bug", "ant", "bee", "beetle", "cricket", "spider", "scorpion", "mosquito", "microbe",
+        "bouquet", "cherry_blossom", "white_flower", "rosette", "rose", "wilted_flower",
+        "hibiscus", "sunflower", "blossom", "tulip", "seedling", "evergreen_tree", "deciduous_tree",
+        "palm_tree", "cactus", "ear_of_rice", "herb", "shamrock", "four_leaf_clover", "maple_leaf",
+        "fallen_leaf", "leaves"
+      ]
+    },
+    {
+      "id": "food",
+      "name": "Food & Drink",
+      "emojis": [
+        "grapes", "melon", "watermelon", "orange", "lemon", "banana", "pineapple", "mango",
+        "apple", "green_apple", "pear", "peach", "cherries", "strawberry", "kiwi", "tomato",
+        "coconut", "avocado", "eggplant", "potato", "carrot", "corn", "hot_pepper", "cucumber",
+        "leafy_greens", "broccoli", "garlic", "onion", "mushroom", "peanuts", "chestnut",
+        "bread", "croissant", "baguette", "pretzel", "bagel", "pancakes", "waffle", "cheese",
+        "meat_on_bone", "poultry_leg", "cut_of_meat", "bacon", "hamburger", "fries", "pizza",
+        "hotdog", "sandwich", "taco", "burrito", "stuffed_flatbread", "falafel", "egg",
+        "fried_egg", "shallow_pan_of_food", "stew", "fondue", "bowl_with_spoon", "green_salad",
+        "popcorn", "butter", "salt", "canned_food", "bento", "rice_cracker", "rice_ball",
+        "rice", "curry", "ramen", "spaghetti", "sweet_potato", "oden", "sushi", "fried_shrimp",
+        "fish_cake", "moon_cake", "dango", "dumpling", "fortune_cookie", "takeout_box"
+      ]
+    },
+    {
+      "id": "activity",
+      "name": "Activities",
+      "emojis": [
+        "soccer", "basketball", "football", "baseball", "softball", "tennis", "volleyball",
+        "rugby_football", "flying_disc", "bowling", "cricket_game", "field_hockey",
+        "ice_hockey", "lacrosse", "ping_pong", "badminton", "boxing_glove", "martial_arts_uniform",
+        "goal_net", "golf", "ice_skate", "fishing_pole_and_fish", "diving_mask", "running_shirt",
+        "ski", "sled", "curling_stone", "dart", "yo-yo", "kite", "8ball", "crystal_ball",
+        "video_game", "joystick", "slot_machine", "game_die", "puzzle_piece", "teddy_bear",
+        "spades", "hearts", "diamonds", "clubs", "chess_pawn", "black_joker", "mahjong",
+        "flower_playing_cards", "performing_arts", "framed_picture", "art", "thread", "yarn"
+      ]
+    },
+    {
+      "id": "travel",
+      "name": "Travel & Places",
+      "emojis": [
+        "car", "taxi", "blue_car", "bus", "trolleybus", "racing_car", "police_car",
+        "ambulance", "fire_engine", "minibus", "truck", "articulated_lorry", "tractor",
+        "kick_scooter", "motorcycle", "bike", "motor_scooter", "busstop", "motorway",
+        "railway_track", "oil_drum", "fuelpump", "rotating_light", "traffic_light",
+        "vertical_traffic_light", "stop_sign", "construction", "anchor", "sailboat",
+        "canoe", "speedboat", "passenger_ship", "ferry", "motor_boat", "ship", "airplane",
+        "small_airplane", "flight_departure", "flight_arrival", "parachute", "seat",
+        "helicopter", "suspension_railway", "mountain_cableway", "aerial_tramway", "satellite",
+        "rocket", "flying_saucer", "bellhop_bell", "luggage", "hourglass", "hourglass_flowing_sand",
+        "watch", "alarm_clock", "stopwatch", "timer_clock", "mantelpiece_clock", "clock12"
+      ]
+    },
+    {
+      "id": "objects",
+      "name": "Objects",
+      "emojis": [
+        "watch", "iphone", "calling", "computer", "keyboard", "desktop_computer", "printer",
+        "computer_mouse", "trackball", "joystick", "compression", "minidisc", "floppy_disk",
+        "cd", "dvd", "abacus", "movie_camera", "film_strip", "film_projector", "clapper",
+        "tv", "camera", "camera_flash", "video_camera", "vhs", "mag", "mag_right",
+        "candle", "bulb", "flashlight", "izakaya_lantern", "diya_lamp", "notebook_with_decorative_cover",
+        "closed_book", "book", "green_book", "blue_book", "orange_book", "books", "notebook",
+        "ledger", "page_with_curl", "scroll", "page_facing_up", "newspaper", "newspaper_roll",
+        "bookmark_tabs", "bookmark", "label", "moneybag", "yen", "dollar", "euro", "pound",
+        "money_with_wings", "credit_card", "receipt", "chart", "email", "e-mail", "incoming_envelope",
+        "envelope_with_arrow", "outbox_tray", "inbox_tray", "package", "mailbox", "mailbox_closed",
+        "mailbox_with_mail", "mailbox_with_no_mail", "postbox", "ballot_box", "pencil2",
+        "black_nib", "fountain_pen", "pen", "paintbrush", "crayon", "memo", "briefcase"
+      ]
+    }
+  ]
+}

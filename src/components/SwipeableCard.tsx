@@ -16,14 +16,27 @@ export function SwipeableCard({ user, onSwipe, isActive }: SwipeableCardProps) {
   const [isDragging, setIsDragging] = useState(false)
   const x = useMotionValue(0)
   const y = useMotionValue(0)
-  const rotate = useTransform(x, [-200, 200], [-25, 25])
-  const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0])
+  const rotate = useTransform(x, [-300, 300], [-30, 30])
+  const opacity = useTransform(x, [-300, -150, 0, 150, 300], [0, 1, 1, 1, 0])
 
-  // Visual feedback transforms
-  const likeOpacity = useTransform(x, [0, 100, 200], [0, 0.5, 1])
-  const nopeOpacity = useTransform(x, [-200, -100, 0], [1, 0.5, 0])
-  const likeScale = useTransform(x, [0, 100, 200], [0.8, 1, 1.2])
-  const nopeScale = useTransform(x, [-200, -100, 0], [1.2, 1, 0.8])
+  // Enhanced visual feedback transforms for smoother animations
+  const likeOpacity = useTransform(x, [25, 150], [0, 1])
+  const nopeOpacity = useTransform(x, [-150, -25], [1, 0])
+  const likeScale = useTransform(x, [25, 150], [0.5, 1.1])
+  const nopeScale = useTransform(x, [-150, -25], [1.1, 0.5])
+
+  // Background color changes
+  const backgroundTint = useTransform(
+    x,
+    [-150, -25, 0, 25, 150],
+    [
+      'rgba(239, 68, 68, 0.1)', // red tint for left swipe
+      'rgba(0, 0, 0, 0)',
+      'rgba(0, 0, 0, 0)',
+      'rgba(0, 0, 0, 0)',
+      'rgba(34, 197, 94, 0.1)', // green tint for right swipe
+    ]
+  )
 
   const handleDragStart = () => {
     setIsDragging(true)
@@ -32,8 +45,8 @@ export function SwipeableCard({ user, onSwipe, isActive }: SwipeableCardProps) {
   const handleDragEnd = (event: any, info: PanInfo) => {
     setIsDragging(false)
 
-    const swipeThreshold = 100
-    const velocityThreshold = 500
+    const swipeThreshold = 120
+    const velocityThreshold = 300
 
     if (
       Math.abs(info.offset.x) > swipeThreshold ||
@@ -41,6 +54,10 @@ export function SwipeableCard({ user, onSwipe, isActive }: SwipeableCardProps) {
     ) {
       const direction = info.offset.x > 0 ? 'right' : 'left'
       onSwipe(direction)
+    } else {
+      // Smooth return to center if not swiped far enough
+      x.set(0)
+      y.set(0)
     }
   }
 
@@ -66,24 +83,43 @@ export function SwipeableCard({ user, onSwipe, isActive }: SwipeableCardProps) {
       }}
       drag={isActive ? 'x' : false}
       dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.8}
+      dragElastic={0.2}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      whileDrag={{ scale: 1.05 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      whileDrag={{ scale: 1.02, zIndex: 1000 }}
+      transition={{
+        type: 'spring',
+        stiffness: 400,
+        damping: 40,
+        mass: 1,
+      }}
       className="touch-none"
     >
+      {/* Background color overlay for visual feedback */}
+      <motion.div
+        style={{
+          backgroundColor: backgroundTint,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderRadius: '1rem',
+          zIndex: 1,
+        }}
+      />
+
       {/* Like indicator */}
       <motion.div
         style={{
           opacity: likeOpacity,
           scale: likeScale,
         }}
-        className="absolute top-8 left-8 z-10 transform -rotate-12"
+        className="absolute top-12 left-6 z-20 transform -rotate-12"
       >
-        <div className="bg-green-500 text-white px-6 py-2 rounded-lg border-4 border-white shadow-lg">
-          <Heart className="h-8 w-8 fill-white" />
-          <span className="block text-sm font-bold">LIKE</span>
+        <div className="bg-green-500 text-white px-4 py-3 rounded-xl border-4 border-white shadow-2xl flex items-center gap-2">
+          <Heart className="h-6 w-6 fill-white" />
+          <span className="text-xl font-bold tracking-wide">LIKE</span>
         </div>
       </motion.div>
 
@@ -93,16 +129,16 @@ export function SwipeableCard({ user, onSwipe, isActive }: SwipeableCardProps) {
           opacity: nopeOpacity,
           scale: nopeScale,
         }}
-        className="absolute top-8 right-8 z-10 transform rotate-12"
+        className="absolute top-12 right-6 z-20 transform rotate-12"
       >
-        <div className="bg-red-500 text-white px-6 py-2 rounded-lg border-4 border-white shadow-lg">
-          <X className="h-8 w-8" />
-          <span className="block text-sm font-bold">NOPE</span>
+        <div className="bg-red-500 text-white px-4 py-3 rounded-xl border-4 border-white shadow-2xl flex items-center gap-2">
+          <X className="h-6 w-6" />
+          <span className="text-xl font-bold tracking-wide">NOPE</span>
         </div>
       </motion.div>
 
       {/* The actual card */}
-      <div className="w-full h-full">
+      <div className="w-full h-full relative z-10">
         <UserProfileCard user={user} />
       </div>
     </motion.div>

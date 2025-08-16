@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserProfile, deleteUserProfile } from '@/services/users'
+import { auth } from '@/lib/firebase'
+import {
+  deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from 'firebase/auth'
 import { revalidateTag } from 'next/cache'
 
 // Helper to check for authorization (is the request from the user themselves?)
@@ -48,7 +54,7 @@ export async function GET(
   }
 }
 
-// DELETE a user profile from Firebase RTDB
+// DELETE a user profile and Firebase auth account
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { userId: string } }
@@ -61,20 +67,44 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const success = await deleteUserProfile(userId)
-
-    if (!success) {
+    // Get the current Firebase user
+    const currentUser = auth.currentUser
+    if (!currentUser || currentUser.uid !== userId) {
       return NextResponse.json(
-        { error: 'Failed to delete user or user not found' },
-        { status: 400 }
+        { error: 'User not authenticated or user mismatch' },
+        { status: 401 }
       )
     }
 
+    // Delete user profile from database first
+    const profileDeleted = await deleteUserProfile(userId)
+    if (!profileDeleted) {
+      console.warn(
+        'Failed to delete user profile from database, but continuing with auth deletion'
+      )
+    }
+
+    // Delete the Firebase auth account
+    try {
+      await deleteUser(currentUser)
+    } catch (error: any) {
+      if (error.code === 'auth/requires-recent-login') {
+        return NextResponse.json(
+          {
+            error:
+              'Please sign out and sign in again before deleting your account',
+          },
+          { status: 400 }
+        )
+      }
+      throw error
+    }
+
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting user:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

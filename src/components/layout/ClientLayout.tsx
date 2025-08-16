@@ -1,4 +1,3 @@
-
 'use client'
 
 import { ReactNode } from 'react'
@@ -14,13 +13,15 @@ export function ClientLayout({ children }: { children: ReactNode }) {
     <Providers>
       <Toaster />
       <SidebarProvider defaultOpen>
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen bg-background">
           <AppSidebar />
-          <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[state=expanded]/sidebar-wrapper:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear">
+          <div
+            className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[state=expanded]/sidebar-wrapper:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear"
+            role="main"
+          >
             <AppHeader />
-            <main className="flex-1 bg-background p-4 sm:p-6 lg:p-8">
-              {/* Removed container from here to allow pages to control their own max-width */}
-              {children}
+            <main className="flex-1 p-4 sm:p-6 lg:p-8">
+              <div className="container mx-auto max-w-7xl">{children}</div>
             </main>
             <Footer />
           </div>

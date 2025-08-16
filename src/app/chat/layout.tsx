@@ -1,12 +1,10 @@
+'use client'
+
 export default function ChatLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  // This layout wrapper ensures that the chat page can correctly use a full-height container.
-  return (
-    <div className="h-full">
-      {children}
-    </div>
-  )
+  // Chat layout removes the main AppHeader for a full-screen chat experience
+  return <div className="h-screen w-full bg-background">{children}</div>
 }

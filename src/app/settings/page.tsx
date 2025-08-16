@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -272,21 +271,24 @@ export default function SettingsPage() {
     if (authIsLoading || isLoadingForm) {
       return (
         <div className="space-y-4">
+          {/* Name and Email fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Skeleton className="h-4 w-1/4 mb-2" />
-              <Skeleton className="h-10 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" /> {/* Label: Full Name */}
+              <Skeleton className="h-10 w-full" /> {/* Input */}
             </div>
-            <div>
-              <Skeleton className="h-4 w-1/4 mb-2" />
-              <Skeleton className="h-10 w-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-28" /> {/* Label: Email Address */}
+              <Skeleton className="h-10 w-full" /> {/* Input */}
             </div>
           </div>
-          <div>
-            <Skeleton className="h-4 w-1/4 mb-2" />
-            <Skeleton className="h-20 w-full" />
+          {/* Bio field */}
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-12" /> {/* Label: Bio */}
+            <Skeleton className="h-20 w-full" /> {/* Textarea rows=3 */}
           </div>
-          <Skeleton className="h-10 w-24" />
+          {/* Submit Button */}
+          <Skeleton className="h-10 w-48" />
         </div>
       )
     }
@@ -383,7 +385,25 @@ export default function SettingsPage() {
   }
 
   const renderPasswordForm = () => {
-    if (authIsLoading || isLoadingForm) return null // Don't show password form if initial user load is pending
+    if (authIsLoading || isLoadingForm) {
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <Skeleton className="h-10 w-40" />
+        </div>
+      )
+    }
     if (!currentUser) return null // No form if not logged in
 
     return (

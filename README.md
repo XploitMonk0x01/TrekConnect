@@ -1,70 +1,274 @@
 # TrekConnect 🏔️
 
-TrekConnect is a modern, AI-powered travel application designed to connect trekkers, help them discover new destinations, and share their adventures. Built with Next.js and Firebase, it offers a seamless and interactive experience for travel enthusiasts.
+<div align="center">
+
+[![Next.js](https://img.shields.io/badge/Next.js-15.3-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?style=for-the-badge&logo=typescript)](https://typescriptlang.org/)
+[![Firebase](https://img.shields.io/badge/Firebase-10.12-orange?style=for-the-badge&logo=firebase)](https://firebase.google.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
+
+_A modern, AI-powered travel application connecting trekkers worldwide_
+
+[Demo](#) • [Documentation](./docs/) • [API Reference](#) • [Contributing](#)
+
+</div>
 
 ## ✨ Features
 
-*   **Explore Destinations**: Discover and learn about various trekking destinations, complete with photos, weather information, and AI-generated custom route planning.
-*   **ConnectSphere**: A Tinder-like swiping interface to find and connect with other trekkers based on their profiles.
-*   **Real-time Chat**: Once matched, engage in one-on-one real-time chat to plan your next adventure.
-*   **AI-Powered Recommendations**: Get smart suggestions for travel companions and new treks to explore based on your profile and preferences.
-*   **Photo & Story Feed**: Share your travel photos and write inspiring stories from your journeys for the community to see.
-*   **User Profiles**: Create and customize your profile to showcase your trekking experience, travel style, and wishlist.
+### 🗺️ **Explore Destinations**
+
+- Discover breathtaking trekking destinations with rich details
+- View high-quality photos from Pexels API integration
+- Get real-time weather information for each location
+- AI-powered custom route planning with Genkit
+- Interactive maps and detailed travel information
+
+### 💫 **ConnectSphere**
+
+- Tinder-style swiping interface for finding travel companions
+- Smart matching based on travel preferences and experience
+- Smooth animations and haptic feedback
+- Instant chat access after successful matches
+
+### 💬 **Real-time Chat**
+
+- WebSocket-powered real-time messaging
+- Modern chat interface with emoji picker support
+- Responsive design optimized for all screen sizes
+- Message status indicators and typing notifications
+- Media sharing capabilities
+
+### 🤖 **AI-Powered Recommendations**
+
+- Smart travel companion suggestions using Google Gemini
+- Personalized trek recommendations based on your profile
+- AI-driven destination filtering and search
+- Custom route generation for unique adventures
+
+### 📸 **Photo & Story Feed**
+
+- Share your travel experiences with the community
+- Upload and organize your trek photos
+- Write inspiring stories from your journeys
+- Interactive feed with likes and comments
+
+### 👤 **User Profiles**
+
+- Comprehensive profile customization
+- Showcase your trekking experience and skills
+- Manage your travel wishlist and history
+- Privacy controls and account management
 
 ## 🛠️ Tech Stack
 
-*   **Framework**: [Next.js](https://nextjs.org/) (App Router)
-*   **Language**: [TypeScript](https://www.typescriptlang.org/)
-*   **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [ShadCN UI](https://ui.shadcn.com/)
-*   **Generative AI**: [Genkit](https://firebase.google.com/docs/genkit) with Gemini models
-*   **Backend & Database**: [Firebase](https://firebase.google.com/) (Authentication, Realtime Database for chat)
-*   **Database (Legacy)**: MongoDB was previously used and is being migrated from.
+### **Frontend**
 
-## 🚀 Getting Started
+- **Framework**: [Next.js 15.3](https://nextjs.org/) with App Router
+- **Language**: [TypeScript 5.8](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS 3.4](https://tailwindcss.com/) + [ShadCN UI](https://ui.shadcn.com/)
+- **Animations**: [Framer Motion 12.18](https://www.framer.com/motion/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
-Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
+### **Backend & Services**
+
+- **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth)
+- **Database**: [Firebase Realtime Database](https://firebase.google.com/docs/database)
+- **AI/ML**: [Google Genkit](https://firebase.google.com/docs/genkit) with Gemini models
+- **External APIs**: Pexels, YouTube Data API v3
+
+### **Development**
+
+- **Build Tool**: [Turbopack](https://turbo.build/)
+- **Linting**: ESLint with Next.js config
+- **Type Checking**: TypeScript strict mode
+- **Package Manager**: npm/yarn
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-*   Node.js (v18 or later)
-*   npm or yarn
+- **Node.js** 18.0.0 or later
+- **npm** 9.0.0 or later (or **yarn** 1.22.0+)
+- **Git** for version control
 
-### Installation & Setup
+### Installation
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-name>
-    ```
+1. **Clone the repository**
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    # or
-    yarn install
-    ```
+   ```bash
+   git clone https://github.com/XploitMonk0x01/TrekConnect.git
+   cd TrekConnect
+   ```
 
-3.  **Set up environment variables:**
-    Create a `.env` file in the root of the project and add the necessary Firebase and other API credentials. You can use `.env.example` as a template.
+2. **Install dependencies**
 
-4.  **Run the development server:**
-    ```bash
-    npm run dev
-    ```
-    The application will be available at `http://localhost:9002`.
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-5.  **Run the Genkit development server:**
-    For AI features, you'll need to run the Genkit server in a separate terminal:
-    ```bash
-    npm run genkit:dev
-    ```
+3. **Environment Setup**
 
-## 📂 Project Structure
+   ```bash
+   # Copy the example environment file
+   cp .env.example .env.local
 
-*   `src/app/`: Main application routes using the Next.js App Router.
-*   `src/components/`: Reusable React components.
-*   `src/contexts/`: React context providers for state management (e.g., Auth, Chat).
-*   `src/ai/`: Contains all Genkit flows for AI-powered features.
-*   `src/lib/`: Core libraries, constants, and Firebase configuration.
-*   `src/services/`: Functions for interacting with backend services (Firebase, Pexels API, etc.).
-*   `public/`: Static assets like images and fonts.
+   # Edit the .env.local file with your API keys
+   ```
+
+4. **Start the development servers**
+
+   **Option A: Automatic (Recommended)**
+
+   - Open the project in VS Code
+   - Development and AI servers will start automatically
+
+   **Option B: Manual**
+
+   ```bash
+   # Terminal 1: Next.js development server
+   npm run dev
+
+   # Terminal 2: Genkit AI server (new terminal)
+   npm run genkit:dev
+   ```
+
+5. **Access the application**
+   - Main app: [http://localhost:9002](http://localhost:9002)
+   - Genkit UI: Check terminal output for Genkit URL
+
+## 📁 Project Structure
+
+```
+TrekConnect/
+├── 📂 src/
+│   ├── 📂 app/                 # Next.js App Router pages
+│   │   ├── 📂 auth/            # Authentication pages
+│   │   ├── 📂 chat/            # Real-time chat interface
+│   │   ├── 📂 connect/         # User matching (ConnectSphere)
+│   │   ├── 📂 explore/         # Destination discovery
+│   │   ├── 📂 feed/            # Social feed
+│   │   ├── 📂 profile/         # User profiles
+│   │   └── 📂 api/             # API routes
+│   ├── 📂 components/          # Reusable React components
+│   │   ├── 📂 ui/              # ShadCN UI components
+│   │   └── 📂 layout/          # Layout components
+│   ├── 📂 contexts/            # React Context providers
+│   ├── 📂 ai/                  # Genkit AI flows and functions
+│   ├── 📂 lib/                 # Core utilities and configuration
+│   ├── 📂 services/            # External API integrations
+│   └── 📂 hooks/               # Custom React hooks
+├── 📂 public/                  # Static assets
+├── 📂 docs/                    # Documentation
+└── 📂 .vscode/                 # VS Code configuration
+```
+
+## 🔧 Available Scripts
+
+| Command                | Description                             |
+| ---------------------- | --------------------------------------- |
+| `npm run dev`          | Start development server with Turbopack |
+| `npm run genkit:dev`   | Start Genkit AI development server      |
+| `npm run genkit:watch` | Start Genkit with file watching         |
+| `npm run build`        | Build production application            |
+| `npm run start`        | Start production server                 |
+| `npm run lint`         | Run ESLint                              |
+| `npm run typecheck`    | Run TypeScript type checking            |
+
+## 🔑 Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+# Firebase Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=your_database_url
+
+# Google AI API
+GOOGLE_API_KEY=your_google_api_key
+
+# External APIs
+PEXELS_API_KEY=your_pexels_key
+YOUTUBE_API_KEY=your_youtube_key
+```
+
+## 🤖 AI Features
+
+TrekConnect leverages Google's Genkit framework for powerful AI capabilities:
+
+- **Smart Matching**: AI analyzes user profiles for compatible travel companions
+- **Destination Recommendations**: Personalized suggestions based on preferences
+- **Route Planning**: Custom trek routes generated using AI
+- **Content Filtering**: AI-powered search and filtering
+
+## 📱 Responsive Design
+
+- **Mobile First**: Optimized for mobile devices
+- **Tablet Support**: Enhanced experience on tablets
+- **Desktop**: Full-featured desktop interface
+- **Large Screens**: Specialized layouts for large displays
+
+## 🔒 Security Features
+
+- **Firebase Authentication**: Secure user authentication
+- **Protected Routes**: Route-level access control
+- **Input Validation**: Comprehensive form validation
+- **XSS Protection**: Built-in security measures
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Configure environment variables
+4. Deploy automatically
+
+### Firebase Hosting
+
+```bash
+npm run build
+firebase deploy
+```
+
+## 📝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes
+4. Run tests: `npm run typecheck && npm run lint`
+5. Commit: `git commit -m 'Add amazing feature'`
+6. Push: `git push origin feature/amazing-feature`
+7. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Next.js Team](https://nextjs.org/) for the amazing framework
+- [Firebase](https://firebase.google.com/) for backend services
+- [Google Genkit](https://firebase.google.com/docs/genkit) for AI capabilities
+- [ShadCN UI](https://ui.shadcn.com/) for beautiful components
+- [Pexels](https://pexels.com/) for high-quality images
+
+## 📞 Support
+
+- 📧 Email: support@trekconnect.com
+- 💬 Discord: [Join our community](https://discord.gg/trekconnect)
+- 🐛 Issues: [GitHub Issues](https://github.com/XploitMonk0x01/TrekConnect/issues)
+
+---
+
+<div align="center">
+  <p>Made with ❤️ by the TrekConnect Team</p>
+  <p>Happy Trekking! 🏔️</p>
+</div>

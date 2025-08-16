@@ -1,4 +1,10 @@
 {
-    "IDX.aI.enableInlineCompletion": true,
-    "IDX.aI.enableCodebaseIndexing": true
+  "IDX.aI.enableInlineCompletion": true,
+  "IDX.aI.enableCodebaseIndexing": true,
+  "terminal.integrated.allowWorkspaceConfiguration": true,
+  "terminal.integrated.autoReplies": {
+    "Are you sure you want to terminate the running process?": "y"
+  },
+  "terminal.integrated.confirmOnExit": "never",
+  "terminal.integrated.confirmOnKill": "never"
 }

@@ -1,0 +1,36 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "terminal.integrated.allowWorkspaceConfiguration": true,
+    "task.allowAutomaticTasks": "on",
+    "task.autoDetect": "on"
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Auto-start Development",
+        "type": "shell",
+        "command": "npm run dev",
+        "group": "build",
+        "isBackground": true,
+        "runOptions": {
+          "runOn": "folderOpen"
+        },
+        "presentation": {
+          "echo": true,
+          "reveal": "always",
+          "focus": false,
+          "panel": "new",
+          "showReuseMessage": false,
+          "clear": false
+        },
+        "problemMatcher": []
+      }
+    ]
+  }
+}

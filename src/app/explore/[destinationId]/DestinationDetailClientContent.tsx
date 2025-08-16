@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -86,6 +85,7 @@ export default function DestinationDetailClientContent({
   )
   const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   const [isWishlistProcessing, setIsWishlistProcessing] = useState(false)
+  const [isMapLoaded, setIsMapLoaded] = useState(false)
 
   useEffect(() => {
     setDestination(initialDestination)
@@ -307,7 +307,7 @@ export default function DestinationDetailClientContent({
     <div className="space-y-8 container mx-auto max-w-7xl">
       <div className="flex items-center justify-between">
         <Button asChild variant="outline">
-          <Link href="/explore">
+          <Link href="/explore" prefetch>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Explore
           </Link>
         </Button>
@@ -424,6 +424,7 @@ export default function DestinationDetailClientContent({
               >
                 <Link
                   href={`/explore/routes/new?destinationId=${destination.id}`}
+                  prefetch
                 >
                   <RouteIcon className="mr-2 h-4 w-4" /> Create Custom Route
                 </Link>
@@ -489,27 +490,26 @@ export default function DestinationDetailClientContent({
               </CardHeader>
               <CardContent>
                 {mapEmbedUrl ? (
-                  <iframe
-                    width="100%"
-                    height="200"
-                    frameBorder="0"
-                    scrolling="no"
-                    marginHeight={0}
-                    marginWidth={0}
-                    src={mapEmbedUrl}
-                    className="rounded-lg"
-                    title={`Map of ${destination.name}`}
-                  ></iframe>
-                ) : (
-                  <div className="h-48 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-                    <p>Map data unavailable for {destination.name}</p>
+                  <div className="relative h-[200px] w-full rounded-lg overflow-hidden border">
+                    <Skeleton
+                      className={`absolute inset-0 transition-opacity duration-300 ${
+                        isMapLoaded ? 'opacity-0' : 'opacity-100'
+                      }`}
+                    />
+                    <iframe
+                      width="100%"
+                      height="200"
+                      loading="lazy"
+                      src={mapEmbedUrl}
+                      className={`transition-opacity duration-300 ${
+                        isMapLoaded ? 'opacity-100' : 'opacity-0'
+                      }`}
+                      onLoad={() => setIsMapLoaded(true)}
+                      title={`Map of ${destination.name}`}
+                    ></iframe>
                   </div>
-                )}
-                {destination.coordinates && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Lat: {destination.coordinates.lat.toFixed(4)}, Lng:{' '}
-                    {destination.coordinates.lng.toFixed(4)}
-                  </p>
+                ) : (
+                  <p className="text-muted-foreground">Map not available.</p>
                 )}
               </CardContent>
             </Card>
@@ -610,12 +610,7 @@ export default function DestinationDetailClientContent({
         <CardContent className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {areTravelerPhotosLoading
             ? [...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-square bg-muted rounded-lg overflow-hidden relative"
-                >
-                  <Skeleton className="h-full w-full" />
-                </div>
+                <Skeleton key={i} className="aspect-square rounded-lg" />
               ))
             : travelerPhotos.length > 0
             ? travelerPhotos.map((photoUrl, i) => (
@@ -654,7 +649,7 @@ export default function DestinationDetailClientContent({
               ))}
           <Button
             variant="outline"
-            className="aspect-square flex flex-col items-center justify-center text-muted-foreground hover:bg-primary/5 hover:text-primary border-primary"
+            className="aspect-square flex flex-col items-center justify-center text-muted-foreground hover:bg-primary/5 hover:text-primary"
             disabled
           >
             <ExternalLink className="h-6 w-6 mb-1" />
