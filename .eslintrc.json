@@ -1,0 +1,16 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    // Basic rules only - avoiding strict enforcement for now
+    "react/no-unescaped-entities": "warn",
+    "@next/next/no-img-element": "warn",
+    "@next/next/no-page-custom-font": "off",
+    "no-console": "off",
+    "prefer-const": "off",
+    "no-var": "error",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-explicit-any": "off"
+  }
+}

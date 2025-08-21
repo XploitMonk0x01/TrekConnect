@@ -1,3 +1,6 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Card,
@@ -9,11 +12,95 @@ import {
 import { Button } from '@/components/ui/button'
 import { PhotoCard } from '@/components/PhotoCard'
 import type { Photo } from '@/lib/types'
-import { UploadCloud, Image as ImageIcon } from 'lucide-react'
-import { getAllPhotos } from '@/services/photos' // Import the service
+import {
+  UploadCloud,
+  Image as ImageIcon,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react'
+import { getAllPhotos } from '@/services/photos'
+import { useCustomAuth } from '@/contexts/CustomAuthContext'
 
-export default async function PhotoFeedPage() {
-  const photos: Photo[] = await getAllPhotos()
+export default function PhotoFeedPage() {
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { user, isLoading: authLoading } = useCustomAuth()
+
+  useEffect(() => {
+    async function fetchPhotos() {
+      if (authLoading) return // Wait for auth to load
+
+      if (!user) {
+        setError('Please sign in to view photos')
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        setError(null)
+        const fetchedPhotos = await getAllPhotos()
+        setPhotos(fetchedPhotos)
+      } catch (err) {
+        console.error('Error fetching photos:', err)
+        setError('Failed to load photos. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPhotos()
+  }, [user, authLoading])
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-lg">Loading photos...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="space-y-8 container mx-auto max-w-7xl">
+        <Card className="shadow-lg">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <h3 className="text-xl font-semibold mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              Please sign in to view and share photos with the community.
+            </p>
+            <Button asChild>
+              <Link href="/auth/signin?redirect=/feed">
+                Sign In to Continue
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 container mx-auto max-w-7xl">
+        <Card className="shadow-lg">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Error Loading Photos</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 container mx-auto max-w-7xl">

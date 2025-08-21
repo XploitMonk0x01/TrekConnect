@@ -1,4 +1,3 @@
-
 'use client'
 
 import Link from 'next/link'
@@ -329,7 +328,7 @@ export default function ProfilePage() {
             <CardHeader>
               <CardTitle className="font-headline">My Travel History</CardTitle>
               <CardDescription>
-                Places I've explored and conquered.
+                Places I&apos;ve explored and conquered.
               </CardDescription>
             </CardHeader>
             <CardContent>

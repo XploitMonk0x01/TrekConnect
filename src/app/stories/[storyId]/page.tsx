@@ -1,4 +1,3 @@
-
 'use server'
 
 import { Button } from '@/components/ui/button'
@@ -32,8 +31,13 @@ interface Comment {
 // Mock comments are removed. In a real app, these would be fetched.
 // const mockComments: Comment[] = [];
 
-export default async function Page({ params }: { params: { storyId: string } }) {
-  const story = await getStoryById(params.storyId)
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ storyId: string }>
+}) {
+  const { storyId } = await params
+  const story = await getStoryById(storyId)
 
   if (!story) {
     return (
@@ -41,8 +45,8 @@ export default async function Page({ params }: { params: { storyId: string } }) 
         <BookOpen className="w-16 h-16 text-muted-foreground mb-4" />
         <h1 className="text-2xl font-semibold">Story not found</h1>
         <p className="text-muted-foreground">
-          The story (ID: {params.storyId}) you are looking for does not exist or
-          has been moved.
+          The story (ID: {storyId}) you are looking for does not exist or has
+          been moved.
         </p>
         <Button asChild className="mt-4">
           <Link href="/stories">Back to Stories</Link>

@@ -1,4 +1,3 @@
-
 import Link from 'next/link'
 import { MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,13 +8,13 @@ import DestinationDetailClientContent from './DestinationDetailClientContent'
 export default async function DestinationDetailPage({
   params,
 }: {
-  params: { destinationId: string }
+  params: Promise<{ destinationId: string }>
 }) {
   let destination: Destination | null = null
   let error: string | null = null
-  let weatherInfo: WeatherInfo | null = null
+  const weatherInfo: WeatherInfo | null = null
 
-  const destinationId = params.destinationId
+  const { destinationId } = await params
 
   try {
     destination = await getDestinationById(destinationId)

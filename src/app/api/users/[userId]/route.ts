@@ -33,8 +33,9 @@ async function isAuthorized(
 // GET a single user profile from Firebase RTDB
 export async function GET(
   request: NextRequest,
-  { params: { userId } }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
+  const { userId } = await params
   try {
     const user = await getUserProfile(userId)
 
@@ -56,8 +57,9 @@ export async function GET(
 // DELETE a user profile and Firebase auth account
 export async function DELETE(
   request: NextRequest,
-  { params: { userId } }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
+  const { userId } = await params
   try {
     // Basic authorization check
     if (!(await isAuthorized(request, userId))) {

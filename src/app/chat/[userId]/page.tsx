@@ -6,8 +6,16 @@ import { useChat } from '@/contexts/ChatContext'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent } from '@/components/ui/card'
-import { Send, ArrowLeft, Loader2, Smile, Phone, Video, MoreVertical } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Send,
+  ArrowLeft,
+  Loader2,
+  Smile,
+  Phone,
+  Video,
+  MoreVertical,
+} from 'lucide-react'
 import Link from 'next/link'
 import { getUserProfileFromRTDB as getUserProfile } from '@/lib/auth'
 import type { UserProfile } from '@/lib/types'
@@ -16,32 +24,148 @@ import Image from 'next/image'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 // Common emojis for quick access
 const QUICK_EMOJIS = [
-  '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊',
-  '😍', '🥰', '😘', '😗', '😙', '😋', '😛', '🤔',
-  '🤗', '🤩', '😎', '🙂', '😐', '😑', '😶', '🙄',
-  '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫',
-  '🥱', '😴', '😌', '😛', '😜', '😝', '🤤', '😒',
-  '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁',
-  '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧',
-  '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶',
-  '😳', '🤪', '😵', '🥴', '😠', '😡', '🤬', '😷',
-  '🤒', '🤕', '🤢', '🤮', '🤧', '🥳', '🥺', '🤠',
-  '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙',
-  '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚',
-  '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏',
-  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
-  '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
-  '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️'
+  '😀',
+  '😃',
+  '😄',
+  '😁',
+  '😅',
+  '😂',
+  '🤣',
+  '😊',
+  '😍',
+  '🥰',
+  '😘',
+  '😗',
+  '😙',
+  '😋',
+  '😛',
+  '🤔',
+  '🤗',
+  '🤩',
+  '😎',
+  '🙂',
+  '😐',
+  '😑',
+  '😶',
+  '🙄',
+  '😏',
+  '😣',
+  '😥',
+  '😮',
+  '🤐',
+  '😯',
+  '😪',
+  '😫',
+  '🥱',
+  '😴',
+  '😌',
+  '😛',
+  '😜',
+  '😝',
+  '🤤',
+  '😒',
+  '😓',
+  '😔',
+  '😕',
+  '🙃',
+  '🤑',
+  '😲',
+  '☹️',
+  '🙁',
+  '😖',
+  '😞',
+  '😟',
+  '😤',
+  '😢',
+  '😭',
+  '😦',
+  '😧',
+  '😨',
+  '😩',
+  '🤯',
+  '😬',
+  '😰',
+  '😱',
+  '🥵',
+  '🥶',
+  '😳',
+  '🤪',
+  '😵',
+  '🥴',
+  '😠',
+  '😡',
+  '🤬',
+  '😷',
+  '🤒',
+  '🤕',
+  '🤢',
+  '🤮',
+  '🤧',
+  '🥳',
+  '🥺',
+  '🤠',
+  '👍',
+  '👎',
+  '👌',
+  '✌️',
+  '🤞',
+  '🤟',
+  '🤘',
+  '🤙',
+  '👈',
+  '👉',
+  '👆',
+  '🖕',
+  '👇',
+  '☝️',
+  '👋',
+  '🤚',
+  '🖐️',
+  '✋',
+  '🖖',
+  '👏',
+  '🙌',
+  '🤲',
+  '🤝',
+  '🙏',
+  '❤️',
+  '🧡',
+  '💛',
+  '💚',
+  '💙',
+  '💜',
+  '🖤',
+  '🤍',
+  '🤎',
+  '💔',
+  '❣️',
+  '💕',
+  '💞',
+  '💓',
+  '💗',
+  '💖',
+  '💘',
+  '💝',
+  '💟',
+  '☮️',
+  '✝️',
+  '☪️',
+  '🕉️',
+  '☸️',
 ]
 
 // Helper function to generate consistent room ID between two users
@@ -193,18 +317,21 @@ export default function ChatPage() {
   }
 
   const handleEmojiSelect = useCallback((emoji: string) => {
-    setMessageInput(prev => prev + emoji)
+    setMessageInput((prev) => prev + emoji)
   }, [])
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setMessageInput(e.target.value)
-    
-    // Simple typing indicator logic
-    if (!isTyping) {
-      setIsTyping(true)
-      setTimeout(() => setIsTyping(false), 2000)
-    }
-  }, [isTyping])
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setMessageInput(e.target.value)
+
+      // Simple typing indicator logic
+      if (!isTyping) {
+        setIsTyping(true)
+        setTimeout(() => setIsTyping(false), 2000)
+      }
+    },
+    [isTyping]
+  )
 
   if (authIsLoading || (isLoadingOtherUser && !otherUser)) {
     return (
@@ -248,7 +375,8 @@ export default function ChatPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Could not load the profile of the user you're trying to chat with.
+              Could not load the profile of the user you&apos;re trying to chat
+              with.
             </p>
             <Button asChild>
               <Link href="/connect">Return to Connect</Link>
@@ -264,7 +392,12 @@ export default function ChatPage() {
       {/* Modern Chat Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
         <div className="container mx-auto max-w-7xl flex h-16 items-center gap-4 px-4 sm:px-6">
-          <Button variant="ghost" size="icon" asChild className="hover:bg-accent/20">
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            className="hover:bg-accent/20"
+          >
             <Link href="/connect">
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -292,7 +425,11 @@ export default function ChatPage() {
                   {otherUser.name || 'User'}
                 </h1>
                 <p className="text-xs text-muted-foreground">
-                  {isConnected ? (isTyping ? 'Typing...' : 'Online') : 'Connecting...'}
+                  {isConnected
+                    ? isTyping
+                      ? 'Typing...'
+                      : 'Online'
+                    : 'Connecting...'}
                 </p>
               </div>
             </div>
@@ -300,15 +437,27 @@ export default function ChatPage() {
 
           {/* Chat Actions */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-accent/20">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden sm:flex hover:bg-accent/20"
+            >
               <Phone className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-accent/20">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden sm:flex hover:bg-accent/20"
+            >
               <Video className="h-4 w-4" />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-accent/20">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hover:bg-accent/20"
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -325,12 +474,15 @@ export default function ChatPage() {
       {/* Chat Content Area */}
       <div className="flex-1 container mx-auto max-w-7xl flex flex-col overflow-hidden p-4">
         <div className="flex flex-col bg-card border rounded-xl shadow-lg w-full flex-1 xl:max-w-5xl xl:self-center overflow-hidden">
-          
           {/* Messages Area */}
           <ScrollArea className="flex-1 p-4 md:p-6">
             <div className="space-y-4">
-              {(chatContextError || (!isConnected && !chatContextIsLoading)) && (
-                <Alert variant={chatContextError ? 'destructive' : 'default'} className="mx-auto max-w-md">
+              {(chatContextError ||
+                (!isConnected && !chatContextIsLoading)) && (
+                <Alert
+                  variant={chatContextError ? 'destructive' : 'default'}
+                  className="mx-auto max-w-md"
+                >
                   <AlertTitle>
                     {chatContextError ? 'Connection Error' : 'Disconnected'}
                   </AlertTitle>
@@ -344,7 +496,9 @@ export default function ChatPage() {
                 <div className="flex items-center justify-center h-40">
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">Loading messages...</p>
+                    <p className="text-sm text-muted-foreground">
+                      Loading messages...
+                    </p>
                   </div>
                 </div>
               ) : messages.length === 0 ? (
@@ -352,50 +506,73 @@ export default function ChatPage() {
                   <div className="text-center">
                     <div className="text-4xl mb-2">💬</div>
                     <p className="text-muted-foreground">No messages yet</p>
-                    <p className="text-sm text-muted-foreground">Start the conversation!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Start the conversation!
+                    </p>
                   </div>
                 </div>
               ) : (
                 messages.map((message, index) => {
                   const isOwn = message.senderId === currentUser?.id
-                  const showAvatar = !isOwn && (index === 0 || messages[index - 1]?.senderId !== message.senderId)
-                  
+                  const prevMessage = messages[index - 1]
+                  const nextMessage = messages[index + 1]
+
+                  // Check if this message is part of a group (consecutive messages from same sender)
+                  const isFirstInGroup =
+                    !prevMessage || prevMessage.senderId !== message.senderId
+                  const isLastInGroup =
+                    !nextMessage || nextMessage.senderId !== message.senderId
+                  const isMiddleInGroup = !isFirstInGroup && !isLastInGroup
+
+                  // Determine bubble radius based on position in group
+                  const getBubbleRadius = () => {
+                    if (isOwn) {
+                      if (isFirstInGroup && isLastInGroup) return 'rounded-2xl' // Single message
+                      if (isFirstInGroup) return 'rounded-2xl rounded-br-md' // First in group
+                      if (isLastInGroup) return 'rounded-2xl rounded-tr-md' // Last in group
+                      return 'rounded-l-2xl rounded-r-md' // Middle in group
+                    } else {
+                      if (isFirstInGroup && isLastInGroup) return 'rounded-2xl' // Single message
+                      if (isFirstInGroup) return 'rounded-2xl rounded-bl-md' // First in group
+                      if (isLastInGroup) return 'rounded-2xl rounded-tl-md' // Last in group
+                      return 'rounded-r-2xl rounded-l-md' // Middle in group
+                    }
+                  }
+
                   return (
                     <div
                       key={message.id}
-                      className={`flex gap-3 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${
+                        isOwn ? 'justify-end' : 'justify-start'
+                      } ${isFirstInGroup ? 'mt-4' : 'mt-1'}`}
                     >
-                      {!isOwn && (
-                        <div className="w-8 flex-shrink-0">
-                          {showAvatar && (
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage
-                                src={otherUser?.photoUrl || PLACEHOLDER_IMAGE_URL(32, 32)}
-                                alt={otherUser?.name || 'User'}
-                              />
-                              <AvatarFallback className="text-xs">
-                                {(otherUser?.name || 'U').charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
-                        </div>
-                      )}
-                      
-                      <div className={`max-w-[70%] sm:max-w-[60%] md:max-w-[50%] lg:max-w-[45%] ${isOwn ? 'ml-auto' : ''}`}>
+                      <div
+                        className={`max-w-[75%] sm:max-w-[65%] md:max-w-[55%] lg:max-w-[50%] ${
+                          isOwn ? 'ml-auto' : ''
+                        }`}
+                      >
                         <div
-                          className={`rounded-2xl px-4 py-3 shadow-sm transition-all hover:shadow-md ${
+                          className={`px-4 py-2.5 shadow-sm transition-all hover:shadow-md ${getBubbleRadius()} ${
                             isOwn
-                              ? 'bg-primary text-primary-foreground rounded-br-md'
-                              : 'bg-muted text-foreground rounded-bl-md'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-foreground'
                           }`}
                         >
                           <p className="whitespace-pre-wrap break-words leading-relaxed text-sm">
                             {message.content}
                           </p>
                         </div>
-                        <p className={`text-xs text-muted-foreground mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
-                          {formatMessageTime(message.timestamp as unknown)}
-                        </p>
+
+                        {/* Show timestamp only for the last message in a group */}
+                        {isLastInGroup && (
+                          <p
+                            className={`text-xs text-muted-foreground mt-1 px-1 ${
+                              isOwn ? 'text-right' : 'text-left'
+                            }`}
+                          >
+                            {formatMessageTime(message.timestamp as unknown)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )
@@ -411,16 +588,20 @@ export default function ChatPage() {
               {/* Emoji Picker */}
               <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
                 <PopoverTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="shrink-0 hover:bg-accent/20"
                     disabled={!isConnected}
                   >
                     <Smile className="h-5 w-5" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-3 border shadow-lg" side="top" align="start">
+                <PopoverContent
+                  className="w-80 p-3 border shadow-lg"
+                  side="top"
+                  align="start"
+                >
                   <div className="max-h-48 overflow-y-auto">
                     <div className="grid grid-cols-8 gap-1">
                       {QUICK_EMOJIS.map((emoji, index) => (

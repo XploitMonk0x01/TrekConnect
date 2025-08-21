@@ -1,3 +1,6 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Card,
@@ -9,11 +12,93 @@ import {
 import { Button } from '@/components/ui/button'
 import { StoryCard } from '@/components/StoryCard'
 import type { Story } from '@/lib/types'
-import { Edit, BookOpen } from 'lucide-react'
-import { getAllStories } from '@/services/stories' // Import service
+import { Edit, BookOpen, Loader2, AlertTriangle } from 'lucide-react'
+import { getAllStories } from '@/services/stories'
+import { useCustomAuth } from '@/contexts/CustomAuthContext'
 
-export default async function TravelStoriesPage() {
-  const stories: Story[] = await getAllStories()
+export default function TravelStoriesPage() {
+  const [stories, setStories] = useState<Story[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { user, isLoading: authLoading } = useCustomAuth()
+
+  useEffect(() => {
+    async function fetchStories() {
+      if (authLoading) return // Wait for auth to load
+
+      if (!user) {
+        setError('Please sign in to view stories')
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        setError(null)
+        const fetchedStories = await getAllStories()
+        setStories(fetchedStories)
+      } catch (err) {
+        console.error('Error fetching stories:', err)
+        setError('Failed to load stories. Please try again.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchStories()
+  }, [user, authLoading])
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-lg">Loading stories...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="space-y-8 container mx-auto max-w-7xl">
+        <Card className="shadow-lg">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <h3 className="text-xl font-semibold mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              Please sign in to read and share travel stories with the
+              community.
+            </p>
+            <Button asChild>
+              <Link href="/auth/signin?redirect=/stories">
+                Sign In to Continue
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 container mx-auto max-w-7xl">
+        <Card className="shadow-lg">
+          <CardContent className="p-8 text-center">
+            <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <h3 className="text-xl font-semibold mb-2">
+              Error Loading Stories
+            </h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // Simple AI hint generation for story cards, can be more sophisticated
   const generateStoryAiHint = (story: Story, index: number): string => {

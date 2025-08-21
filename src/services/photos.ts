@@ -1,5 +1,3 @@
-'use server'
-
 import {
   ref as dbRef,
   set,
@@ -13,6 +11,7 @@ import { realtimeDb } from '@/lib/firebase'
 import type { Photo, CreatePhotoInput } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 
+// Server-side function for creating photos
 export async function createPhoto(
   photoInput: CreatePhotoInput
 ): Promise<Photo> {
@@ -31,8 +30,6 @@ export async function createPhoto(
       userName: photoInput.userName,
       userAvatarUrl: photoInput.userAvatarUrl || null,
       imageUrl: photoInput.imageUrl || PLACEHOLDER_IMAGE_URL(600, 400),
-      // destinationId is optional and not part of CreatePhotoInput shape; leave undefined
-      destinationId: undefined,
       destinationName: photoInput.destinationName || '',
       caption: photoInput.caption || '',
       tags: photoInput.tags || [],
@@ -41,6 +38,9 @@ export async function createPhoto(
       commentsCount: 0,
       likes: [],
     }
+
+    // Note: destinationId is not included as it's not part of the CreatePhotoInput
+    // and is only used for potential linking to destination records
 
     await set(newPhotoRef, newPhoto)
     return newPhoto

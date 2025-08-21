@@ -39,6 +39,7 @@ export default function ConnectSpherePage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [profiles, setProfiles] = useState<UserProfile[]>([])
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(true)
+  const [isNavigatingToChat, setIsNavigatingToChat] = useState(false)
   const [lastSwipedProfile, setLastSwipedProfile] =
     useState<UserProfile | null>(null)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
@@ -92,7 +93,7 @@ export default function ConnectSpherePage() {
       setProfiles([])
       setCurrentIndex(0)
     }
-  }, [currentUser?.id, authIsLoading, loadProfiles])
+  }, [currentUser, authIsLoading, loadProfiles])
 
   useEffect(() => {
     if (shouldReloadProfiles) {
@@ -140,7 +141,7 @@ export default function ConnectSpherePage() {
     setLastSwipedProfile(swipedProfile)
 
     if (direction === 'right') {
-      // Show match animation briefly then immediately open chat
+      // Show match animation and let user choose next action
       setShowMatchAnimation(true)
 
       // Prefill chat user payload in sessionStorage for instant hydration on chat page
@@ -163,12 +164,7 @@ export default function ConnectSpherePage() {
         router.prefetch?.(`/chat/${swipedProfile.id}`)
       } catch {}
 
-      // Open chat immediately after brief animation
-      const timeoutId = setTimeout(() => {
-        setShowMatchAnimation(false)
-        router.push(`/chat/${swipedProfile.id}`)
-      }, 1500) // Reduced from 3500 to 1500ms for quicker transition
-      matchAnimationTimeoutId.current = timeoutId
+      // No automatic redirect - let user choose to continue swiping or start chat
     } else {
       advanceToNextProfile()
     }
@@ -184,10 +180,14 @@ export default function ConnectSpherePage() {
     setLastSwipedProfile(null)
   }
 
-  const handleStartChat = (matchProfileId: string) => {
+  const handleStartChat = async (matchProfileId: string) => {
     if (matchAnimationTimeoutId.current) {
       clearTimeout(matchAnimationTimeoutId.current) // Clear the auto-advance timeout
     }
+
+    // Set loading state
+    setIsNavigatingToChat(true)
+
     // Prefill chat user payload in sessionStorage for instant hydration on chat page
     try {
       const matchProfile =
@@ -212,8 +212,11 @@ export default function ConnectSpherePage() {
       router.prefetch?.(`/chat/${matchProfileId}`)
     } catch {}
 
-    setShowMatchAnimation(false) // Hide match animation
-    router.push(`/chat/${matchProfileId}`)
+    // Small delay to show loading state, then navigate
+    setTimeout(() => {
+      setShowMatchAnimation(false) // Hide match animation
+      router.push(`/chat/${matchProfileId}`)
+    }, 300) // Brief delay to show loading state
   }
 
   const currentProfileForCard =
@@ -314,6 +317,46 @@ export default function ConnectSpherePage() {
     )
   }
 
+  // Show loading skeleton when navigating to chat
+  if (isNavigatingToChat && lastSwipedProfile) {
+    return (
+      <div className="space-y-8 container mx-auto max-w-7xl">
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4 bg-background">
+          <Loader2 className="w-16 h-16 text-primary animate-spin mb-4" />
+          <h2 className="text-2xl font-headline text-primary">
+            Opening Chat with {lastSwipedProfile.name}...
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            Preparing your conversation
+          </p>
+
+          {/* Chat skeleton preview */}
+          <div className="w-full max-w-md mt-8 p-4 border rounded-lg bg-card">
+            <div className="flex items-center space-x-3 mb-4">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-end">
+                <Skeleton className="h-8 w-32 rounded-lg" />
+              </div>
+              <div className="flex justify-start">
+                <Skeleton className="h-8 w-40 rounded-lg" />
+              </div>
+              <div className="flex justify-end">
+                <Skeleton className="h-8 w-24 rounded-lg" />
+              </div>
+            </div>
+            <Skeleton className="h-10 w-full mt-4 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (showMatchAnimation && lastSwipedProfile && currentUser) {
     const currentUserPhoto =
       currentUser?.photoUrl || PLACEHOLDER_IMAGE_URL(100, 100)
@@ -321,7 +364,9 @@ export default function ConnectSpherePage() {
       <div className="space-y-8 container mx-auto max-w-7xl">
         <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4 bg-background">
           <Heart className="w-24 h-24 text-pink-500 animate-ping mb-4" />
-          <h2 className="text-3xl font-headline text-primary">It's a Match!</h2>
+          <h2 className="text-3xl font-headline text-primary">
+            It&apos;s a Match!
+          </h2>
           <p className="text-xl text-muted-foreground mt-2">
             You and {lastSwipedProfile.name || 'your match'} are interested in
             connecting!
@@ -364,19 +409,37 @@ export default function ConnectSpherePage() {
               />
             </div>
           </div>
-          <Button
-            className="mt-8 bg-accent hover:bg-accent/90"
-            onClick={() => handleStartChat(lastSwipedProfile.id)}
-          >
-            <MessageSquare className="mr-2 h-5 w-5" /> Start Chatting
-          </Button>
-          <Button
-            variant="link"
-            className="mt-2 text-primary"
-            onClick={advanceToNextProfile}
-          >
-            Continue Swiping
-          </Button>
+          <div className="flex flex-col gap-3 mt-8">
+            <Button
+              className="bg-accent hover:bg-accent/90"
+              onClick={() => handleStartChat(lastSwipedProfile.id)}
+              disabled={isNavigatingToChat}
+            >
+              {isNavigatingToChat ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Opening Chat...
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="mr-2 h-5 w-5" />
+                  Start Chatting
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="text-primary border-primary hover:bg-primary/10"
+              onClick={() => {
+                setShowMatchAnimation(false)
+                setIsNavigatingToChat(false)
+                advanceToNextProfile()
+              }}
+              disabled={isNavigatingToChat}
+            >
+              Continue Swiping
+            </Button>
+          </div>
         </div>
       </div>
     )

@@ -1,13 +1,8 @@
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    // Auth pages typically don't have the main app sidebar and header.
-    // This layout ensures they are displayed as standalone pages.
-    <div className="min-h-screen">
-      {children}
-    </div>
-  );
-}
+
+import React from 'react';
+
+const AuthLayout = ({ children }: { children: React.ReactNode }) => {
+  return <div className="auth-container">{children}</div>;
+};
+
+export default AuthLayout;

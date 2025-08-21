@@ -561,8 +561,8 @@ export default function DestinationDetailClientContent({
             Vision
           </CardTitle>
           <CardDescription>
-            See an AI's artistic interpretation of {destination.name}. Results
-            may vary!
+            See an AI&apos;s artistic interpretation of {destination.name}.
+            Results may vary!
           </CardDescription>
         </CardHeader>
         <CardContent>

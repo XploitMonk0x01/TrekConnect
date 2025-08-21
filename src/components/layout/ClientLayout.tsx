@@ -1,32 +1,76 @@
 'use client'
 
-import { ReactNode } from 'react'
-import { SidebarProvider } from '@/components/ui/sidebar'
+import { ReactNode, useState, useEffect } from 'react'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { Footer } from '@/components/layout/Footer'
 import { Toaster } from '@/components/ui/toaster'
 import { Providers } from '@/app/providers'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { cn } from '@/lib/utils'
 
 export function ClientLayout({ children }: { children: ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const isMobile = useIsMobile()
+
+  // Close sidebar when switching to mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
+  }, [isMobile])
+
+  // Close sidebar when clicking outside on mobile
+  const handleOverlayClick = () => {
+    if (isMobile && sidebarOpen) {
+      setSidebarOpen(false)
+    }
+  }
+
   return (
     <Providers>
       <Toaster />
-      <SidebarProvider defaultOpen>
-        <div className="flex min-h-screen bg-background">
-          <AppSidebar />
+      <div className="flex min-h-screen bg-background">
+        {/* Mobile overlay */}
+        {isMobile && sidebarOpen && (
           <div
-            className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[state=expanded]/sidebar-wrapper:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-linear"
-            role="main"
-          >
-            <AppHeader />
-            <main className="flex-1 p-4 sm:p-6 lg:p-8">
-              <div className="container mx-auto max-w-7xl">{children}</div>
-            </main>
-            <Footer />
-          </div>
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            onClick={handleOverlayClick}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Sidebar */}
+        <AppSidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          isMobile={isMobile}
+        />
+
+        {/* Main content area */}
+        <div
+          className={cn(
+            'flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out',
+            // Desktop: adjust margin based on sidebar state
+            !isMobile && sidebarOpen && 'lg:ml-64',
+            !isMobile && !sidebarOpen && 'lg:ml-16'
+          )}
+        >
+          <AppHeader
+            onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+            sidebarOpen={sidebarOpen}
+          />
+
+          {/* Main content */}
+          <main className="flex-1 overflow-x-hidden">
+            <div className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+              {children}
+            </div>
+          </main>
+
+          <Footer />
         </div>
-      </SidebarProvider>
+      </div>
     </Providers>
   )
 }
