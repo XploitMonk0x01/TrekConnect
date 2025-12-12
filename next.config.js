@@ -1,5 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable parallel builds on Windows to avoid EPERM errors
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
+  // Externalize genkit packages to avoid webpack bundling issues
+  serverExternalPackages: [
+    'genkit',
+    '@genkit-ai/core',
+    '@genkit-ai/googleai',
+    'handlebars',
+  ],
   images: {
     remotePatterns: [
       {
