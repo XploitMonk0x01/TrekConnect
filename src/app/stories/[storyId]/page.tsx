@@ -3,33 +3,11 @@
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { StoryCard } from '@/components/StoryCard'
-import type { Story } from '@/lib/types' // Assuming Story type is defined
-import { getStoryById } from '@/services/stories' // Service to fetch story
-import { ArrowLeft, BookOpen, MessageSquare, ThumbsUp } from 'lucide-react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import type { Story } from '@/lib/types'
+import { getStoryById } from '@/services/stories'
+import { ArrowLeft, BookOpen } from 'lucide-react'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
-
-// Comment type can be moved to lib/types if used elsewhere
-interface Comment {
-  id: string
-  userId: string
-  userName: string
-  userAvatarUrl?: string
-  text: string
-  createdAt: string
-}
-
-// Mock comments are removed. In a real app, these would be fetched.
-// const mockComments: Comment[] = [];
+import { CommentsSection } from '@/components/CommentsSection'
 
 export default async function Page({
   params,
@@ -55,10 +33,7 @@ export default async function Page({
     )
   }
 
-  // For now, comments are not fetched or displayed from DB.
-  const storyComments: Comment[] = []
-
-  // Enhance story with aiHint for images if necessary (assuming StoryCard handles it)
+  // Enhance story with aiHint for images if necessary
   const storyWithAIHint = {
     ...story,
     imageUrl: story.imageUrl
@@ -89,90 +64,11 @@ export default async function Page({
 
       <StoryCard story={storyWithAIHint} isDetailedView={true} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline text-xl">
-            Comments ({storyComments.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-start gap-3">
-            <Avatar className="h-9 w-9 border">
-              {/* TODO: Get current user avatar */}
-              <AvatarImage
-                src={PLACEHOLDER_IMAGE_URL(36, 36)}
-                alt="Your avatar"
-                data-ai-hint="person user"
-              />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <Textarea
-                placeholder="Write a comment... (Coming Soon)"
-                className="mb-2"
-                disabled
-              />
-              <Button size="sm" disabled>
-                Post Comment
-              </Button>
-            </div>
-          </div>
-          {storyComments.length > 0 ? (
-            storyComments.map((comment) => (
-              <div
-                key={comment.id}
-                className="flex items-start gap-3 pt-4 border-t"
-              >
-                <Avatar className="h-9 w-9 border">
-                  <AvatarImage
-                    src={comment.userAvatarUrl || PLACEHOLDER_IMAGE_URL(36, 36)}
-                    alt={comment.userName}
-                    data-ai-hint={`person ${comment.userName.split(' ')[0]}`}
-                  />
-                  <AvatarFallback>
-                    {comment.userName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm">
-                      {comment.userName}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(comment.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-foreground/90 mt-0.5">
-                    {comment.text}
-                  </p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-1 text-xs text-muted-foreground hover:text-primary"
-                      disabled
-                    >
-                      <ThumbsUp className="h-3 w-3 mr-1" /> Like
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-1 text-xs text-muted-foreground hover:text-primary"
-                      disabled
-                    >
-                      Reply
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              No comments yet. Commenting feature coming soon!
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <CommentsSection
+        parentId={storyId}
+        parentType="story"
+        initialCommentsCount={story.commentsCount || 0}
+      />
     </div>
   )
 }

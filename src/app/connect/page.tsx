@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -18,7 +18,6 @@ import {
   Heart,
   X,
   RotateCcw,
-  Filter,
   Users,
   MessageSquare,
   Loader2,
@@ -30,6 +29,14 @@ import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
+import { ConnectFilters, UserFilters } from '@/components/ConnectFilters'
+
+const defaultFilters: UserFilters = {
+  gender: [],
+  trekkingExperience: [],
+  travelStyle: [],
+  budget: [],
+}
 
 export default function ConnectSpherePage() {
   const { user: currentUser, isLoading: authIsLoading } = useCustomAuth()
@@ -46,6 +53,55 @@ export default function ConnectSpherePage() {
   const matchAnimationTimeoutId = useRef<NodeJS.Timeout | null>(null)
   const [shouldReloadProfiles, setShouldReloadProfiles] = useState(false)
   const lastPrefetchedChatId = useRef<string | null>(null)
+  const [filters, setFilters] = useState<UserFilters>(defaultFilters)
+
+  // Filter profiles based on selected filters
+  const filteredProfiles = useMemo(() => {
+    return profiles.filter((profile) => {
+      // Gender filter
+      if (
+        filters.gender.length > 0 &&
+        profile.gender &&
+        !filters.gender.includes(profile.gender)
+      ) {
+        return false
+      }
+
+      // Trekking experience filter
+      if (
+        filters.trekkingExperience.length > 0 &&
+        profile.trekkingExperience &&
+        !filters.trekkingExperience.includes(profile.trekkingExperience)
+      ) {
+        return false
+      }
+
+      // Travel style filter
+      if (
+        filters.travelStyle.length > 0 &&
+        profile.travelPreferences?.soloOrGroup &&
+        !filters.travelStyle.includes(profile.travelPreferences.soloOrGroup)
+      ) {
+        return false
+      }
+
+      // Budget filter
+      if (
+        filters.budget.length > 0 &&
+        profile.travelPreferences?.budget &&
+        !filters.budget.includes(profile.travelPreferences.budget)
+      ) {
+        return false
+      }
+
+      return true
+    })
+  }, [profiles, filters])
+
+  // Reset index when filters change
+  useEffect(() => {
+    setCurrentIndex(0)
+  }, [filters])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -117,16 +173,21 @@ export default function ConnectSpherePage() {
   useEffect(() => {
     if (
       !isLoadingProfiles &&
-      profiles.length > 0 &&
-      currentIndex >= profiles.length
+      filteredProfiles.length > 0 &&
+      currentIndex >= filteredProfiles.length
     ) {
       setShouldReloadProfiles(true)
       setCurrentIndex(0)
     }
-  }, [currentIndex, profiles.length, isLoadingProfiles])
+  }, [currentIndex, filteredProfiles.length, isLoadingProfiles])
 
   const handleSwipe = (direction: 'left' | 'right') => {
-    if (!currentUser || profiles.length === 0 || !profiles[currentIndex]) return
+    if (
+      !currentUser ||
+      filteredProfiles.length === 0 ||
+      !filteredProfiles[currentIndex]
+    )
+      return
 
     // Haptic feedback (if available)
     if (navigator.vibrate) {
@@ -137,7 +198,7 @@ export default function ConnectSpherePage() {
       clearTimeout(matchAnimationTimeoutId.current)
     }
 
-    const swipedProfile = profiles[currentIndex]
+    const swipedProfile = filteredProfiles[currentIndex]
     setLastSwipedProfile(swipedProfile)
 
     if (direction === 'right') {
@@ -220,8 +281,10 @@ export default function ConnectSpherePage() {
   }
 
   const currentProfileForCard =
-    !isLoadingProfiles && profiles.length > 0 && currentIndex < profiles.length
-      ? profiles[currentIndex]
+    !isLoadingProfiles &&
+    filteredProfiles.length > 0 &&
+    currentIndex < filteredProfiles.length
+      ? filteredProfiles[currentIndex]
       : null
 
   // Prefetch chat route and prefill data for the visible profile to make chat entry instant
@@ -458,13 +521,16 @@ export default function ConnectSpherePage() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <Button variant="outline" size="sm" disabled>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters (Soon!)
-            </Button>
+            <ConnectFilters filters={filters} onFiltersChange={setFilters} />
             <div className="flex items-center space-x-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" />
-              <span>{profiles.length} trekkers available</span>
+              <span>
+                {filteredProfiles.length} trekker
+                {filteredProfiles.length !== 1 ? 's' : ''} available
+                {filteredProfiles.length !== profiles.length && (
+                  <span className="text-xs ml-1">(of {profiles.length})</span>
+                )}
+              </span>
             </div>
           </div>
         </CardContent>
@@ -517,7 +583,7 @@ export default function ConnectSpherePage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Viewed:</span>
                   <span className="font-medium">
-                    {currentIndex} / {profiles.length}
+                    {currentIndex} / {filteredProfiles.length}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -525,8 +591,8 @@ export default function ConnectSpherePage() {
                     className="bg-primary h-2 rounded-full transition-all duration-300"
                     style={{
                       width: `${
-                        profiles.length > 0
-                          ? (currentIndex / profiles.length) * 100
+                        filteredProfiles.length > 0
+                          ? (currentIndex / filteredProfiles.length) * 100
                           : 0
                       }%`,
                     }}
@@ -549,14 +615,15 @@ export default function ConnectSpherePage() {
                         Finding trekkers...
                       </p>
                     </div>
-                  ) : profiles.length > 0 && currentIndex < profiles.length ? (
-                    profiles
+                  ) : filteredProfiles.length > 0 &&
+                    currentIndex < filteredProfiles.length ? (
+                    filteredProfiles
                       .slice(currentIndex, currentIndex + 3)
                       .reverse()
                       .map((profile, index) => {
                         const isTop =
                           index ===
-                          profiles.slice(currentIndex, currentIndex + 3)
+                          filteredProfiles.slice(currentIndex, currentIndex + 3)
                             .length -
                             1
                         return (
@@ -566,14 +633,18 @@ export default function ConnectSpherePage() {
                             animate={{
                               scale:
                                 1 -
-                                (profiles.slice(currentIndex, currentIndex + 3)
-                                  .length -
+                                (filteredProfiles.slice(
+                                  currentIndex,
+                                  currentIndex + 3
+                                ).length -
                                   1 -
                                   index) *
                                   0.05,
                               y:
-                                (profiles.slice(currentIndex, currentIndex + 3)
-                                  .length -
+                                (filteredProfiles.slice(
+                                  currentIndex,
+                                  currentIndex + 3
+                                ).length -
                                   1 -
                                   index) *
                                 -8,

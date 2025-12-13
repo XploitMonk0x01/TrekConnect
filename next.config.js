@@ -40,12 +40,27 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Admin endpoints must never be cached (session + CRUD)
+        source: '/api/admin/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+        ],
+      },
+      {
         source: '/api/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            // APIs are generally dynamic; caching here breaks auth/session and CRUD freshness.
+            value: 'no-store, no-cache, must-revalidate',
           },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
         ],
       },
       {

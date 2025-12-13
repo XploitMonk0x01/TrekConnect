@@ -6,10 +6,13 @@ import {
   query,
   orderByChild,
   equalTo,
+  update,
 } from 'firebase/database'
 import { realtimeDb } from '@/lib/firebase'
 import type { Photo, CreatePhotoInput } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
+
+const PHOTOS_PATH = 'photos'
 
 // Server-side function for creating photos
 export async function createPhoto(
@@ -70,6 +73,43 @@ export async function getAllPhotos(): Promise<Photo[]> {
   }
 }
 
+// Get paginated photos
+export async function getPaginatedPhotos(
+  limit: number = 12,
+  lastUploadedAt?: string
+): Promise<{ photos: Photo[]; hasMore: boolean }> {
+  try {
+    const photosRef = dbRef(realtimeDb, PHOTOS_PATH)
+    const snapshot = await get(query(photosRef, orderByChild('uploadedAt')))
+
+    if (snapshot.exists()) {
+      const photosData = snapshot.val()
+      let allPhotos = Object.values<Photo>(photosData).sort(
+        (a, b) =>
+          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+      )
+
+      // If we have a cursor, filter photos older than the cursor
+      if (lastUploadedAt) {
+        const cursorTime = new Date(lastUploadedAt).getTime()
+        allPhotos = allPhotos.filter(
+          (p) => new Date(p.uploadedAt).getTime() < cursorTime
+        )
+      }
+
+      // Get one extra to check if there are more
+      const photos = allPhotos.slice(0, limit)
+      const hasMore = allPhotos.length > limit
+
+      return { photos, hasMore }
+    }
+    return { photos: [], hasMore: false }
+  } catch (error) {
+    console.error('Error getting paginated photos from Firebase:', error)
+    return { photos: [], hasMore: false }
+  }
+}
+
 export async function getPhotosByUser(userId: string): Promise<Photo[]> {
   try {
     const photosRef = dbRef(realtimeDb, 'photos')
@@ -94,5 +134,47 @@ export async function getPhotosByUser(userId: string): Promise<Photo[]> {
       error
     )
     return []
+  }
+}
+
+// Toggle like on a photo
+export async function togglePhotoLike(
+  photoId: string,
+  userId: string
+): Promise<{ likesCount: number; likes: string[]; isLiked: boolean } | null> {
+  try {
+    const photoRef = dbRef(realtimeDb, `${PHOTOS_PATH}/${photoId}`)
+    const snapshot = await get(photoRef)
+
+    if (!snapshot.exists()) {
+      return null
+    }
+
+    const photo = snapshot.val() as Photo
+    const currentLikes = photo.likes || []
+    const isCurrentlyLiked = currentLikes.includes(userId)
+
+    let newLikes: string[]
+    if (isCurrentlyLiked) {
+      newLikes = currentLikes.filter((id) => id !== userId)
+    } else {
+      newLikes = [...currentLikes, userId]
+    }
+
+    const newLikesCount = newLikes.length
+
+    await update(photoRef, {
+      likes: newLikes,
+      likesCount: newLikesCount,
+    })
+
+    return {
+      likesCount: newLikesCount,
+      likes: newLikes,
+      isLiked: !isCurrentlyLiked,
+    }
+  } catch (error) {
+    console.error(`Error toggling like on photo ${photoId}:`, error)
+    throw new Error('Failed to toggle photo like.')
   }
 }

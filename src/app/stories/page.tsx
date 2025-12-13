@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Card,
@@ -13,18 +13,32 @@ import { Button } from '@/components/ui/button'
 import { StoryCard } from '@/components/StoryCard'
 import type { Story } from '@/lib/types'
 import { Edit, BookOpen, Loader2, AlertTriangle } from 'lucide-react'
-import { getAllStories } from '@/services/stories'
+import { getPaginatedStories } from '@/services/stories'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
+
+const STORIES_PER_PAGE = 9
 
 export default function TravelStoriesPage() {
   const [stories, setStories] = useState<Story[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user, isLoading: authLoading } = useCustomAuth()
 
+  const fetchStories = useCallback(async (cursor?: string) => {
+    try {
+      const result = await getPaginatedStories(STORIES_PER_PAGE, cursor)
+      return result
+    } catch (err) {
+      console.error('Error fetching stories:', err)
+      throw err
+    }
+  }, [])
+
   useEffect(() => {
-    async function fetchStories() {
-      if (authLoading) return // Wait for auth to load
+    async function loadInitialStories() {
+      if (authLoading) return
 
       if (!user) {
         setError('Please sign in to view stories')
@@ -35,18 +49,35 @@ export default function TravelStoriesPage() {
       try {
         setIsLoading(true)
         setError(null)
-        const fetchedStories = await getAllStories()
-        setStories(fetchedStories)
+        const result = await fetchStories()
+        setStories(result.stories)
+        setHasMore(result.hasMore)
       } catch (err) {
-        console.error('Error fetching stories:', err)
         setError('Failed to load stories. Please try again.')
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchStories()
-  }, [user, authLoading])
+    loadInitialStories()
+  }, [user, authLoading, fetchStories])
+
+  const handleLoadMore = async () => {
+    if (stories.length === 0 || isLoadingMore) return
+
+    const lastStory = stories[stories.length - 1]
+    setIsLoadingMore(true)
+
+    try {
+      const result = await fetchStories(lastStory.createdAt)
+      setStories((prev) => [...prev, ...result.stories])
+      setHasMore(result.hasMore)
+    } catch (err) {
+      console.error('Error loading more stories:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   if (authLoading || isLoading) {
     return (
@@ -175,10 +206,21 @@ export default function TravelStoriesPage() {
         </Card>
       )}
 
-      {stories.length > 0 && (
+      {stories.length > 0 && hasMore && (
         <div className="flex justify-center mt-8">
-          <Button variant="outline" disabled>
-            Load More Stories (Coming Soon)
+          <Button
+            variant="outline"
+            onClick={handleLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load More Stories'
+            )}
           </Button>
         </div>
       )}

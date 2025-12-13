@@ -1,9 +1,8 @@
-
 'use server'
 
 import type { Db, WithId, Document } from 'mongodb'
 import { ObjectId } from 'mongodb'
-import { getDb } from '@/lib/mongodb' 
+import { getDb } from '@/lib/mongodb'
 import type { Destination } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 
@@ -21,6 +20,7 @@ function mapDocToDestination(doc: WithId<Document>): Destination {
     coordinates: doc.coordinates || undefined,
     averageRating: doc.averageRating || 0,
     aiHint: doc.aiHint || doc.name,
+    altitude: doc.altitude || undefined, // Peak altitude in meters
   }
 }
 
