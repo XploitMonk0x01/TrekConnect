@@ -88,6 +88,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       coordinates,
       altitude,
       aiHint,
+      averageRating,
+      youtubeLink,
     } = body
 
     const db = await getDb()
@@ -108,6 +110,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (altitude !== undefined)
       updateData.altitude = normalizeAltitude(altitude)
     if (aiHint !== undefined) updateData.aiHint = aiHint
+    if (averageRating !== undefined)
+      updateData.averageRating = normalizeAltitude(averageRating) ?? 0
+    if (youtubeLink !== undefined) updateData.youtubeLink = youtubeLink
 
     const result = await db
       .collection('destinations')

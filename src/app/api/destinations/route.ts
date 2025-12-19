@@ -4,6 +4,10 @@ import type { Destination } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
 import type { WithId, Document } from 'mongodb'
 
+// Force dynamic rendering - never cache this route
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Helper function to map MongoDB document to Destination type
 function mapDocToDestination(doc: WithId<Document>): Destination {
   return {
@@ -19,6 +23,7 @@ function mapDocToDestination(doc: WithId<Document>): Destination {
     averageRating: doc.averageRating || 0,
     aiHint: doc.aiHint || doc.name,
     altitude: doc.altitude || undefined,
+    youtubeLink: doc.youtubeLink || undefined,
   }
 }
 

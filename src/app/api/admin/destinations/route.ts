@@ -66,6 +66,8 @@ export async function POST(request: NextRequest) {
       coordinates,
       altitude,
       aiHint,
+      averageRating,
+      youtubeLink,
     } = body
 
     if (!name) {
@@ -84,7 +86,8 @@ export async function POST(request: NextRequest) {
       coordinates: normalizeCoordinates(coordinates),
       altitude: normalizeAltitude(altitude),
       aiHint: aiHint || name.toLowerCase(),
-      averageRating: 0,
+      averageRating: normalizeAltitude(averageRating) ?? 0,
+      youtubeLink: youtubeLink || '',
       createdAt: new Date(),
       updatedAt: new Date(),
     }

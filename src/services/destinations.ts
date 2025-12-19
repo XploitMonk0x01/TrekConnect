@@ -21,6 +21,7 @@ function mapDocToDestination(doc: WithId<Document>): Destination {
     averageRating: doc.averageRating || 0,
     aiHint: doc.aiHint || doc.name,
     altitude: doc.altitude || undefined, // Peak altitude in meters
+    youtubeLink: doc.youtubeLink || undefined,
   }
 }
 

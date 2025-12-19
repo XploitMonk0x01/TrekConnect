@@ -38,6 +38,7 @@ export interface Destination {
   averageRating?: number
   aiHint?: string
   altitude?: number // Peak altitude in meters
+  youtubeLink?: string // YouTube video link for the destination
 }
 
 export interface PlannedTrip {

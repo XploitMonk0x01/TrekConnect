@@ -12,6 +12,8 @@ import {
   Image as ImageIcon,
   Plus,
   X,
+  Star,
+  Youtube,
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -53,6 +55,8 @@ export default function EditDestinationPage({
   const [newAttraction, setNewAttraction] = useState('')
   const [lat, setLat] = useState('')
   const [lng, setLng] = useState('')
+  const [rating, setRating] = useState('')
+  const [youtubeLink, setYoutubeLink] = useState('')
 
   // Fetch destination data
   useEffect(() => {
@@ -77,6 +81,8 @@ export default function EditDestinationPage({
         setAttractions(data.attractions || [])
         setLat(data.coordinates?.lat?.toString() || '')
         setLng(data.coordinates?.lng?.toString() || '')
+        setRating(data.averageRating?.toString() || '')
+        setYoutubeLink(data.youtubeLink || '')
       } catch (error) {
         toast({
           title: 'Error',
@@ -119,6 +125,8 @@ export default function EditDestinationPage({
         aiHint: aiHint || name.toLowerCase(),
         attractions,
         coordinates: lat && lng ? { lat: Number(lat), lng: Number(lng) } : null,
+        averageRating: rating ? Number(rating) : 0,
+        youtubeLink: youtubeLink || '',
       }
 
       const res = await fetch(`/api/admin/destinations/${id}`, {
@@ -209,6 +217,25 @@ export default function EditDestinationPage({
                   placeholder="e.g., 5364"
                   value={altitude}
                   onChange={(e) => setAltitude(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="rating" className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  Rating (0-5)
+                </Label>
+                <Input
+                  id="rating"
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  placeholder="e.g., 4.5"
+                  value={rating}
+                  onChange={(e) => setRating(e.target.value)}
                 />
               </div>
             </div>
@@ -306,7 +333,9 @@ export default function EditDestinationPage({
               <ImageIcon className="h-5 w-5" />
               Media
             </CardTitle>
-            <CardDescription>Add an image for this destination</CardDescription>
+            <CardDescription>
+              Add image and video for this destination
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -333,6 +362,23 @@ export default function EditDestinationPage({
                 />
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="youtubeLink" className="flex items-center gap-2">
+                <Youtube className="h-4 w-4 text-red-500" />
+                YouTube Video Link
+              </Label>
+              <Input
+                id="youtubeLink"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={youtubeLink}
+                onChange={(e) => setYoutubeLink(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add a YouTube video URL to showcase this destination
+              </p>
+            </div>
           </CardContent>
         </Card>
 
