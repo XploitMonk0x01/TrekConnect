@@ -16,10 +16,13 @@ export function ClientLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const isMobile = useIsMobile()
 
-  // Close sidebar when switching to mobile
+  // Open sidebar by default on desktop, close on mobile
   useEffect(() => {
     if (isMobile) {
       setSidebarOpen(false)
+    } else {
+      // Default to open on laptop/desktop
+      setSidebarOpen(true)
     }
   }, [isMobile])
 
@@ -57,9 +60,9 @@ export function ClientLayout({ children }: { children: ReactNode }) {
           <div
             className={cn(
               'flex flex-col flex-1 min-w-0 transition-all duration-300 ease-in-out',
-              // Desktop: adjust margin based on sidebar state
-              !isMobile && sidebarOpen && 'lg:ml-64',
-              !isMobile && !sidebarOpen && 'lg:ml-16'
+              // Desktop/Laptop: adjust margin based on sidebar state (md = 768px+)
+              !isMobile && sidebarOpen && 'ml-64',
+              !isMobile && !sidebarOpen && 'ml-16'
             )}
           >
             <AppHeader

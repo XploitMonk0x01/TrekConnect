@@ -110,14 +110,14 @@ export function AppHeader({ onMenuClick, sidebarOpen }: AppHeaderProps) {
   return (
     <header className={headerClass}>
       <div className="flex h-16 items-center gap-4 px-4 sm:px-6 lg:px-8">
-        {/* Mobile menu button */}
+        {/* Menu toggle button - show on mobile, or on desktop when sidebar is collapsed */}
         <Button
           variant="ghost"
           size="sm"
           onClick={onMenuClick}
           className={cn(
             'p-2 hover:bg-accent',
-            isMobile ? 'flex' : 'hidden',
+            isMobile || !sidebarOpen ? 'flex' : 'hidden',
             isHomePage && !isScrolled
               ? 'text-white hover:bg-white/20 hover:text-white'
               : ''

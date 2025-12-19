@@ -322,6 +322,7 @@ export default function EditDestinationPage({
             {imageUrl && (
               <div className="mt-4">
                 <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl}
                   alt="Preview"

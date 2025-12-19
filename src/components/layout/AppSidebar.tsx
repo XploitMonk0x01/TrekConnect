@@ -88,13 +88,14 @@ export function AppSidebar({ isOpen, onToggle, isMobile }: AppSidebarProps) {
         className={cn(
           'fixed top-0 left-0 z-50 h-full transition-all duration-300 ease-in-out',
           'flex flex-col',
-          // Himalayan gradient background
+          // Solid background for mobile, gradient for desktop
+          'bg-sidebar-background',
           'bg-gradient-to-b from-sidebar-background via-sidebar-background to-sidebar-accent/30',
           'border-r border-sidebar-border/50',
           // Subtle shadow for depth
           'shadow-lg shadow-sidebar-border/10',
-          // Mobile: slide in/out from left
-          isMobile && 'w-64',
+          // Mobile: slide in/out from left with backdrop
+          isMobile && 'w-64 backdrop-blur-none',
           isMobile && isOpen && 'translate-x-0',
           isMobile && !isOpen && '-translate-x-full',
           // Desktop: expand/collapse
