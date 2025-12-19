@@ -1,9 +1,66 @@
 import type { WeatherInfo } from '@/lib/types'
 import { getCache, setCache } from '@/lib/cache'
+import { getGeminiApiKey } from '@/lib/gemini'
+import { getGoogleGenAIClient } from '@/lib/google-genai'
 
 const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+
+function parseGeminiWeatherJson(text: string): WeatherInfo | null {
+  const trimmed = (text || '').trim()
+  if (!trimmed) return null
+
+  // Sometimes models wrap JSON in fenced blocks
+  const match = trimmed.match(/```json([\s\S]*?)```/i)
+  const jsonStr = (match ? match[1] : trimmed).trim()
+
+  try {
+    const parsed = JSON.parse(jsonStr)
+    if (parsed?.temperature && parsed?.condition) {
+      return parsed as WeatherInfo
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function getWeatherFromGeminiSdk(
+  prompt: string
+): Promise<WeatherInfo | null> {
+  const client = getGoogleGenAIClient()
+  if (!client) return null
+
+  const response = await client.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: prompt,
+    config: {
+      // Ask for clean JSON so parsing is reliable
+      responseMimeType: 'application/json',
+      temperature: 0.2,
+    },
+  })
+
+  return parseGeminiWeatherJson(response.text || '')
+}
+
+async function getWeatherFromGeminiRest(
+  prompt: string
+): Promise<WeatherInfo | null> {
+  const geminiKey = getGeminiApiKey()
+  if (!geminiKey) return null
+
+  const res = await fetch(`${GEMINI_API_URL}?key=${geminiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  })
+
+  if (!res.ok) return null
+  const data = await res.json()
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  return parseGeminiWeatherJson(text)
+}
 
 async function getOpenMeteoWeather(
   latitude: number,
@@ -71,28 +128,23 @@ export async function getWeather(
   }
 
   // 2. Fallback to Gemini
-  if (GEMINI_API_KEY) {
-    const prompt = `Give me the current weather and a 2-day forecast for ${destinationName} (lat: ${latitude}, lon: ${longitude}) in JSON format with keys: temperature, condition, iconCode, forecast (array of {date, minTemp, maxTemp, condition, iconCode}). Use Celsius and short weather codes. Ensure the temperature values are strings ending in '°C'. For dates, use YYYY-MM-DD format.`
-    try {
-      const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-        const match = text.match(/```json([\s\S]*?)```/)
-        const jsonStr = match ? match[1] : text
-        const weatherJson = JSON.parse(jsonStr)
-        if (weatherJson.temperature && weatherJson.condition) {
-          setCache(cacheKey, weatherJson)
-          return weatherJson
-        }
-      }
-    } catch (error) {
-      console.error(`Gemini weather error for ${destinationName}:`, error)
+  const prompt = `Give me the current weather and a 2-day forecast for ${destinationName} (lat: ${latitude}, lon: ${longitude}) in JSON format with keys: temperature, condition, iconCode, forecast (array of {date, minTemp, maxTemp, condition, iconCode}). Use Celsius and short weather codes. Ensure the temperature values are strings ending in '°C'. For dates, use YYYY-MM-DD format.`
+  try {
+    // Prefer the official SDK (as per your @google/genai reference).
+    // If it fails (or isn't usable in some environments), fall back to the REST call.
+    const weatherFromSdk = await getWeatherFromGeminiSdk(prompt)
+    if (weatherFromSdk) {
+      setCache(cacheKey, weatherFromSdk)
+      return weatherFromSdk
     }
+
+    const weatherFromRest = await getWeatherFromGeminiRest(prompt)
+    if (weatherFromRest) {
+      setCache(cacheKey, weatherFromRest)
+      return weatherFromRest
+    }
+  } catch (error) {
+    console.error(`Gemini weather error for ${destinationName}:`, error)
   }
 
   // 3. Fallback to Google Search (placeholder)
@@ -139,4 +191,3 @@ function getWeatherConditionFromCode(code: number): string {
   }
   return conditions[code] || 'Unknown'
 }
-
