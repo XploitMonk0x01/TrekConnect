@@ -53,12 +53,6 @@ export function Footer() {
               >
                 Travel Stories
               </Link>
-              <Link
-                href="/recommendations"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                Smart Picks
-              </Link>
             </nav>
           </div>
 

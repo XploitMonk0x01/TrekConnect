@@ -5,6 +5,7 @@ const nextConfig = {
     workerThreads: false,
     cpus: 1,
   },
+
   // Externalize genkit packages to avoid webpack bundling issues
   serverExternalPackages: [
     'genkit',
@@ -18,6 +19,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'images.pexels.com',
         pathname: '/photos/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'trekthehimalayas.com',
+        pathname: '/**',
       },
       {
         protocol: 'https',
