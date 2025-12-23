@@ -22,11 +22,13 @@ _A modern, AI-powered travel application connecting trekkers worldwide_
 - Get real-time weather information for each location
 - AI-powered custom route planning with Genkit
 - Interactive maps and detailed travel information
+- User ratings and reviews for each destination
+- Integrated YouTube videos showcasing treks
 
 ### 💫 **ConnectSphere**
 
 - Tinder-style swiping interface for finding travel companions
-- Smart matching based on travel preferences and experience
+- Match with like-minded travelers based on preferences
 - Smooth animations and haptic feedback
 - Instant chat access after successful matches
 
@@ -38,12 +40,12 @@ _A modern, AI-powered travel application connecting trekkers worldwide_
 - Message status indicators and typing notifications
 - Media sharing capabilities
 
-### 🤖 **AI-Powered Recommendations**
+### 🤖 **AI-Powered Features**
 
-- Smart travel companion suggestions using Google Gemini
-- Personalized trek recommendations based on your profile
+- Personalized trek recommendations using Google Gemma 3 4B
 - AI-driven destination filtering and search
 - Custom route generation for unique adventures
+- Smart travel suggestions based on your profile
 
 ### 📸 **Photo & Story Feed**
 
@@ -72,8 +74,8 @@ _A modern, AI-powered travel application connecting trekkers worldwide_
 ### **Backend & Services**
 
 - **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth)
-- **Database**: [Firebase Realtime Database](https://firebase.google.com/docs/database)
-- **AI/ML**: [Google Genkit](https://firebase.google.com/docs/genkit) with Gemini models
+- **Database**: [Firebase Realtime Database](https://firebase.google.com/docs/database) + MongoDB
+- **AI/ML**: [Google Genkit](https://firebase.google.com/docs/genkit) with Gemma 3 4B
 - **External APIs**: Pexels, YouTube Data API v3
 
 ### **Development**
@@ -144,6 +146,7 @@ _A modern, AI-powered travel application connecting trekkers worldwide_
 TrekConnect/
 ├── 📂 src/
 │   ├── 📂 app/                 # Next.js App Router pages
+│   │   ├── 📂 admin/           # Admin dashboard for destinations
 │   │   ├── 📂 auth/            # Authentication pages
 │   │   ├── 📂 chat/            # Real-time chat interface
 │   │   ├── 📂 connect/         # User matching (ConnectSphere)
@@ -160,7 +163,6 @@ TrekConnect/
 │   ├── 📂 services/            # External API integrations
 │   └── 📂 hooks/               # Custom React hooks
 ├── 📂 public/                  # Static assets
-├── 📂 docs/                    # Documentation
 └── 📂 .vscode/                 # VS Code configuration
 ```
 
@@ -187,8 +189,17 @@ NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_DATABASE_URL=your_database_url
 
-# Google AI API
+# MongoDB
+MONGODB_URI=your_mongodb_connection_string
+
+# Google AI API (Gemma 3 4B)
+GEMINI_API_KEY=your_google_api_key
 GOOGLE_API_KEY=your_google_api_key
+
+# Admin Authentication
+ADMIN_USERNAME=your_admin_username
+ADMIN_PASSWORD=your_admin_password
+ADMIN_JWT_SECRET=your_jwt_secret
 
 # External APIs
 PEXELS_API_KEY=your_pexels_key
@@ -197,12 +208,12 @@ YOUTUBE_API_KEY=your_youtube_key
 
 ## 🤖 AI Features
 
-TrekConnect leverages Google's Genkit framework for powerful AI capabilities:
+TrekConnect leverages Google's Genkit framework with Gemma 3 4B for powerful AI capabilities:
 
-- **Smart Matching**: AI analyzes user profiles for compatible travel companions
-- **Destination Recommendations**: Personalized suggestions based on preferences
+- **Destination Recommendations**: Personalized trek suggestions based on preferences
 - **Route Planning**: Custom trek routes generated using AI
-- **Content Filtering**: AI-powered search and filtering
+- **Content Filtering**: AI-powered search and destination filtering
+- **Travel Suggestions**: Smart recommendations based on user history and preferences
 
 ## 📱 Responsive Design
 

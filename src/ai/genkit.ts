@@ -4,5 +4,5 @@ import { getGeminiApiKey } from '@/lib/gemini'
 
 export const ai = genkit({
   plugins: [googleAI({ apiKey: getGeminiApiKey() })],
-  model: 'googleai/gemini-3-flash-preview', // Using Gemma 3 4B instruction-tuned
+  model: 'googleai/gemini-3-flash-preview',
 })
