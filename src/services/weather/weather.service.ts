@@ -4,7 +4,7 @@ import { getGeminiApiKey } from '@/lib/gemini'
 import { getGoogleGenAIClient } from '@/lib/google-genai'
 
 const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent'
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent'
 
 function parseGeminiWeatherJson(text: string): WeatherInfo | null {
   const trimmed = (text || '').trim()
@@ -32,7 +32,7 @@ async function getWeatherFromGeminiSdk(
   if (!client) return null
 
   const response = await client.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3-flash-preview',
     contents: prompt,
     config: {
       // Ask for clean JSON so parsing is reliable

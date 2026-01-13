@@ -42,7 +42,7 @@ _A modern, AI-powered travel application connecting trekkers worldwide_
 
 ### 🤖 **AI-Powered Features**
 
-- Personalized trek recommendations using Google Gemma 3 4B
+- Personalized trek recommendations using Google Gemini 3
 - AI-driven destination filtering and search
 - Custom route generation for unique adventures
 - Smart travel suggestions based on your profile

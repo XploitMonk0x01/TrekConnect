@@ -129,13 +129,26 @@ function NewCustomRouteForm() {
     setIsLoadingRoute(true)
     setGeneratedRoute(null)
     try {
-      const input: GenerateCustomTrekRouteInput = {
-        destinationName: values.destinationName,
-        durationDays: values.durationDays,
-        difficulty: values.difficulty,
-        specificInterests: values.specificInterests,
+      // Call Groq API endpoint instead of Genkit flow
+      const response = await fetch('/api/routes/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          destinationName: values.destinationName,
+          durationDays: values.durationDays,
+          difficulty: values.difficulty,
+          specificInterests: values.specificInterests,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate route')
       }
-      const result = await generateCustomTrekRoute(input)
+
+      const result: GenerateCustomTrekRouteOutput = await response.json()
       setGeneratedRoute(result)
       toast({
         title: 'Trek Route Generated!',

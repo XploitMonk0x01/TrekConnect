@@ -556,50 +556,6 @@ export default function DestinationDetailClientContent({
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-xl flex items-center">
-            <Sparkles className="mr-2 h-5 w-5 text-accent" /> AI-Generated
-            Vision
-          </CardTitle>
-          <CardDescription>
-            See an AI&apos;s artistic interpretation of {destination.name}.
-            Results may vary!
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            onClick={handleGenerateImage}
-            disabled={isGeneratingImage}
-            className="bg-accent hover:bg-accent/90 mb-4"
-          >
-            {isGeneratingImage ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            Generate AI Image of {destination.name}
-          </Button>
-          {isGeneratingImage && (
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating your image, this might take a few moments...
-            </div>
-          )}
-          {generatedImageUrl && (
-            <div className="mt-4 relative aspect-video rounded-lg overflow-hidden border shadow-md">
-              <Image
-                src={generatedImageUrl}
-                alt={`AI generated image of ${destination.name}`}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                className="object-cover"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
           <CardTitle className="font-headline text-2xl text-primary">
             Photos from Travelers
           </CardTitle>

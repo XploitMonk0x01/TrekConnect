@@ -50,6 +50,7 @@
     "firebase": "^12.1.0",
     "framer-motion": "^12.18.1",
     "genkit": "^1.16.0",
+    "groq-sdk": "^0.37.0",
     "jose": "^5.10.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.475.0",
