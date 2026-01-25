@@ -1,6 +1,5 @@
 import type { UserProfile } from '@/lib/types'
 import {
-  getDatabase,
   ref,
   get,
   update,
@@ -9,6 +8,7 @@ import {
   orderByChild,
   limitToLast,
 } from 'firebase/database'
+import { realtimeDb } from '@/lib/firebase'
 
 // The incoming data type matches the form schema on the client
 export type UserProfileUpdateData = {
@@ -31,8 +31,7 @@ export async function updateUserProfileClient(
   dataToUpdate: UserProfileUpdateData
 ): Promise<void> {
   if (!userId) throw new Error('User ID is required')
-  const db = getDatabase()
-  const userRef = ref(db, `users/${userId}`)
+  const userRef = ref(realtimeDb, `users/${userId}`)
   const updatePayload: any = {
     ...dataToUpdate,
     updatedAt: new Date().toISOString(),
@@ -45,8 +44,7 @@ export async function getUserProfile(
   userId: string
 ): Promise<UserProfile | null> {
   if (!userId) return null
-  const db = getDatabase()
-  const userRef = ref(db, `users/${userId}`)
+  const userRef = ref(realtimeDb, `users/${userId}`)
   const snapshot = await get(userRef)
   if (snapshot.exists()) {
     return { ...snapshot.val(), id: userId } as UserProfile
@@ -57,8 +55,7 @@ export async function getUserProfile(
 // Client-side profile delete function
 export async function deleteUserProfile(userId: string): Promise<boolean> {
   try {
-    const db = getDatabase()
-    const userRef = ref(db, `users/${userId}`)
+    const userRef = ref(realtimeDb, `users/${userId}`)
     await remove(userRef)
     return true
   } catch (error) {
@@ -72,8 +69,7 @@ export async function getOtherUsers(
   currentUserId: string
 ): Promise<UserProfile[]> {
   try {
-    const db = getDatabase()
-    const usersRef = ref(db, 'users')
+    const usersRef = ref(realtimeDb, 'users')
     const snapshot = await get(usersRef)
 
     if (!snapshot.exists()) {

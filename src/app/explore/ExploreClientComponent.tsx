@@ -25,6 +25,8 @@ import {
   PlayCircle,
   XCircle,
   Wand2,
+  Mountain,
+  ChevronDown,
 } from 'lucide-react'
 import type { Destination, WeatherInfo } from '@/lib/types'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
@@ -131,6 +133,31 @@ export default function ExploreClientComponent({
   const [aiFilterExplanation, setAiFilterExplanation] = useState<string | null>(
     null
   )
+  const [selectedAltitudeRange, setSelectedAltitudeRange] = useState<string>('')
+
+  // Altitude filter categories
+  const altitudeCategories = [
+    { label: 'All Altitudes', value: '', min: 0, max: Infinity },
+    { label: 'Easy (Below 3,000m)', value: 'easy', min: 0, max: 3000 },
+    {
+      label: 'Moderate (3,000m - 4,500m)',
+      value: 'moderate',
+      min: 3000,
+      max: 4500,
+    },
+    {
+      label: 'Challenging (4,500m - 5,500m)',
+      value: 'challenging',
+      min: 4500,
+      max: 5500,
+    },
+    {
+      label: 'Extreme (Above 5,500m)',
+      value: 'extreme',
+      min: 5500,
+      max: Infinity,
+    },
+  ]
 
   const isLoadingInitialData = useMemo(() => {
     if (initialDestinations.length === 0) return false
@@ -155,6 +182,19 @@ export default function ExploreClientComponent({
           .includes(searchQuery.toLowerCase())
     )
 
+    // Apply altitude filter
+    if (selectedAltitudeRange) {
+      const category = altitudeCategories.find(
+        (c) => c.value === selectedAltitudeRange
+      )
+      if (category) {
+        currentList = currentList.filter((dest) => {
+          if (!dest.altitude) return false // Exclude destinations without altitude data
+          return dest.altitude >= category.min && dest.altitude < category.max
+        })
+      }
+    }
+
     if (aiFilteredDestinationIds) {
       const orderedByIds = aiFilteredDestinationIds
         .map((id) => currentList.find((dest) => dest.id === id))
@@ -163,7 +203,13 @@ export default function ExploreClientComponent({
       currentList = orderedByIds
     }
     return currentList
-  }, [destinations, searchQuery, aiFilteredDestinationIds])
+  }, [
+    destinations,
+    searchQuery,
+    aiFilteredDestinationIds,
+    selectedAltitudeRange,
+    altitudeCategories,
+  ])
 
   const fetchMediaForDestination = useCallback(
     async (dest: Destination, signal: AbortSignal) => {
@@ -479,6 +525,35 @@ export default function ExploreClientComponent({
                 </Button>
               )}
             </div>
+
+            {/* Altitude Filter */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mountain className="h-4 w-4" />
+                <span className="font-medium">Filter by Altitude:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {altitudeCategories.map((category) => (
+                  <Button
+                    key={category.value}
+                    variant={
+                      selectedAltitudeRange === category.value
+                        ? 'default'
+                        : 'outline'
+                    }
+                    size="sm"
+                    onClick={() => setSelectedAltitudeRange(category.value)}
+                    className={
+                      selectedAltitudeRange === category.value
+                        ? 'bg-primary'
+                        : ''
+                    }
+                  >
+                    {category.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
           </div>
           {aiFilterExplanation && (
             <div className="mt-2 p-3 bg-muted/50 border border-border rounded-md text-sm text-muted-foreground">
@@ -589,6 +664,14 @@ export default function ExploreClientComponent({
                   {destination.country}
                   {destination.region ? `, ${destination.region}` : ''}
                 </div>
+                {destination.altitude && (
+                  <div className="flex items-center text-sm text-primary mb-2">
+                    <Mountain className="h-4 w-4 mr-1" />
+                    <span className="font-semibold">
+                      {destination.altitude.toLocaleString()}m
+                    </span>
+                  </div>
+                )}
                 <CardDescription className="text-sm line-clamp-3">
                   {destination.description}
                 </CardDescription>

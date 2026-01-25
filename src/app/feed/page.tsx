@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Card,
@@ -18,18 +18,32 @@ import {
   Loader2,
   AlertTriangle,
 } from 'lucide-react'
-import { getAllPhotos } from '@/services/photos'
+import { getPaginatedPhotos } from '@/services/photos'
 import { useCustomAuth } from '@/contexts/CustomAuthContext'
+
+const PHOTOS_PER_PAGE = 12
 
 export default function PhotoFeedPage() {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user, isLoading: authLoading } = useCustomAuth()
 
+  const fetchPhotos = useCallback(async (cursor?: string) => {
+    try {
+      const result = await getPaginatedPhotos(PHOTOS_PER_PAGE, cursor)
+      return result
+    } catch (err) {
+      console.error('Error fetching photos:', err)
+      throw err
+    }
+  }, [])
+
   useEffect(() => {
-    async function fetchPhotos() {
-      if (authLoading) return // Wait for auth to load
+    async function loadInitialPhotos() {
+      if (authLoading) return
 
       if (!user) {
         setError('Please sign in to view photos')
@@ -40,18 +54,35 @@ export default function PhotoFeedPage() {
       try {
         setIsLoading(true)
         setError(null)
-        const fetchedPhotos = await getAllPhotos()
-        setPhotos(fetchedPhotos)
+        const result = await fetchPhotos()
+        setPhotos(result.photos)
+        setHasMore(result.hasMore)
       } catch (err) {
-        console.error('Error fetching photos:', err)
         setError('Failed to load photos. Please try again.')
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchPhotos()
-  }, [user, authLoading])
+    loadInitialPhotos()
+  }, [user, authLoading, fetchPhotos])
+
+  const handleLoadMore = async () => {
+    if (photos.length === 0 || isLoadingMore) return
+
+    const lastPhoto = photos[photos.length - 1]
+    setIsLoadingMore(true)
+
+    try {
+      const result = await fetchPhotos(lastPhoto.uploadedAt)
+      setPhotos((prev) => [...prev, ...result.photos])
+      setHasMore(result.hasMore)
+    } catch (err) {
+      console.error('Error loading more photos:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }
 
   if (authLoading || isLoading) {
     return (
@@ -146,10 +177,21 @@ export default function PhotoFeedPage() {
         </Card>
       )}
 
-      {photos.length > 0 && (
+      {photos.length > 0 && hasMore && (
         <div className="flex justify-center mt-8">
-          <Button variant="outline" disabled>
-            Load More Photos (Coming Soon)
+          <Button
+            variant="outline"
+            onClick={handleLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load More Photos'
+            )}
           </Button>
         </div>
       )}

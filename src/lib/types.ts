@@ -37,6 +37,8 @@ export interface Destination {
   coordinates?: { lat: number; lng: number }
   averageRating?: number
   aiHint?: string
+  altitude?: number // Peak altitude in meters
+  youtubeLink?: string // YouTube video link for the destination
 }
 
 export interface PlannedTrip {
@@ -96,6 +98,24 @@ export interface Story {
 export type CreateStoryInput = Pick<
   Story,
   'title' | 'content' | 'imageUrl' | 'destinationName' | 'tags'
+> & { userId: string; userName: string; userAvatarUrl?: string | null }
+
+export interface Comment {
+  id: string
+  parentId: string // storyId or photoId
+  parentType: 'story' | 'photo'
+  userId: string
+  userName: string
+  userAvatarUrl?: string | null
+  content: string
+  createdAt: string // ISO string
+  likesCount: number
+  likes?: string[]
+}
+
+export type CreateCommentInput = Pick<
+  Comment,
+  'parentId' | 'parentType' | 'content'
 > & { userId: string; userName: string; userAvatarUrl?: string | null }
 
 export interface WeatherInfo {

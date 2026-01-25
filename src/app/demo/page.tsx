@@ -122,29 +122,6 @@ export default function DemoPage() {
               </Button>
             </CardContent>
           </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Star className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Smart Picks</CardTitle>
-                  <CardDescription>AI-powered recommendations</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get personalized recommendations based on your preferences and
-                past adventures.
-              </p>
-              <Button variant="outline" size="sm" className="w-full">
-                Get Recommendations
-              </Button>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Statistics Section */}

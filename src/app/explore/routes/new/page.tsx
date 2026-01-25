@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -77,7 +77,7 @@ const routeFormSchema = z.object({
 
 type RouteFormValues = z.infer<typeof routeFormSchema>
 
-export default function NewCustomRoutePage() {
+function NewCustomRouteForm() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [destination, setDestination] = useState<Destination | null>(null)
@@ -129,13 +129,26 @@ export default function NewCustomRoutePage() {
     setIsLoadingRoute(true)
     setGeneratedRoute(null)
     try {
-      const input: GenerateCustomTrekRouteInput = {
-        destinationName: values.destinationName,
-        durationDays: values.durationDays,
-        difficulty: values.difficulty,
-        specificInterests: values.specificInterests,
+      // Call Groq API endpoint instead of Genkit flow
+      const response = await fetch('/api/routes/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          destinationName: values.destinationName,
+          durationDays: values.durationDays,
+          difficulty: values.difficulty,
+          specificInterests: values.specificInterests,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate route')
       }
-      const result = await generateCustomTrekRoute(input)
+
+      const result: GenerateCustomTrekRouteOutput = await response.json()
       setGeneratedRoute(result)
       toast({
         title: 'Trek Route Generated!',
@@ -404,5 +417,24 @@ export default function NewCustomRoutePage() {
         </Card>
       )}
     </div>
+  )
+}
+
+export default function NewCustomRoutePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto max-w-4xl py-8">
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-3 text-muted-foreground">
+              Loading route generator...
+            </span>
+          </div>
+        </div>
+      }
+    >
+      <NewCustomRouteForm />
+    </Suspense>
   )
 }

@@ -7,72 +7,93 @@
     --font-sans: 'PT Sans', sans-serif;
     --font-serif: 'Playfair Display', serif;
 
-    --background: 49 50% 94%; /* Light warm ivory */
-    --foreground: 49 25% 25%; /* Dark warm brown */
-    --card: 49 60% 97%; /* Slightly off-white, warmer */
-    --card-foreground: 49 25% 25%;
-    --popover: 49 60% 97%;
-    --popover-foreground: 49 25% 25%;
-    --primary: 49 100% 45%; /* Bright Gold */
-    --primary-foreground: 49 100% 95%; /* Very light gold */
-    --secondary: 49 30% 85%; /* Lighter, less saturated gold/brown */
-    --secondary-foreground: 49 25% 20%; /* Darker text for secondary */
-    --muted: 49 20% 90%; /* Very subtle warm gray */
-    --muted-foreground: 49 15% 50%; /* Readable gray on muted */
-    --accent: 30 100% 50%; /* Bright Orange */
-    --accent-foreground: 30 100% 95%; /* Very light orange */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 49 20% 80%; /* Subtle warm border */
-    --input: 49 20% 88%; /* Slightly darker than muted for input */
-    --ring: 30 100% 60%; /* Slightly lighter accent for focus rings */
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    /* Himalayan Expedition Theme - Light */
+    --background: 220 30% 97%; /* Snow White - Fresh mountain air */
+    --foreground: 220 50% 15%; /* Deep Mountain Slate */
 
-    /* Sidebar specific colors */
-    --sidebar-background: 49 40% 90%; /* A slightly darker shade of the main background */
-    --sidebar-foreground: 49 25% 20%; /* Dark text for readability */
-    --sidebar-primary: 49 100% 45%;
-    --sidebar-primary-foreground: 49 100% 95%;
-    --sidebar-accent: 30 100% 50%;
-    --sidebar-accent-foreground: 30 100% 95%;
-    --sidebar-border: 49 30% 75%;
-    --sidebar-ring: 30 100% 60%;
+    --card: 0 0% 100%; /* Pure Snow */
+    --card-foreground: 220 50% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 50% 15%;
+
+    --primary: 199 89% 48%; /* Glacier Blue - Crystal clear sky */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 25% 88%; /* Rocky Beige - Mountain stone */
+    --secondary-foreground: 30 30% 20%;
+
+    --muted: 220 20% 92%; /* Misty Gray - Morning fog */
+    --muted-foreground: 220 15% 45%;
+
+    --accent: 25 95% 55%; /* Sunrise Orange - Dawn on the peaks */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 25% 88%;
+    --input: 220 25% 90%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.75rem;
+
+    /* Chart colors - Mountain inspired */
+    --chart-1: 199 89% 48%; /* Glacier Blue */
+    --chart-2: 25 95% 55%; /* Sunrise Orange */
+    --chart-3: 142 70% 40%; /* Pine Forest Green */
+    --chart-4: 280 60% 65%; /* Twilight Purple */
+    --chart-5: 45 90% 55%; /* Golden Hour */
+
+    /* Sidebar - Mountain cabin feel */
+    --sidebar-background: 220 30% 97%;
+    --sidebar-foreground: 220 50% 15%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 25% 90%;
+    --sidebar-accent-foreground: 30 30% 20%;
+    --sidebar-border: 220 25% 88%;
+    --sidebar-ring: 199 89% 48%;
   }
 
   .dark {
-    --background: 49 20% 14%; /* Slightly lighter, warm dark */
-    --foreground: 49 35% 92%; /* Brighter warm gray for text */
-    --card: 49 22% 18%; /* Slightly lighter card for contrast */
-    --card-foreground: 49 35% 92%;
-    --popover: 49 22% 18%;
-    --popover-foreground: 49 35% 92%;
-    --primary: 49 95% 55%; /* Vibrant gold */
-    --primary-foreground: 49 100% 96%; /* Light text on gold */
-    --secondary: 49 40% 32%; /* More saturated dark gold */
-    --secondary-foreground: 49 35% 92%;
-    --muted: 49 18% 22%; /* Slightly lighter muted */
-    --muted-foreground: 49 25% 70%;
-    --accent: 30 100% 60%; /* Brighter orange accent */
-    --accent-foreground: 49 100% 96%;
-    --destructive: 0 80% 55%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 49 18% 28%;
-    --input: 49 18% 24%;
-    --ring: 30 100% 70%;
+    /* Himalayan Expedition Theme - Dark (Night on the Mountain) */
+    --background: 220 50% 8%; /* Deep Night Sky */
+    --foreground: 220 30% 95%; /* Starlit Snow */
 
-    --sidebar-background: 49 20% 16%;
-    --sidebar-foreground: 49 35% 92%;
-    --sidebar-primary: 49 95% 55%;
-    --sidebar-primary-foreground: 49 100% 96%;
-    --sidebar-accent: 30 100% 60%;
-    --sidebar-accent-foreground: 49 100% 96%;
-    --sidebar-border: 49 18% 28%;
-    --sidebar-ring: 30 100% 70%;
+    --card: 220 45% 12%; /* Mountain Shadow */
+    --card-foreground: 220 30% 95%;
+
+    --popover: 220 45% 12%;
+    --popover-foreground: 220 30% 95%;
+
+    --primary: 199 85% 55%; /* Moonlit Glacier */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 35% 18%; /* Dark Rock */
+    --secondary-foreground: 220 30% 95%;
+
+    --muted: 220 35% 16%;
+    --muted-foreground: 220 20% 65%;
+
+    --accent: 25 95% 58%; /* Campfire Orange */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 35%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 35% 20%;
+    --input: 220 35% 18%;
+    --ring: 199 85% 55%;
+
+    --sidebar-background: 220 50% 7%;
+    --sidebar-foreground: 220 30% 95%;
+    --sidebar-primary: 199 85% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 35% 18%;
+    --sidebar-accent-foreground: 220 30% 95%;
+    --sidebar-border: 220 35% 20%;
+    --sidebar-ring: 199 85% 55%;
   }
 }
 
@@ -97,6 +118,38 @@
 
   .grid-responsive-3 {
     @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+
+  /* Himalayan gradient backgrounds */
+  .gradient-himalayan-sky {
+    @apply bg-gradient-to-b from-sky-400 via-blue-500 to-indigo-600;
+  }
+
+  .gradient-sunrise {
+    @apply bg-gradient-to-r from-orange-400 via-rose-400 to-purple-500;
+  }
+
+  .gradient-mountain-mist {
+    @apply bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent;
+  }
+
+  .gradient-snow-fade {
+    @apply bg-gradient-to-b from-white via-slate-50 to-slate-100;
+  }
+
+  /* Trek card styling */
+  .trek-card {
+    @apply relative overflow-hidden rounded-xl border-none bg-card shadow-lg transition-all duration-300;
+    @apply hover:-translate-y-2 hover:shadow-2xl;
+  }
+
+  .trek-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-300;
+  }
+
+  .trek-card:hover::before {
+    @apply opacity-100;
   }
 
   /* Responsive text utilities */

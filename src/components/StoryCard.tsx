@@ -1,3 +1,6 @@
+'use client'
+
+import { useState } from 'react'
 import CachedImage from './CachedImage'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -11,11 +14,20 @@ import {
 } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { Story } from '@/lib/types'
-import { CalendarDays, MessageCircle, Heart, ExternalLink } from 'lucide-react'
+import {
+  CalendarDays,
+  MessageCircle,
+  Heart,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants'
+import { toggleStoryLike } from '@/services/stories'
+import { useCustomAuth } from '@/contexts/CustomAuthContext'
+import { useToast } from '@/hooks/use-toast'
 
 interface StoryCardProps {
   story: Story
@@ -23,6 +35,49 @@ interface StoryCardProps {
 }
 
 export function StoryCard({ story, isDetailedView = false }: StoryCardProps) {
+  const { user } = useCustomAuth()
+  const { toast } = useToast()
+  const [likesCount, setLikesCount] = useState(story.likesCount || 0)
+  const [isLiked, setIsLiked] = useState(
+    user ? (story.likes || []).includes(user.id) : false
+  )
+  const [isLiking, setIsLiking] = useState(false)
+
+  const handleLikeToggle = async () => {
+    if (!user) {
+      toast({
+        title: 'Sign in required',
+        description: 'Please sign in to like stories.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsLiking(true)
+    // Optimistic update
+    setIsLiked(!isLiked)
+    setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1))
+
+    try {
+      const result = await toggleStoryLike(story.id, user.id)
+      if (result) {
+        setLikesCount(result.likesCount)
+        setIsLiked(result.isLiked)
+      }
+    } catch (error) {
+      // Revert optimistic update on error
+      setIsLiked(isLiked)
+      setLikesCount(story.likesCount || 0)
+      toast({
+        title: 'Error',
+        description: 'Failed to update like. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsLiking(false)
+    }
+  }
+
   let imageUrl = story.imageUrl
   let imageAiHint = 'travel story'
   if (story.imageUrl && story.imageUrl.includes('?ai_hint=')) {
@@ -129,14 +184,31 @@ export function StoryCard({ story, isDetailedView = false }: StoryCardProps) {
       </CardContent>
       <CardFooter className="p-4 border-t flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button className="flex items-center text-muted-foreground hover:text-primary transition-colors">
-            <Heart className="h-5 w-5 mr-1" />
-            <span>{story.likesCount || 0}</span>
+          <button
+            onClick={handleLikeToggle}
+            disabled={isLiking}
+            className={`flex items-center transition-colors ${
+              isLiked
+                ? 'text-red-500 hover:text-red-600'
+                : 'text-muted-foreground hover:text-red-500'
+            }`}
+          >
+            {isLiking ? (
+              <Loader2 className="h-5 w-5 mr-1 animate-spin" />
+            ) : (
+              <Heart
+                className={`h-5 w-5 mr-1 ${isLiked ? 'fill-current' : ''}`}
+              />
+            )}
+            <span>{likesCount}</span>
           </button>
-          <button className="flex items-center text-muted-foreground hover:text-primary transition-colors">
+          <Link
+            href={`/stories/${story.id}#comments`}
+            className="flex items-center text-muted-foreground hover:text-primary transition-colors"
+          >
             <MessageCircle className="h-5 w-5 mr-1" />
             <span>{story.commentsCount || 0}</span>
-          </button>
+          </Link>
         </div>
         {!isDetailedView && (
           <Button

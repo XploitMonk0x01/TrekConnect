@@ -1,11 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable parallel builds on Windows to avoid EPERM errors
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
+
+  // Externalize genkit packages to avoid webpack bundling issues
+  serverExternalPackages: [
+    'genkit',
+    '@genkit-ai/core',
+    '@genkit-ai/googleai',
+    'handlebars',
+  ],
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'images.pexels.com',
         pathname: '/photos/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'trekthehimalayas.com',
+        pathname: '/**',
       },
       {
         protocol: 'https',
@@ -28,12 +46,27 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // Admin endpoints must never be cached (session + CRUD)
+        source: '/api/admin/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate',
+          },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+        ],
+      },
+      {
         source: '/api/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            // APIs are generally dynamic; caching here breaks auth/session and CRUD freshness.
+            value: 'no-store, no-cache, must-revalidate',
           },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
         ],
       },
       {

@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -44,9 +45,19 @@ export function AppHeader({ onMenuClick, sidebarOpen }: AppHeaderProps) {
   const { user, signOut: customSignOut, isLoading } = useCustomAuth()
   const { toast } = useToast()
   const isMobile = useIsMobile()
+  const [isScrolled, setIsScrolled] = React.useState(false)
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   // Special handling for chat pages - show the other user's name instead of "Chat"
   const isChatPage = pathname.startsWith('/chat/')
+  const isHomePage = pathname === '/'
 
   const currentNavItem =
     NAV_ITEMS.find((item) => {
@@ -87,15 +98,30 @@ export function AppHeader({ onMenuClick, sidebarOpen }: AppHeaderProps) {
     return 'U'
   }
 
+  const headerClass = cn(
+    'z-40 w-full transition-all duration-300',
+    isHomePage
+      ? isScrolled
+        ? 'fixed top-0 border-b bg-background/80 backdrop-blur-md text-foreground'
+        : 'fixed top-0 border-b border-transparent bg-transparent text-white'
+      : 'sticky top-0 border-b bg-background/80 backdrop-blur-md text-foreground'
+  )
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-md">
+    <header className={headerClass}>
       <div className="flex h-16 items-center gap-4 px-4 sm:px-6 lg:px-8">
-        {/* Mobile menu button */}
+        {/* Menu toggle button - show on mobile, or on desktop when sidebar is collapsed */}
         <Button
           variant="ghost"
           size="sm"
           onClick={onMenuClick}
-          className={cn('p-2 hover:bg-accent', isMobile ? 'flex' : 'hidden')}
+          className={cn(
+            'p-2 hover:bg-accent',
+            isMobile || !sidebarOpen ? 'flex' : 'hidden',
+            isHomePage && !isScrolled
+              ? 'text-white hover:bg-white/20 hover:text-white'
+              : ''
+          )}
         >
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
@@ -103,7 +129,12 @@ export function AppHeader({ onMenuClick, sidebarOpen }: AppHeaderProps) {
 
         {/* Page title */}
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg sm:text-xl font-semibold font-headline text-foreground truncate">
+          <h1
+            className={cn(
+              'text-lg sm:text-xl font-semibold font-headline truncate',
+              isHomePage && !isScrolled ? 'text-white' : 'text-foreground'
+            )}
+          >
             {pageTitle}
           </h1>
         </div>
@@ -114,7 +145,12 @@ export function AppHeader({ onMenuClick, sidebarOpen }: AppHeaderProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="hidden sm:flex p-2 hover:bg-accent"
+            className={cn(
+              'hidden sm:flex p-2 hover:bg-accent',
+              isHomePage && !isScrolled
+                ? 'text-white hover:bg-white/20 hover:text-white'
+                : ''
+            )}
           >
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
@@ -125,7 +161,12 @@ export function AppHeader({ onMenuClick, sidebarOpen }: AppHeaderProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="hidden sm:flex p-2 hover:bg-accent relative"
+              className={cn(
+                'hidden sm:flex p-2 hover:bg-accent relative',
+                isHomePage && !isScrolled
+                  ? 'text-white hover:bg-white/20 hover:text-white'
+                  : ''
+              )}
             >
               <Bell className="h-5 w-5" />
               <span className="sr-only">Notifications</span>

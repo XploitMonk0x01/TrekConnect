@@ -1,9 +1,8 @@
-
 'use client'
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -18,10 +17,14 @@ import { useCustomAuth } from '@/contexts/CustomAuthContext'
 import { Loader2, MountainSnow } from 'lucide-react'
 import Image from 'next/image'
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signIn: customSignIn, isLoading: authIsLoading, user } = useCustomAuth()
+  const {
+    signIn: customSignIn,
+    isLoading: authIsLoading,
+    user,
+  } = useCustomAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -48,11 +51,11 @@ export default function SignInPage() {
 
   // Prevent flash of sign-in form if loading or already logged in
   if (authIsLoading || user) {
-      return (
-          <div className="flex min-h-screen flex-col items-center justify-center">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          </div>
-      )
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </div>
+    )
   }
 
   return (
@@ -60,7 +63,7 @@ export default function SignInPage() {
       <div className="flex items-center justify-center py-12">
         <div className="mx-auto grid w-[350px] gap-6">
           <div className="grid gap-2 text-center">
-             <h1 className="text-3xl font-bold font-headline">Sign In</h1>
+            <h1 className="text-3xl font-bold font-headline">Sign In</h1>
             <p className="text-balance text-muted-foreground">
               Enter your email below to login to your account
             </p>
@@ -81,20 +84,23 @@ export default function SignInPage() {
             <div className="grid gap-2">
               <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                
               </div>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 required
-                 value={password}
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting || authIsLoading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting || authIsLoading}>
-               {isSubmitting || authIsLoading ? (
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting || authIsLoading}
+            >
+              {isSubmitting || authIsLoading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 'Sign In'
@@ -102,7 +108,7 @@ export default function SignInPage() {
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
             <Link href="/auth/signup" className="underline">
               Sign up
             </Link>
@@ -118,15 +124,31 @@ export default function SignInPage() {
           className="h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
           data-ai-hint="mountain landscape"
         />
-         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <div className="absolute bottom-8 left-8 text-white">
-            <div className="flex items-center gap-2 text-2xl font-semibold font-headline text-white">
-              <MountainSnow className="h-8 w-8" />
-              <span>TrekConnect</span>
-            </div>
-            <p className="mt-2 text-lg">Your adventure starts here. Join a community of explorers.</p>
+          <div className="flex items-center gap-2 text-2xl font-semibold font-headline text-white">
+            <MountainSnow className="h-8 w-8" />
+            <span>TrekConnect</span>
+          </div>
+          <p className="mt-2 text-lg">
+            Your adventure starts here. Join a community of explorers.
+          </p>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   )
 }
